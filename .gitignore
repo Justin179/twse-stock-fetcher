@@ -26,4 +26,5 @@ Thumbs.db
 
 # Data
 data/*.csv
+data/raw/*.csv
 output/*.csv

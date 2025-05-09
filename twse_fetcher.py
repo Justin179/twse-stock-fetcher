@@ -36,7 +36,7 @@ def convert_to_df(data_rows: list) -> pd.DataFrame:
 def fetch_twse_history(stock_code: str):
     today = datetime.today()
     last_month = today.replace(day=1) - timedelta(days=1)
-    
+    # 抓本月、上個月、上上個月的資料
     this_month = today
     last_month = this_month.replace(day=1) - timedelta(days=1)
     two_months_ago = last_month.replace(day=1) - timedelta(days=1)
@@ -52,11 +52,18 @@ def fetch_twse_history(stock_code: str):
 
     # 儲存
     Path("data").mkdir(exist_ok=True)
-    file_path = f"data/{stock_code}_history.csv"
+    file_path = f"data/raw/{stock_code}_history.csv"
     df.to_csv(file_path, index=False, encoding="utf-8-sig")
     print(f"✅ 資料已儲存到 {file_path}")
     return df
 
-# 範例執行
+
+
+def read_stock_list(file_path="stock_list.txt") -> list:
+    with open(file_path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
+
 if __name__ == "__main__":
-    fetch_twse_history("2330")
+    stock_list = read_stock_list("stock_list.txt")
+    for stock_code in stock_list:
+        fetch_twse_history(stock_code)

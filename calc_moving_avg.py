@@ -24,8 +24,8 @@ def calculate_moving_averages(input_file: str, stock_code: str, output_dir: str 
     df["Volume"] = (df["Volume"] / 1000).round().astype(int)
 
 
-    # 取出最後5筆資料
-    result = df[["Close", "MA5", "MA10", "MA24","Volume"]].tail(5)
+    # 取出最後1筆資料
+    result = df[["Close", "MA5", "MA10", "MA24","Volume"]].tail(1)
 
     # 輸出成CSV
     result.to_csv(output_path, encoding="utf-8-sig")
@@ -74,7 +74,42 @@ def filter_n_gen_report(input_file: str, stock_code: str, output_dir: str = "out
     print(f"✅ 分析完成，已儲存至：{output_path}")
 
 
-# 範例執行
+def read_stock_list(file_path="stock_list.txt") -> list:
+    with open(file_path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
+
+
 if __name__ == "__main__":
-    calculate_moving_averages("data/2330_history.csv", "2330", "data")
-    filter_n_gen_report("data/2330_均價.csv", "2330", "output")
+    stock_list = read_stock_list("stock_list.txt")
+    combined_rows = []
+
+    for stock_code in stock_list:
+        try:
+            input_hist = f"data/raw/{stock_code}_history.csv"
+            ma_output = f"data/{stock_code}_均價.csv"
+            report_output = f"output/{stock_code}_report.csv"
+
+            calculate_moving_averages(input_hist, stock_code, "data")
+            filter_n_gen_report(ma_output, stock_code, "output")
+
+            # 讀取最後一筆資料並加入總表
+            df = pd.read_csv(report_output)
+            last_row = df.tail(1).copy()
+            # 篩選條件：最後三欄為 True, True, False
+            if (
+                last_row.iloc[0, -3] == True and
+                last_row.iloc[0, -2] == True and
+                last_row.iloc[0, -1] == False
+            ):
+                last_row.insert(0, "Stock", stock_code)  # 插入股票代碼欄
+                combined_rows.append(last_row)
+
+        except Exception as e:
+            print(f"❌ {stock_code} 處理失敗: {e}")
+
+    # 整併所有結果
+    if combined_rows:
+        all_df = pd.concat(combined_rows, ignore_index=True)
+        all_df.to_csv("output/all_report.csv", index=False, encoding="utf-8-sig")
+        print("📊 已輸出整併報告：output/all_report.csv")
+
