@@ -21,10 +21,11 @@ def calculate_moving_averages(input_file: str, stock_code: str, output_dir: str 
     df["MA10"] = df["Close"].rolling(window=10).mean()
     df["MA24"] = df["Close"].rolling(window=24).mean()
     df[["MA5", "MA10", "MA24"]] = df[["MA5", "MA10", "MA24"]].round(1)
-    
+    df["Volume"] = (df["Volume"] / 1000).round().astype(int)
+
 
     # 取出最後5筆資料
-    result = df[["Close", "MA5", "MA10", "MA24"]].tail(5)
+    result = df[["Close", "MA5", "MA10", "MA24","Volume"]].tail(5)
 
     # 輸出成CSV
     result.to_csv(output_path, encoding="utf-8-sig")
@@ -38,9 +39,9 @@ def filter_n_gen_report(input_file: str, stock_code: str, output_dir: str = "out
     # 加入一欄：判斷收盤價是否高於 MA5
     # df["Above_MA5"] = df["Close"] >= df["MA5"]
 
-    # 判斷：收盤價高於 MA5 且 乖離率 < 4%（保留 1 位小數再比較）
+    # 判斷：收盤價高於 MA5 且 乖離率 < 3%（保留 1 位小數再比較）
     df["站上5日均 且乖離小"] = df.apply(
-        lambda row: round((row["Close"] - row["MA5"]) / row["MA5"] * 100, 1) < 4 if row["Close"] > row["MA5"] else False,
+        lambda row: round((row["Close"] - row["MA5"]) / row["MA5"] * 100, 1) < 3 if row["Close"] > row["MA5"] else False,
         axis=1
     )
 
@@ -56,6 +57,11 @@ def filter_n_gen_report(input_file: str, stock_code: str, output_dir: str = "out
         (df["MA10"] >= df["MA24"]) &
         (((df["MA5"] - df["MA10"]) / df["MA10"]) * 100 < 3)
     )
+
+
+    # 判斷是否量增下跌（成交量大於前一日且收盤價低於前一日）
+    df["帶量跌"] = (df["Volume"] > df["Volume"].shift(1)) & (df["Close"] < df["Close"].shift(1))
+
 
 
     # 確保輸出資料夾存在
