@@ -1,6 +1,8 @@
 import pandas as pd
 from pathlib import Path
 import sys
+from stock_conditions import apply_conditions
+
 
 # 從命令列參數讀取乖離率門檻值，預設為 3
 bias_threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 3.0
@@ -26,29 +28,31 @@ if __name__ == "__main__":
             df[["MA5", "MA10", "MA24"]] = df[["MA5", "MA10", "MA24"]].round(1)
             df["Volume"] = (df["Volume"] / 1000).round().astype(int)
 
-            # ✅ 使用變數 bias_threshold 替代硬編碼數字
-            df["站上5日均 且乖離小"] = df.apply(
-                lambda row: round((row["Close"] - row["MA5"]) / row["MA5"] * 100, 1) < bias_threshold
-                if row["Close"] > row["MA5"] else False,
-                axis=1
-            )
 
-            df["均線排列正確 且開口小"] = (
-                (df["MA5"] >= df["MA10"]) &
-                (df["MA10"] >= df["MA24"]) &
-                (((df["MA5"] - df["MA10"]) / df["MA10"]) * 100 < bias_threshold)
-            )
+            # if stock_code == "1210":
+            #     print(f"\n📊 {stock_code} 加入均線後的完整 df：")
+            #     print(df)
 
-            df["帶量跌"] = (df["Volume"] > df["Volume"].shift(1)) & (df["Close"] < df["Close"].shift(1))
+            # 篩選條件
+            df = apply_conditions(df, bias_threshold)
 
+            # if stock_code == "1210":
+            #     print(f"\n✅ {stock_code} 套用條件後的完整 df：")
+            #     print(df)
+
+            # 只取最後一行
             last_row = df.tail(1).copy()
-            if (
-                last_row.iloc[0, -3] == True and
-                last_row.iloc[0, -2] == True and
-                last_row.iloc[0, -1] == False
-            ):
+
+            # 可以進入報告的條件
+            conditions = {
+                "站上5日均 且乖離小": True,
+                "均線排列正確 且開口小": True,
+                "帶量跌": False
+            }
+            if all(last_row[col].iloc[0] == expected for col, expected in conditions.items()):
                 last_row.insert(0, "Stock", stock_code)
                 all_report_rows.append(last_row)
+
 
         except Exception as e:
             print(f"❌ {stock_code} 處理失敗: {e}")
