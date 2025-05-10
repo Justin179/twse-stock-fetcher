@@ -4,8 +4,8 @@ import sys
 from stock_conditions import apply_conditions
 
 
-# 從命令列參數讀取乖離率門檻值，預設為 3
-bias_threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 3.0
+# 從命令列參數讀取乖離率門檻值，預設為 2.5
+bias_threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 2.5
 
 
 def read_stock_list(file_path="stock_list.txt") -> list:
@@ -62,3 +62,9 @@ if __name__ == "__main__":
         Path("output").mkdir(parents=True, exist_ok=True)
         report_df.to_csv("output/all_report.csv", index=False, encoding="utf-8-sig")
         print(f"📊 已輸出整併報告（乖離條件 < {bias_threshold}%）：output/all_report.csv")
+
+        # 產生 XQ 匯入清單
+        xq_list = report_df["Stock"].astype(str) + ".TW"
+        xq_path = Path("output") / "匯入XQ.csv"
+        xq_list.to_csv(xq_path, index=False, header=False, encoding="utf-8-sig")
+        print(f"✅ 已產出 XQ 匯入清單：{xq_path}")
