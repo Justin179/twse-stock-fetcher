@@ -52,7 +52,7 @@ def fetch_twse_history(stock_code: str):
 
     # 儲存
     Path("data").mkdir(exist_ok=True)
-    file_path = f"data/raw/{stock_code}_history.csv"
+    file_path = f"data/{stock_code}_history.csv"
     df.to_csv(file_path, index=False, encoding="utf-8-sig")
     print(f"✅ 資料已儲存到 {file_path}")
     return df
