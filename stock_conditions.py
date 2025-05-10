@@ -19,6 +19,13 @@ def apply_conditions(df, bias_threshold=3.0):
 
     df["帶量跌"] = (df["Volume"] > df["Volume"].shift(1)) & (df["Close"] < df["Close"].shift(1))
     
+    df["24日均乖離<15%"] = (
+        (df["Close"] > df["MA24"]) &
+        ((df["Close"] - df["MA24"]) / df["MA24"] * 100 < 15)
+    )
+
+
+
     # 刪除輔助欄位，避免出現在輸出報告中
     df.drop(columns=["Close_5days_ago"], inplace=True)
 

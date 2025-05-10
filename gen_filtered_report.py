@@ -53,7 +53,8 @@ if __name__ == "__main__":
             conditions = {
                 "站上上彎5日均 且乖離小": True,
                 "均線排列正確 且開口小": True,
-                "帶量跌": False
+                "帶量跌": False,
+                "24日均乖離<15%": True
             }
             if all(last_row[col].iloc[0] == expected for col, expected in conditions.items()):
                 last_row.insert(0, "Stock", stock_code)
@@ -73,4 +74,4 @@ if __name__ == "__main__":
         xq_list = report_df["Stock"].astype(str) + ".TW"
         xq_path = Path("output") / "匯入XQ.csv"
         xq_list.to_csv(xq_path, index=False, header=False, encoding="utf-8-sig")
-        print(f"✅ 已產出 XQ 匯入清單：{xq_path}")
+        print(f"✅ 已產出 XQ 匯入清單（共 {len(xq_list)} 檔）：{xq_path}")
