@@ -20,6 +20,12 @@ if __name__ == "__main__":
     for stock_code in stock_list:
         try:
             input_hist = f"data/{stock_code}_history.csv"
+            input_path = Path(input_hist)
+
+            # ✅ 如果檔案不存在就跳過
+            if not input_path.exists():
+                print(f"⏩ 跳過 {stock_code}，找不到歷史資料檔案")
+                continue
 
             df = pd.read_csv(input_hist, index_col=0, parse_dates=True)
             df["MA5"] = df["Close"].rolling(window=5).mean()
@@ -29,9 +35,9 @@ if __name__ == "__main__":
             df["Volume"] = (df["Volume"] / 1000).round().astype(int)
 
 
-            if stock_code == "2330":
-                print(f"\n📊 {stock_code} 加入均線後的完整 df：")
-                print(df)
+            # if stock_code == "2330":
+            #     print(f"\n📊 {stock_code} 加入均線後的完整 df：")
+            #     print(df)
 
             # 篩選條件
             df = apply_conditions(df, bias_threshold)

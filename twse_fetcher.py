@@ -8,6 +8,8 @@ def get_twse_month_data(stock_code: str, date: datetime) -> list:
     date_str = date.strftime("%Y%m01")  # 固定為該月1號
     url = f"https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date={date_str}&stockNo={stock_code}"
 
+    # print(f"🔗 正在請求資料：{url}")  # 加這行就能印出 URL
+
     try:
         response = httpx.get(url, timeout=10.0, verify=False)
         data = response.json()
@@ -50,6 +52,11 @@ def fetch_twse_history(stock_code: str):
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date").reset_index(drop=True)
 
+    # ✅ 資料少於 10 筆就跳過儲存
+    if len(df) < 10:
+        print(f"⚠️ {stock_code} 資料不足（僅 {len(df)} 筆），不產出檔案")
+        return
+
     # 儲存
     Path("data").mkdir(exist_ok=True)
     file_path = f"data/{stock_code}_history.csv"
@@ -64,6 +71,15 @@ def read_stock_list(file_path="stock_list.txt") -> list:
         return [line.strip() for line in f if line.strip()]
 
 if __name__ == "__main__":
+    # 清空 data 資料夾的歷史檔案
+    for file in Path("data").glob("*_history.csv"):
+        try:
+            file.unlink()
+            print(f"🗑️ 已刪除：{file}")
+        except Exception as e:
+            print(f"⚠️ 刪除失敗：{file} - {e}")
+
     stock_list = read_stock_list("stock_list.txt")
     for stock_code in stock_list:
         fetch_twse_history(stock_code)
+
