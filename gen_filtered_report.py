@@ -29,9 +29,9 @@ if __name__ == "__main__":
             df["Volume"] = (df["Volume"] / 1000).round().astype(int)
 
 
-            # if stock_code == "1210":
-            #     print(f"\n📊 {stock_code} 加入均線後的完整 df：")
-            #     print(df)
+            if stock_code == "2330":
+                print(f"\n📊 {stock_code} 加入均線後的完整 df：")
+                print(df)
 
             # 篩選條件
             df = apply_conditions(df, bias_threshold)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
             # 可以進入報告的條件
             conditions = {
-                "站上5日均 且乖離小": True,
+                "站上上彎5日均 且乖離小": True,
                 "均線排列正確 且開口小": True,
                 "帶量跌": False
             }
