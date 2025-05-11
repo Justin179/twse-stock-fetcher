@@ -58,6 +58,10 @@ def get_user_selected_conditions(use_gui=True):
         checkbox_vars[label] = var
 
     tk.Button(root, text="開始篩選", command=submit).pack(pady=10)
+    # ✅ 支援按下 Enter 鍵等同點擊「開始篩選」
+    root.bind("<Return>", lambda event: submit())
+    # ✅ 支援按下 Esc 鍵等同關閉視窗退出
+    root.bind("<Escape>", lambda event: on_close())
     root.mainloop()
 
     return conditions
