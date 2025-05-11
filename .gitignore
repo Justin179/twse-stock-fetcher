@@ -28,3 +28,5 @@ Thumbs.db
 data/*.csv
 data/raw/*.csv
 output/*.csv
+
+stock_list.txt
