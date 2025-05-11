@@ -54,6 +54,7 @@ if __name__ == "__main__":
                 "站上上彎5日均 且乖離小": True,
                 "均線排列正確 且開口小": True,
                 "帶量跌": False,
+                "帶量漲": True,
                 "24日均乖離<15%": True
             }
             if all(last_row[col].iloc[0] == expected for col, expected in conditions.items()):
