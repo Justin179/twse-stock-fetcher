@@ -10,8 +10,8 @@ conditions = get_user_selected_conditions(use_gui=use_gui)
 # print("使用的條件：", conditions)
 
 
-# 從命令列參數讀取乖離率門檻值，預設為 2.5
-bias_threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 2.5
+# 從命令列參數讀取乖離率門檻值，預設為 2
+bias_threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 2
 
 
 def read_stock_list(file_path="stock_list.txt") -> list:
