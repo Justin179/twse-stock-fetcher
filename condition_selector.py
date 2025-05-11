@@ -37,6 +37,7 @@ def get_user_selected_conditions(use_gui=True):
     # ✅ 點 [X] 關閉視窗時，直接退出主程式
     def on_close():
         print("❌ 使用者關閉了條件視窗，程式中止。")
+        print()  # 空一行
         root.destroy()
         exit()
 
