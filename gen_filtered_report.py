@@ -39,7 +39,9 @@ if __name__ == "__main__":
             df["MA5"] = df["Close"].rolling(window=5).mean()
             df["MA10"] = df["Close"].rolling(window=10).mean()
             df["MA24"] = df["Close"].rolling(window=24).mean()
-            df[["MA5", "MA10", "MA24"]] = df[["MA5", "MA10", "MA24"]].round(1)
+            df["MA72"] = df["Close"].rolling(window=72).mean()
+            df["MA200"] = df["Close"].rolling(window=200).mean()
+            df[["MA5", "MA10", "MA24", "MA72", "MA200"]] = df[["MA5", "MA10", "MA24", "MA72", "MA200"]].round(1)
             df["Volume"] = (df["Volume"] / 1000).round().astype(int)
 
 
