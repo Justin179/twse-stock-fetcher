@@ -41,7 +41,7 @@ if __name__ == "__main__":
             df["MA24"] = df["Close"].rolling(window=24).mean()
             df["MA72"] = df["Close"].rolling(window=72).mean()
             df["MA200"] = df["Close"].rolling(window=200).mean()
-            df[["MA5", "MA10", "MA24", "MA72", "MA200"]] = df[["MA5", "MA10", "MA24", "MA72", "MA200"]].round(1)
+            df[["MA5", "MA10", "MA24", "MA72", "MA200"]] = df[["MA5", "MA10", "MA24", "MA72", "MA200"]].round(2)
             df["Volume"] = (df["Volume"] / 1000).round().astype(int)
 
 
@@ -67,7 +67,9 @@ if __name__ == "__main__":
             #     "帶量漲": True,
             #     "24日均乖離<15%": True
             # }
-            if all(last_row[col].iloc[0] == expected for col, expected in conditions.items()):
+
+            # 未勾選就不處理、不過濾
+            if all(last_row[col].iloc[0] == True for col, expected in conditions.items() if expected is True):
                 last_row.insert(0, "Stock", stock_code)
                 all_report_rows.append(last_row)
             else:

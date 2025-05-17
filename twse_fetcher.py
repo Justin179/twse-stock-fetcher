@@ -9,6 +9,7 @@ def get_twse_month_data(stock_code: str, date: datetime) -> list:
     date_str = date.strftime("%Y%m01")
     url = f"https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date={date_str}&stockNo={stock_code}"
     # print("📡 正在抓取：", url)
+    # https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20250501&stockNo=8358
 
     try:
         response = httpx.get(url, timeout=10.0, verify=False)

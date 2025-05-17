@@ -17,10 +17,10 @@ def get_window_position(width, height, offset_x=400, offset_y=100):
 def get_user_selected_conditions(use_gui=True):
     default_conditions = {
         "站上上彎5日均 且乖離小": True,
-        "均線排列正確 且開口小": True,
-        "帶量跌": False,
-        "帶量漲": True,
-        "24日均乖離<15%": True
+        "5 10 24均線上彎 多頭排列 開口小": True,
+        "24日均乖離<15%": True,
+        "量價同步": True,
+        "站上上彎72日均": False
     }
 
     if not use_gui:
@@ -32,6 +32,8 @@ def get_user_selected_conditions(use_gui=True):
     def submit():
         for key in checkbox_vars:
             conditions[key] = checkbox_vars[key].get()
+        print("✅ 使用者勾選的條件:")
+        print(conditions)
         root.destroy()
 
     # ✅ 點 [X] 關閉視窗時，直接退出主程式
@@ -43,12 +45,13 @@ def get_user_selected_conditions(use_gui=True):
 
     # 🎯 建立 GUI 視窗並配置到右下角
     width, height = 300, 250
-    x, y = get_window_position(width=300, height=250, offset_x=200, offset_y=200)
+    x, y = get_window_position(width=400, height=250, offset_x=200, offset_y=200)
 
 
     root = tk.Tk()
     root.title("請選擇要套用的條件")
     root.geometry(f"{width}x{height}+{x}+{y}")
+    root.option_add("*Font", ("Microsoft JhengHei", 13))  # 全域預設字型
     root.protocol("WM_DELETE_WINDOW", on_close)
 
     checkbox_vars = {}
