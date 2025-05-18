@@ -1,9 +1,10 @@
 import pandas as pd
 from pathlib import Path
 import sys
-from stock_conditions import apply_conditions
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from condition_selector import get_user_selected_conditions
+from src.analyze.stock_conditions import apply_conditions
+from src.ui.condition_selector import get_user_selected_conditions
 
 use_gui = True  # or False for CLI/排程
 conditions = get_user_selected_conditions(use_gui=use_gui)
