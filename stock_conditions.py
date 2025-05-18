@@ -19,26 +19,20 @@ def apply_conditions(df, bias_threshold=2.0):
         (df["Close"] > df["Close"].shift(24)) # 24日均線上彎
     )
 
-    df["24日均乖離<15%"] = (
-        (df["Close"] > df["MA24"]) &
-        ((df["Close"] - df["MA24"]) / df["MA24"] * 100 < 15) 
-    )
+    df["24日均乖離<15%"] = ((df["Close"] - df["MA24"]) / df["MA24"] * 100 < 15) 
 
     df["量價同步"] = (
         ((df["Volume"] > df["Volume"].shift(1)) & (df["Close"] > df["Close"].shift(1))) |
         ((df["Volume"] < df["Volume"].shift(1)) & (df["Close"] < df["Close"].shift(1)))
     )
 
-    # df["上彎72日均"] = (df["Close"] > df["Close"].shift(72))
-
-    # df["站上72日均"] = df["Close"] > df["MA72"]
-
     df["站上上彎72日均"] = (
         (df["Close"] > df["Close"].shift(72)) &
         (df["Close"] > df["MA72"])
     )
 
-
+    # .rolling(window=5).mean() 是以「今天這筆資料」為起點，往前回看4天 + 今天，共5天去計算平均
+    # df["5日成交均量大於1500張"] = df["Volume"].rolling(window=5).mean() > 1500
 
     # df["接近72或200日均線壓力"] = (
     #     (
