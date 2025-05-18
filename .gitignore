@@ -13,6 +13,7 @@ env/
 
 # VS Code
 .vscode/
+.idea/
 
 # Jupyter notebooks checkpoints (if有)
 .ipynb_checkpoints/
@@ -27,7 +28,7 @@ Thumbs.db
 # Data
 data/*.csv
 data/raw/*.csv
-output/*.csv
+output/
 
 stock_list.txt
 zip_my_project.py
