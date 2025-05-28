@@ -1,3 +1,3 @@
 @echo off
-python src\gen_filtered_report.py
+python src\gen_filtered_report_db.py
 
