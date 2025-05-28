@@ -1,3 +1,3 @@
 @echo off
-python src\fetch\twse_fetcher.py
+python src\fetch\twse_db_fetcher.py
 
