@@ -1,6 +1,8 @@
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
+plt.rcParams['font.family'] = 'Microsoft JhengHei'
+plt.rcParams['axes.unicode_minus'] = False
 
 stock_id = "3017"
 conn = sqlite3.connect("data/institution.db")
