@@ -25,7 +25,7 @@ conn.commit()
 
 # === 設定查詢區間 ===
 today = datetime.today()
-dates = [today - timedelta(days=i) for i in range(15)]  # 多取幾天避開假日
+dates = [today - timedelta(days=i) for i in range(60)]  # 多取幾天避開假日
 dates = sorted(set(d.strftime("%Y-%m-%d") for d in dates))
 
 # 查詢 DB 已有的日期資料
@@ -47,6 +47,7 @@ for date_str in target_dates:
         resp = httpx.get(url_foreign, timeout=10.0, verify=False)
         data = resp.json()
         if not data.get("data"):
+            print(f"⚠️ {date_str} 無資料，跳過（可能為非交易日）")
             continue
 
         foreign_dict = {}
@@ -68,13 +69,14 @@ for date_str in target_dates:
         resp = httpx.get(url_trust, timeout=10.0, verify=False)
         data = resp.json()
         if not data.get("data"):
+            print(f"⚠️ {date_str} 無資料，跳過（可能為非交易日）")
             continue
 
         trust_dict = {}
         for row in data["data"]:
             stock_id = row[1].strip()
             try:
-                trust = int(row[4].replace(",", "").replace("--", "0"))
+                trust = int(row[5].replace(",", "").replace("--", "0"))
                 trust_dict[stock_id] = trust
             except:
                 continue
