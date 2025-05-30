@@ -5,6 +5,10 @@ from datetime import datetime, timedelta
 import time
 from pathlib import Path
 
+"""
+下載 TWSE 外資與投信每日買賣超資料(全上市公司)
+存入 institution_daily 資料表 
+"""
 # === 設定資料庫 ===
 db_path = Path("data/institution.db")
 db_path.parent.mkdir(exist_ok=True)
@@ -25,7 +29,7 @@ conn.commit()
 
 # === 設定查詢區間 ===
 today = datetime.today()
-dates = [today - timedelta(days=i) for i in range(60)]  # 多取幾天避開假日
+dates = [today - timedelta(days=i) for i in range(99)]  # 多取幾天避開假日(實際需要的交易日是60天)
 dates = sorted(set(d.strftime("%Y-%m-%d") for d in dates))
 
 # 查詢 DB 已有的日期資料

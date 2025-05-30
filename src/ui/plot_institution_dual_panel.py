@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
 
+"""
+圖示 TWSE 外資與投信每日買賣超資料(全上市公司)(60個交易日)
+from institution_daily 資料表 
+"""
+
 stock_id = "3017"
 conn = sqlite3.connect("data/institution.db")
 df = pd.read_sql_query("""
@@ -11,7 +16,7 @@ df = pd.read_sql_query("""
     FROM institution_daily
     WHERE stock_id = ?
     ORDER BY date DESC
-    LIMIT 20
+    LIMIT 60
 """, conn, params=(stock_id,))
 conn.close()
 
@@ -33,6 +38,6 @@ ax2.set_title(f"{stock_id} 投信買賣超")
 ax2.grid(True, axis="y", linestyle="--", alpha=0.5)
 
 # x 軸日期標籤
-plt.xticks(df.index, df["date"].dt.strftime("%Y-%m-%d"), rotation=45)
+plt.xticks(df.index, df["date"].dt.strftime("%m-%d"), rotation=45)
 plt.tight_layout()
 plt.show()
