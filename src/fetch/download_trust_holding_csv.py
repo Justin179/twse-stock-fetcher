@@ -1,15 +1,15 @@
 import httpx
 import os
 
-def download_twse_foreign_csv(date_str):
+def download_twse_trust_csv(date_str):
     """
-    使用新版 TWSE RWD API 成功下載外資持股比率資料 csv
+    使用 TWSE RWD API 下載投信持股比率資料
     存入 output/ 目錄
     """
-    url = f"https://www.twse.com.tw/rwd/zh/fund/MI_QFIIS?date={date_str}&selectType=ALLBUT0999&response=csv"
+    url = f"https://www.twse.com.tw/rwd/zh/fund/MI_SITE?date={date_str}&selectType=ALLBUT0999&response=csv"
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Referer": "https://www.twse.com.tw/rwd/zh/fund/MI_QFIIS"
+        "Referer": "https://www.twse.com.tw/rwd/zh/fund/MI_SITE"
     }
 
     try:
@@ -19,7 +19,7 @@ def download_twse_foreign_csv(date_str):
         os.makedirs("output", exist_ok=True)
 
         if response.status_code == 200 and "證券代號" in response.text:
-            filename = os.path.join("output", f"外資持股統計_{date_str}.csv")
+            filename = os.path.join("output", f"投信持股統計_{date_str}.csv")
             with open(filename, "w", encoding="utf-8-sig") as f:
                 f.write(response.text)
             print(f"✅ 成功下載：{filename}")
@@ -31,4 +31,4 @@ def download_twse_foreign_csv(date_str):
         print(f"❌ 發生錯誤：{e}")
 
 if __name__ == "__main__":
-    download_twse_foreign_csv("20250528")  # ✅ 改成你要的日期
+    download_twse_trust_csv("20250528")  # ✅ 改成你要的日期
