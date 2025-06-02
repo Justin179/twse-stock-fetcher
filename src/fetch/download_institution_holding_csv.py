@@ -3,6 +3,7 @@ import os
 
 def download_twse_foreign_csv(date_str):
     """
+    (暫時用不到)
     使用新版 TWSE RWD API 成功下載外資持股比率資料 csv
     存入 output/ 目錄
     """
@@ -31,4 +32,4 @@ def download_twse_foreign_csv(date_str):
         print(f"❌ 發生錯誤：{e}")
 
 if __name__ == "__main__":
-    download_twse_foreign_csv("20250528")  # ✅ 改成你要的日期
+    download_twse_foreign_csv("20250529")  # ✅ 改成你要的日期

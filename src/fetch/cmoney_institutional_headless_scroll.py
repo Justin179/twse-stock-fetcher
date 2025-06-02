@@ -8,7 +8,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 import time
 import os
-
+"""
+(暫時用不到)
+"""
 # 股票代碼
 stock_id = "3017"
 url = f"https://www.cmoney.tw/finance/{stock_id}/f00036"
