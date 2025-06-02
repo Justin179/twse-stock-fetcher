@@ -75,12 +75,16 @@ for attempt in range(2):
                     year = int(roc_parts[0]) + 1911
                     date = f"{year}-{roc_parts[1].zfill(2)}-{roc_parts[2].zfill(2)}"
 
+                    # 若資料已存在則跳過
+                    cursor.execute("SELECT 1 FROM institutional_netbuy_holding WHERE stock_id=? AND date=?", (stock_id, date))
+                    if cursor.fetchone():
+                        continue
+
                     foreign_netbuy = int(cols[1])
                     trust_netbuy = int(cols[2])
                     foreign_shares = int(cols[5])
                     trust_shares = int(cols[6])
                     foreign_ratio = float(cols[9].replace("%", ""))
-
                     total_shares = foreign_shares / (foreign_ratio / 100)
                     trust_ratio = round((trust_shares / total_shares) * 100, 2)
 
@@ -96,10 +100,10 @@ for attempt in range(2):
 
 driver.quit()
 
-# 寫入 DB
+# 僅針對不存在的資料進行 INSERT
 cursor.executemany(
     """
-    INSERT OR REPLACE INTO institutional_netbuy_holding
+    INSERT INTO institutional_netbuy_holding
     (stock_id, date, foreign_netbuy, trust_netbuy,
      foreign_shares, foreign_ratio, trust_shares, trust_ratio)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -108,4 +112,4 @@ cursor.executemany(
 conn.commit()
 conn.close()
 
-print(f"✅ 已寫入 {len(insert_rows)} 筆資料")
+print(f"✅ 已補入 {len(insert_rows)} 筆新資料")
