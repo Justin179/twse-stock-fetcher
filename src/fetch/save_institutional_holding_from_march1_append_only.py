@@ -8,7 +8,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 import sqlite3
 import time
 import os
-
+"""
+永豐的表格資料，補資料用，最多只會回補到2025年3月1日
+"""
 # 股票代碼與起始日期設定
 stock_id = "3017"
 year_index = 1
