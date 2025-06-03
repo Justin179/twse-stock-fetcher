@@ -30,9 +30,9 @@ data/*.csv
 data/raw/*.csv
 output/
 
-stock_list.txt
+*.txt
 zip_my_project.py
 *.zip
 
-開發草稿.txt
+
 # Temporary files
