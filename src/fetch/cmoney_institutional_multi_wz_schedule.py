@@ -1,3 +1,38 @@
+import sys
+
+import os
+from datetime import datetime
+
+# 建立 logs 資料夾
+os.makedirs("logs", exist_ok=True)
+log_path = os.path.join("logs", f"log_{datetime.today().strftime('%Y%m%d')}.txt")
+
+# 將 print 同時輸出到 console 與 log 檔案
+class Logger(object):
+    def __init__(self):
+        self.terminal = sys.stdout
+        self.log = open(log_path, "a", encoding="utf-8")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+        self.log.flush()
+
+    def flush(self):
+        pass
+
+sys.stdout = Logger()
+print(f"\n🕒 開始執行時間：{datetime.now()}")
+
+from datetime import datetime
+
+# 若以 --schedule 參數啟動，且今天是週六或週日，則退出
+if "--schedule" in sys.argv:
+    today = datetime.today()
+    if today.weekday() >= 5:
+        print("🛑 今天是週末，不執行排程。")
+        exit(0)
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
