@@ -50,7 +50,7 @@ ax2.set_title(f"{stock_id} 投信：買賣超 + 持股比率")
 
 # 明確設定 x 軸刻度與旋轉（作用在最下方子圖）
 ax2.set_xticks(df.index)
-ax2.set_xticklabels(df["date"].dt.strftime("%m-%d"), rotation=45)
+ax2.set_xticklabels(df["date"].dt.strftime("%m-%d"), rotation=45, fontsize=8)
 
 plt.tight_layout()
 plt.show()
