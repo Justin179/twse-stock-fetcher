@@ -27,6 +27,7 @@ Thumbs.db
 
 # Data
 data/*.csv
+data/back_history_csv
 data/raw/*.csv
 output/
 data/*.db
