@@ -29,6 +29,8 @@ Thumbs.db
 data/*.csv
 data/raw/*.csv
 output/
+data/*.db
+
 
 *.txt
 zip_my_project.py
