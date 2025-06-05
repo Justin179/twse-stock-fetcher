@@ -12,7 +12,7 @@ def load_stock_list(file_path="my_stock_holdings.txt"):
         stocks = sorted(line.strip() for line in f if line.strip())
     return stocks
 
-# 畫圖主邏輯（來自 plot_institution_combo_rotated_v3.py）
+# 畫圖主邏輯
 def plot_stock_institution(stock_id):
     conn = sqlite3.connect("data/institution.db")
     df = pd.read_sql_query("""
@@ -27,9 +27,8 @@ def plot_stock_institution(stock_id):
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 9), dpi=100, sharex=True)
 
-    # 外資圖
     colors_f = df["foreign_netbuy"].apply(lambda x: "red" if x > 0 else "green")
     ax1.bar(df.index, df["foreign_netbuy"], color=colors_f)
     ax1b = ax1.twinx()
@@ -39,7 +38,6 @@ def plot_stock_institution(stock_id):
     ax1.set_title(f"{stock_id} 外資：買賣超 + 持股比率")
     ax1.grid(True, axis="y", linestyle="--", alpha=0.5)
 
-    # 投信圖
     colors_t = df["trust_netbuy"].apply(lambda x: "red" if x > 0 else "green")
     ax2.bar(df.index, df["trust_netbuy"], color=colors_t)
     ax2b = ax2.twinx()
@@ -52,13 +50,18 @@ def plot_stock_institution(stock_id):
     ax2.grid(True, axis="y", linestyle="--", alpha=0.5)
 
     plt.tight_layout()
-    st.pyplot(fig)
+    st.pyplot(fig, use_container_width=True)
 
 # Streamlit UI
+st.set_page_config(layout="wide")
 st.title("📈 法人買賣超圖表系統")
 
-stock_list = load_stock_list()
-selected = st.sidebar.selectbox("請選擇股票代碼", stock_list)
+col1, col2 = st.columns([1, 6])
 
-if selected:
-    plot_stock_institution(selected)
+with col1:
+    stock_list = load_stock_list()
+    selected = st.selectbox("股票代碼", stock_list)
+
+with col2:
+    if selected:
+        plot_stock_institution(selected)
