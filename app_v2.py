@@ -54,7 +54,14 @@ def plot_stock_institution(stock_id):
 
 # Streamlit UI
 st.set_page_config(layout="wide")
-st.title("📈 法人買賣超圖表系統")
+st.title("📈 法人買賣超與持股比率")
+with st.expander("📘 說明：這是什麼？"):
+    st.markdown("""
+    - 目前支援的股票代碼來自 `my_stock_holdings.txt`，做為個股「投後管」的股票清單
+    - 每天晚上 10 點自動更新 資料庫 `institution.db`(一筆寫入，四筆更新，資料來源: cmoney)
+    - 排程程式: cmoney_institutional_multi_wz_schedule.py                    
+    - 系統會顯示所選股票近 60 個交易日的 外資與投信 買賣超與持股比率圖表
+    """)
 
 col1, col2 = st.columns([1, 6])
 
