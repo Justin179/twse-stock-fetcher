@@ -32,6 +32,8 @@ data/raw/*.csv
 output/
 data/*.db
 
+# Backup
+backup/
 
 *.txt
 zip_my_project.py
