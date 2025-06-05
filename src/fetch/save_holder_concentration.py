@@ -87,12 +87,18 @@ if __name__ == "__main__":
                     (stock_id, date, avg_shares, ratio_1000, close_price)
                     VALUES (?, ?, ?, ?, ?)
                 """, row)
-                success += 1
+                if cursor.rowcount > 0:
+                    success += 1
             except Exception as e:
                 print(f"\u274c insert error: {e}")
 
         conn.commit()
         print(f"\u2705 新增 {success} 筆資料")
+
+        # ✅ 若 0050 無新增筆數，直接中斷程式
+        if stock_id == "0050" and success == 0:
+            print("⛔️ 0050 無新增資料(視為還沒有新的資料)，已中止後續處理")
+            break
 
     conn.close()
     print("\n\U0001f389 全部完成")
