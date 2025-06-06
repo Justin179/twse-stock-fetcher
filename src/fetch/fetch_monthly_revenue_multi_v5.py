@@ -1,6 +1,8 @@
 import sqlite3
 import time
 import os
+import sys
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -24,6 +26,11 @@ def fetch_monthly_revenue(stock_id):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(3)
 
+            if "查無資料" in driver.page_source or "無營收資料" in driver.page_source:
+                print(f"⚠️  {stock_id} 無營收資料，直接跳過")
+                driver.quit()
+                return []
+
             wait = WebDriverWait(driver, 10)
             table = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table.tb.tb2")))
             rows = table.find_elements(By.TAG_NAME, "tr")
@@ -44,8 +51,6 @@ def fetch_monthly_revenue(stock_id):
                             continue
 
             driver.quit()
-            if not data:
-                print(f"⚠️  {stock_id} 查無資料，跳過")
             return data
         except (TimeoutException, WebDriverException) as e:
             print(f"🔁 {stock_id} 嘗試第 {attempt+1} 次失敗：{e}")
@@ -73,16 +78,28 @@ def save_to_db(data, db_path="data/institution.db"):
             PRIMARY KEY (stock_id, year_month)
         )
     """)
+    success_count = 0
     for row in data:
         cursor.execute("""
             INSERT OR IGNORE INTO monthly_revenue
             (stock_id, year_month, revenue, yoy_rate)
             VALUES (?, ?, ?, ?)
         """, row)
+        if cursor.rowcount > 0:
+            success_count += 1
+
     conn.commit()
     conn.close()
+    return success_count
 
 if __name__ == "__main__":
+    # 若加上 --schedule，才限制 6~14 號執行
+    if "--schedule" in sys.argv:
+        today = datetime.today()
+        if today.day < 6 or today.day > 14:
+            print("📅 今日非月營收公告期間（6~14 號），排程模式下不執行。")
+            exit(0)
+
     with open("my_stock_holdings.txt", "r", encoding="utf-8") as f:
         stock_list = [line.strip() for line in f if line.strip()]
 
@@ -90,8 +107,9 @@ if __name__ == "__main__":
         print(f"📥 抓取 {stock_id} 月營收資料...")
         records = fetch_monthly_revenue(stock_id)
         if records:
-            print(f"✅ {stock_id} 共取得 {len(records)} 筆")
-            save_to_db(records)
+            print(f"📊 解析到 {len(records)} 筆資料")
+            success = save_to_db(records)
+            print(f"✅ 寫入 {success} 筆（未重複）")
         else:
             print(f"⏭️  {stock_id} 無資料或失敗")
     print("🎉 所有股票處理完畢")
