@@ -6,11 +6,22 @@ import matplotlib.pyplot as plt
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
 
-# 讀取持股清單
-def load_stock_list(file_path="my_stock_holdings.txt"):
+# 讀取持股清單與公司名稱
+def load_stock_list_with_names(file_path="my_stock_holdings.txt", db_path="data/institution.db"):
     with open(file_path, "r", encoding="utf-8") as f:
         stocks = sorted(line.strip() for line in f if line.strip())
-    return stocks
+
+    # 從 DB 查公司名稱
+    conn = sqlite3.connect(db_path)
+    df = pd.read_sql_query("SELECT stock_id, name FROM stock_meta", conn)
+    conn.close()
+    id_name_map = dict(zip(df["stock_id"].astype(str), df["name"]))
+
+    display_options = [
+        f"{stock_id} {id_name_map[stock_id]}" if stock_id in id_name_map else stock_id
+        for stock_id in stocks
+    ]
+    return stocks, display_options
 
 # 畫外資/投信圖表
 def plot_stock_institution(stock_id):
@@ -153,8 +164,9 @@ with st.expander("📘 說明：這是什麼？"):
 col1, col2 = st.columns([1, 6])
 
 with col1:
-    stock_list = load_stock_list()
-    selected = st.selectbox("股票代碼", stock_list)
+    stock_ids, stock_display = load_stock_list_with_names()
+    selected_display = st.selectbox("股票代碼", stock_display)
+    selected = selected_display.split()[0]  # 提取純代碼
 
 with col2:
     if selected:
