@@ -134,6 +134,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="%{x}<br>%{y:.1f}%"
     ))
     fig1.update_layout(
+        xaxis=dict(tickfont=dict(size=14), tickangle=-45),
         showlegend=False,
         hoverlabel=dict(font=dict(size=16)),title=f"{full_title} 營收年增率", yaxis_title="營收年增率 (%)", height=400)
 
@@ -149,6 +150,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="%{x}<br>%{y:.0f}"
     ))
     fig2.update_layout(
+        xaxis=dict(tickfont=dict(size=14), tickangle=-45),
         showlegend=False,
         hoverlabel=dict(font=dict(size=16)),title=f"{full_title} 營收", yaxis_title="營收 (百萬)", height=400)
 
