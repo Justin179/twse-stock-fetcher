@@ -8,7 +8,10 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 
-
+"""
+排程2: 更新每週 籌碼集中度 與 千張大戶持股比率
+INSERT OR IGNORE INTO holder_concentration
+"""
 def fetch_holder_concentration_selenium(stock_id: str):
     url = f"https://norway.twsthr.info/StockHolders.aspx?stock={stock_id}"
 

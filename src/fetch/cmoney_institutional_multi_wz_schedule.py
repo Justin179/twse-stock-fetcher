@@ -2,7 +2,11 @@ import sys
 
 import os
 from datetime import datetime
-
+"""
+排程1: 更新每日外資與投信買賣超與持股比率資料
+ON CONFLICT(stock_id, date) DO UPDATE SET
+因為cmoney 一次就只有5筆資料，所以每天應會新增1筆，更新4筆
+"""
 # 建立 logs 資料夾
 os.makedirs("logs", exist_ok=True)
 log_path = os.path.join("logs", f"log_{datetime.today().strftime('%Y%m%d')}.txt")

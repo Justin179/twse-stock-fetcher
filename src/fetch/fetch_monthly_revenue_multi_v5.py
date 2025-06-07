@@ -10,7 +10,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
-
+"""
+排程3: 更新 每個月的6號-14號，公司會公佈上個月的營收
+INSERT OR IGNORE INTO monthly_revenue
+"""
 MAX_RETRIES = 3
 
 def fetch_monthly_revenue(stock_id):
