@@ -5,6 +5,14 @@ import plotly.graph_objects as go
 
 stock_id = "3017"
 conn = sqlite3.connect("data/institution.db")
+
+# 查公司名稱
+cursor = conn.cursor()
+cursor.execute("SELECT name FROM stock_meta WHERE stock_id = ?", (stock_id,))
+row = cursor.fetchone()
+stock_name = row[0] if row else stock_id
+
+# 查主要數據
 df = pd.read_sql_query("""
     SELECT date, foreign_netbuy, trust_netbuy, foreign_ratio, trust_ratio
     FROM institutional_netbuy_holding
@@ -38,10 +46,11 @@ fig1.add_trace(go.Scatter(
     hovertemplate="持股比率：%{y:.2f}%<extra></extra>"
 ))
 fig1.update_layout(
-    title=f"{stock_id} 外資：買賣超 + 持股比率",
+    title=f"{stock_name} ({stock_id}) 外資：買賣超 + 持股比率",
     xaxis=dict(type="category", title="日期", tickfont=dict(size=12), tickangle=-45),
     yaxis=dict(title="買賣超(張)"),
-    yaxis2=dict(title="外資持股比率(%)", overlaying="y", side="right"),
+    yaxis2=dict(title=dict(text="外資持股比率(%)", font=dict(color="blue")), overlaying="y", side="right",
+                tickfont=dict(color="blue")),
     showlegend=False,
     height=400,
     hovermode="x unified",
@@ -68,10 +77,11 @@ fig2.add_trace(go.Scatter(
     hovertemplate="持股比率：%{y:.2f}%<extra></extra>"
 ))
 fig2.update_layout(
-    title=f"{stock_id} 投信：買賣超 + 持股比率",
+    title=f"{stock_name} ({stock_id}) 投信：買賣超 + 持股比率",
     xaxis=dict(type="category", title="日期", tickfont=dict(size=12), tickangle=-45),
     yaxis=dict(title="買賣超(張)"),
-    yaxis2=dict(title="投信持股比率(%)", overlaying="y", side="right"),
+    yaxis2=dict(title=dict(text="投信持股比率(%)", font=dict(color="purple")), overlaying="y", side="right",
+                tickfont=dict(color="purple")),
     showlegend=False,
     height=400,
     hovermode="x unified",
