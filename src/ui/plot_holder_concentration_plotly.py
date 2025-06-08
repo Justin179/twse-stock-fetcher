@@ -6,9 +6,17 @@ import plotly.graph_objects as go
 # 參數
 stock_id = "3017"
 db_path = "data/institution.db"
+conn = sqlite3.connect(db_path)
+
+
+# 查詢名稱
+cursor = conn.cursor()
+cursor.execute("SELECT name FROM stock_meta WHERE stock_id = ?", (stock_id,))
+row = cursor.fetchone()
+stock_name = row[0] if row else stock_id
 
 # 讀取資料
-conn = sqlite3.connect(db_path)
+
 df = pd.read_sql_query(f"""
     SELECT * FROM holder_concentration
     WHERE stock_id = '{stock_id}'
@@ -35,7 +43,7 @@ fig1.add_trace(go.Scatter(
     hovertemplate="集中度：%{y:.2f} 張<extra></extra>"
 ))
 fig1.update_layout(
-    title=f"{stock_id} 收盤價 vs 籌碼集中度",
+    title=f"{stock_name} ({stock_id}) 收盤價 vs 籌碼集中度",
     xaxis=dict(type="category", tickangle=-45, tickfont=dict(size=12)),
     yaxis=dict(title="收盤價", side="left"),
     yaxis2=dict(title="籌碼集中度 (張)", overlaying="y", side="right"),
@@ -58,7 +66,7 @@ fig2.add_trace(go.Scatter(
     hovertemplate="千張大戶佔比：%{y:.2f}%<extra></extra>"
 ))
 fig2.update_layout(
-    title=f"{stock_id} 收盤價 vs 千張大戶持股比率",
+    title=f"{stock_name} ({stock_id}) 收盤價 vs 千張大戶持股比率",
     xaxis=dict(type="category", tickangle=-45, tickfont=dict(size=12)),
     yaxis=dict(title="收盤價", side="left"),
     yaxis2=dict(title="千張大戶佔比 (%)", overlaying="y", side="right"),
