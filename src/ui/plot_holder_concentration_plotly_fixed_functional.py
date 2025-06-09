@@ -3,7 +3,7 @@ import sqlite3
 import pandas as pd
 import plotly.graph_objects as go
 
-def plot_holder_concentration_plotly(stock_id="3017", db_path="data/institution.db"):
+def plot_holder_concentration_plotly(stock_id, db_path):
     conn = sqlite3.connect(db_path)
 
     # 查詢名稱
@@ -90,6 +90,6 @@ def plot_holder_concentration_plotly(stock_id="3017", db_path="data/institution.
     return fig1, fig2
 
 if __name__ == "__main__":
-    fig1, fig2 = plot_holder_concentration_plotly()
+    fig1, fig2 = plot_holder_concentration_plotly("3017", "data/institution.db")
     fig1.show()
     fig2.show()

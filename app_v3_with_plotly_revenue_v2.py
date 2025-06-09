@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from src.ui.plot_institution_combo_plotly_fixed_functional import plot_institution_combo_plotly
+from src.ui.plot_holder_concentration_plotly_fixed_functional import plot_holder_concentration_plotly
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -25,38 +26,9 @@ def load_stock_list_with_names(file_path="my_stock_holdings.txt", db_path="data/
     ]
     return stocks, display_options
 
-# 籌碼集中圖
-def plot_holder_concentration(stock_id):
-    conn = sqlite3.connect("data/institution.db")
-    df = pd.read_sql_query("""
-        SELECT * FROM holder_concentration
-        WHERE stock_id = ?
-        ORDER BY date DESC
-        LIMIT 26
-    """, conn, params=(stock_id,))
-    conn.close()
 
-    df = df.sort_values(by="date")
-    df["date"] = pd.to_datetime(df["date"], format="%Y%m%d")
-    x_labels = df["date"].apply(lambda d: f"{d.month}-{d.day}")
-    x = range(len(df))
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 9), dpi=100, sharex=True)
-
-    ax1.set_title(f"{stock_id} 收盤價 vs 籌碼集中度", fontsize=14)
-    ax1.plot(x, df["close_price"], color="red", marker='o')
-    ax1b = ax1.twinx()
-    ax1b.plot(x, df["avg_shares"], color="green", marker='o')
-
-    ax2.set_title(f"{stock_id} 收盤價 vs 千張大戶持股比率", fontsize=14)
-    ax2.plot(x, df["close_price"], color="red", marker='o')
-    ax2b = ax2.twinx()
-    ax2b.plot(x, df["ratio_1000"], color='blue', marker='o')
-
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(x_labels, rotation=45, fontsize=12)
-    plt.tight_layout()
-    st.pyplot(fig, use_container_width=True)
+# 法人買賣超圖表
+# 籌碼集中度圖表
 
 # Plotly 營收 + 年增率
 def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
@@ -145,7 +117,9 @@ with col2:
         st.plotly_chart(fig2, use_container_width=True)
 
         st.subheader("📈 籌碼集中度 + 千張大戶持股比率 (週)")
-        plot_holder_concentration(selected)
+        fig3, fig4 = plot_holder_concentration_plotly(selected, "data/institution.db")
+        st.plotly_chart(fig3, use_container_width=True)
+        st.plotly_chart(fig4, use_container_width=True)
 
         st.subheader("📈 月營收 + 月營收年增率")
         plot_monthly_revenue_plotly(selected)
