@@ -53,17 +53,17 @@ with col1:
 with col2:
     if selected:
         st.subheader("📊 法人買賣超 + 持股比率 (日)")
-        fig1, fig2 = plot_institution_combo_plotly(selected, "data/institution.db")
+        fig1, fig2 = plot_institution_combo_plotly(selected)
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
 
         st.subheader("📈 籌碼集中度 + 千張大戶持股比率 (週)")
-        fig3, fig4 = plot_holder_concentration_plotly(selected, "data/institution.db")
+        fig3, fig4 = plot_holder_concentration_plotly(selected)
         st.plotly_chart(fig3, use_container_width=True)
         st.plotly_chart(fig4, use_container_width=True)
 
         st.subheader("📈 月營收 + 月營收年增率")
-        fig5, fig6 = plot_monthly_revenue_plotly(selected, "data/institution.db")
+        fig5, fig6 = plot_monthly_revenue_plotly(selected)
         st.plotly_chart(fig5, use_container_width=True)
         st.plotly_chart(fig6, use_container_width=True)
 

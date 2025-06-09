@@ -3,7 +3,7 @@ import sqlite3
 import pandas as pd
 import plotly.graph_objects as go
 
-def plot_institution_combo_plotly(stock_id, db_path):
+def plot_institution_combo_plotly(stock_id, db_path="data/institution.db"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM stock_meta WHERE stock_id = ?", (stock_id,))
