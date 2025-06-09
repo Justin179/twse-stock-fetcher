@@ -13,6 +13,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 """
 排程3: 更新 每個月的6號-14號，公司會公佈上個月的營收
 INSERT OR IGNORE INTO monthly_revenue
+另一個可以抓月營收的地方: https://www.wantgoo.com/stock/2330/financial-statements/monthly-revenue
 """
 MAX_RETRIES = 3
 
