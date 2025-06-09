@@ -57,12 +57,12 @@ with col2:
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
 
-        st.subheader("📈 籌碼集中度 + 千張大戶持股比率 (週)")
+        st.subheader("📈 籌碼集中度 & 千張大戶持股比率 (週)")
         fig3, fig4 = plot_holder_concentration_plotly(selected)
         st.plotly_chart(fig3, use_container_width=True)
         st.plotly_chart(fig4, use_container_width=True)
 
-        st.subheader("📈 月營收 + 月營收年增率")
+        st.subheader("📈 月營收年增率 & 月營收")
         fig5, fig6 = plot_monthly_revenue_plotly(selected)
         st.plotly_chart(fig5, use_container_width=True)
         st.plotly_chart(fig6, use_container_width=True)
