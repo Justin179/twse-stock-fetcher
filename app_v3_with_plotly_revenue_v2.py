@@ -4,8 +4,8 @@ import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from src.ui.plot_institution_combo_plotly_fixed_functional import plot_institution_combo_plotly
-from src.ui.plot_holder_concentration_plotly_fixed_functional import plot_holder_concentration_plotly
+from src.ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
+from src.ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from src.ui.plot_monthly_revenue_plotly_final import plot_monthly_revenue_plotly
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
