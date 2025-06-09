@@ -1,11 +1,11 @@
-
 import sqlite3
 import pandas as pd
 import httpx
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from dateutil.relativedelta import relativedelta
 from tqdm import tqdm
+import sys
 
 DB_PATH = "data/institution.db"
 
@@ -83,8 +83,6 @@ def fetch_twse_history_to_db(stock_code: str):
     last_date = datetime.strptime(row[0], "%Y-%m-%d") if row else today - relativedelta(months=12)
     conn.close()
 
-    all_data = []
-
     for i in range(12):
         date = today - relativedelta(months=i)
         if date < last_date.replace(day=1):
@@ -103,13 +101,15 @@ def read_stock_list(file_path="stock_list.txt") -> list:
         return [line.strip() for line in f if line.strip()]
 
 if __name__ == "__main__":
+    # 支援輸入自訂股票清單檔案，例如 my_stock_holdings.txt
+    input_file = sys.argv[1] if len(sys.argv) > 1 else "stock_list.txt"
     init_db()
-    stock_list = read_stock_list("stock_list.txt")
+    stock_list = read_stock_list(input_file)
     skip_count = 0
     success_count = 0
     failed_summary = []
 
-    print(f"📦 開始抓取 TWSE 歷史資料（共 {len(stock_list)} 檔）...")
+    print(f"📦 開始抓取 TWSE 歷史資料（共 {len(stock_list)} 檔，來源：{input_file}）...")
 
     for stock_code in tqdm(stock_list, desc="處理中", ncols=80):
         result = fetch_twse_history_to_db(stock_code)
