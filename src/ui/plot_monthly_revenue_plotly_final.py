@@ -39,7 +39,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
     fig1.update_layout(
         xaxis=dict(tickfont=dict(size=14), tickangle=-45),
         showlegend=False,
-        hoverlabel=dict(font=dict(size=16)),title=f"{full_title} 營收年增率", yaxis_title="營收年增率 (%)", height=400)
+        hoverlabel=dict(font=dict(size=16)),title=f"{full_title} 月營收 YoY", yaxis_title="月營收 YoY (%)", height=400)
 
     fig2 = go.Figure()
     fig2.add_trace(go.Bar(
@@ -55,7 +55,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
     fig2.update_layout(
         xaxis=dict(tickfont=dict(size=14), tickangle=-45),
         showlegend=False,
-        hoverlabel=dict(font=dict(size=16)),title=f"{full_title} 營收", yaxis_title="營收 (百萬)", height=400)
+        hoverlabel=dict(font=dict(size=16)),title=f"{full_title} 月營收", yaxis_title="月營收 (百萬)", height=400)
 
     return fig1, fig2
 
