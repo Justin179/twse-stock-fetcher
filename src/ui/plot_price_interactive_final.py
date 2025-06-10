@@ -65,15 +65,31 @@ def plot_price_interactive(stock_id, db_path="data/institution.db"):
 
     fig.update_layout(
         title=f"{stock_name} ({stock_id}) 過去60個交易日收盤價",
-        xaxis=dict(title="日期", type="category", tickangle=-45),
-        yaxis=dict(title=dict(text="收盤價", font=dict(color="orange")), tickfont=dict(color="orange")),
-        yaxis2=dict(title=dict(text="收盤價", font=dict(color="orange")), overlaying="y", side="right", tickfont=dict(color="orange")),
+        xaxis=dict(
+            title="日期",
+            type="category",
+            tickangle=-45,
+            domain=[0.0, 1.0],
+            categoryorder="array",
+            categoryarray=df["label"].tolist()
+        ),
+        yaxis=dict(
+            title=dict(text="收盤價", font=dict(color="orange")),
+            tickfont=dict(color="orange")
+        ),
+        yaxis2=dict(
+            title=dict(text="收盤價", font=dict(color="orange")),
+            overlaying="y",
+            side="right",
+            tickfont=dict(color="orange")
+        ),
+        showlegend=False,  # 👈 關閉圖例，避免右側空間壓縮
         height=400,
         hovermode="x unified",
         margin=dict(t=40, b=40)
     )
 
-    fig.show()
+    return fig  # ✅ 替代 fig.show()
 
 if __name__ == "__main__":
-    plot_price_interactive("2330", "data/institution.db")
+    plot_price_interactive("2330", "data/institution.db").show()  # Example usage

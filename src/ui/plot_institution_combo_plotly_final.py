@@ -21,7 +21,7 @@ def plot_institution_combo_plotly(stock_id, db_path="data/institution.db"):
 
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
-    df["label"] = df["date"].dt.strftime("%m/%d")
+    df["label"] = df["date"].dt.strftime("%#m/%#d")
 
     fig1 = go.Figure()
     fig1.add_trace(go.Bar(

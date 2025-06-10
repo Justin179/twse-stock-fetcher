@@ -4,6 +4,7 @@ import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from src.ui.plot_price_interactive_final import plot_price_interactive
 from src.ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
 from src.ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from src.ui.plot_monthly_revenue_plotly_final import plot_monthly_revenue_plotly
@@ -39,6 +40,7 @@ with st.expander("📘 說明：這是什麼？"):
     - 股票代碼清單來自 `my_stock_holdings.txt`
     - 自動更新資料至 `institution.db`
     - 圖表類型包含：
+        - 收盤價互動圖（近60交易日）        
         - 外資 / 投信 買賣超與持股比率（互動式）
         - 籌碼集中度與大戶比率
         - 月營收與年增率（互動圖）
@@ -52,6 +54,10 @@ with col1:
 
 with col2:
     if selected:
+        st.subheader("📉 收盤價 (日)")
+        fig_price = plot_price_interactive(selected)
+        st.plotly_chart(fig_price, use_container_width=True)
+
         st.subheader("📊 法人買賣超 + 持股比率 (日)")
         fig1, fig2 = plot_institution_combo_plotly(selected)
         st.plotly_chart(fig1, use_container_width=True)
