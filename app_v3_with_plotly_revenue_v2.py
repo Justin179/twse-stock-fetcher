@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from src.ui.plot_price_interactive_final import plot_price_interactive
 from src.ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
 from src.ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
-from src.ui.plot_monthly_revenue_with_close_cleaned_final_nameless import plot_monthly_revenue_plotly
+from src.ui.plot_monthly_revenue_with_close_final import plot_monthly_revenue_plotly
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
