@@ -49,7 +49,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         
         line=dict(color="orange"),
         marker=dict(color="orange"),
-        hovertemplate="%{x}<br>收盤: %{y:.1f}"
+        hovertemplate="%{x}<br>月收盤: %{y:.1f}"
     ))
 
     fig1.update_layout(
@@ -88,7 +88,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         
         line=dict(color="orange"),
         marker=dict(color="orange"),
-        hovertemplate="%{x}<br>收盤: %{y:.1f}"
+        hovertemplate="%{x}<br>月收盤: %{y:.1f}"
     ))
 
     fig2.update_layout(

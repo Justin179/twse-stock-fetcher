@@ -30,7 +30,7 @@ def plot_holder_concentration_plotly(stock_id, db_path="data/institution.db"):
     fig1.add_trace(go.Scatter(
         x=df["label"], y=df["close_price"], mode="lines+markers",
         name="收盤價", marker=dict(color="orange"), yaxis="y1",
-        hovertemplate="週收盤價：%{y:.1f}<extra></extra>"
+        hovertemplate="週收盤：%{y:.1f}<extra></extra>"
     ))
     fig1.add_trace(go.Scatter(
         x=df["label"], y=df["avg_shares"], mode="lines+markers",
@@ -61,7 +61,7 @@ def plot_holder_concentration_plotly(stock_id, db_path="data/institution.db"):
     fig2.add_trace(go.Scatter(
         x=df["label"], y=df["close_price"], mode="lines+markers",
         name="收盤價", marker=dict(color="orange"), yaxis="y1",
-        hovertemplate="週收盤價：%{y:.1f}<extra></extra>"
+        hovertemplate="週收盤：%{y:.1f}<extra></extra>"
     ))
     fig2.add_trace(go.Scatter(
         x=df["label"], y=df["ratio_1000"], mode="lines+markers",
