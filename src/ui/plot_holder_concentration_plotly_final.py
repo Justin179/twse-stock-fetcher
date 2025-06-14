@@ -29,8 +29,8 @@ def plot_holder_concentration_plotly(stock_id, db_path="data/institution.db"):
     fig1 = go.Figure()
     fig1.add_trace(go.Scatter(
         x=df["label"], y=df["close_price"], mode="lines+markers",
-        name="收盤價", marker=dict(color="red"), yaxis="y1",
-        hovertemplate="收盤價：%{y:.1f}<extra></extra>"
+        name="收盤價", marker=dict(color="orange"), yaxis="y1",
+        hovertemplate="週收盤價：%{y:.1f}<extra></extra>"
     ))
     fig1.add_trace(go.Scatter(
         x=df["label"], y=df["avg_shares"], mode="lines+markers",
@@ -38,12 +38,12 @@ def plot_holder_concentration_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="集中度：%{y:.2f} 張<extra></extra>"
     ))
     fig1.update_layout(
-        title=f"{stock_name} ({stock_id}) 收盤價 vs 籌碼集中度",
+        title=f"{stock_name} ({stock_id}) 週收盤價 vs 籌碼集中度",
         xaxis=dict(type="category", tickangle=-45, tickfont=dict(size=12)),
         yaxis=dict(
-            title=dict(text='收盤價', font=dict(color="red")),
+            title=dict(text='週收盤價', font=dict(color="orange")),
             side="left",
-            tickfont=dict(color="red")
+            tickfont=dict(color="orange")
         ),
         yaxis2=dict(
             title=dict(text='籌碼集中度 (張)', font=dict(color="green")),
@@ -60,8 +60,8 @@ def plot_holder_concentration_plotly(stock_id, db_path="data/institution.db"):
     fig2 = go.Figure()
     fig2.add_trace(go.Scatter(
         x=df["label"], y=df["close_price"], mode="lines+markers",
-        name="收盤價", marker=dict(color="red"), yaxis="y1",
-        hovertemplate="收盤價：%{y:.1f}<extra></extra>"
+        name="收盤價", marker=dict(color="orange"), yaxis="y1",
+        hovertemplate="週收盤價：%{y:.1f}<extra></extra>"
     ))
     fig2.add_trace(go.Scatter(
         x=df["label"], y=df["ratio_1000"], mode="lines+markers",
@@ -69,12 +69,12 @@ def plot_holder_concentration_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="千張大戶佔比：%{y:.2f}%<extra></extra>"
     ))
     fig2.update_layout(
-        title=f"{stock_name} ({stock_id}) 收盤價 vs 千張大戶持股比率",
+        title=f"{stock_name} ({stock_id}) 週收盤價 vs 千張大戶持股比率",
         xaxis=dict(type="category", tickangle=-45, tickfont=dict(size=12)),
         yaxis=dict(
-            title=dict(text='收盤價', font=dict(color="red")),
+            title=dict(text='週收盤價', font=dict(color="orange")),
             side="left",
-            tickfont=dict(color="red")
+            tickfont=dict(color="orange")
         ),
         yaxis2=dict(
             title=dict(text='千張大戶佔比 (%)', font=dict(color="blue")),

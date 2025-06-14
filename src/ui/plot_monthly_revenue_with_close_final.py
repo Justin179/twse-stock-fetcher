@@ -26,7 +26,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
 
     colors = ["red" if val >= 0 else "green" for val in df["yoy_rate"]]
 
-    # === 第一張圖：YoY + 月末收盤價 ===
+    # === 第一張圖：YoY + 月收盤價 ===
     fig1 = go.Figure()
 
     # 主 Y 軸：YoY
@@ -40,15 +40,15 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="%{x}<br>%{y:.1f}%"
     ))
 
-    # 副 Y 軸：月末收盤價（藍色折線）
+    # 副 Y 軸：月收盤價（藍色折線）
     fig1.add_trace(go.Scatter(name="", showlegend=False, hoverinfo="skip",
         x=df["label"],
         y=df["monthly_last_close"],
         mode="lines+markers",
         yaxis="y2",
         
-        line=dict(color="blue"),
-        marker=dict(color="blue"),
+        line=dict(color="orange"),
+        marker=dict(color="orange"),
         hovertemplate="%{x}<br>收盤: %{y:.1f}"
     ))
 
@@ -57,8 +57,8 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         xaxis=dict(tickfont=dict(size=14), tickangle=-45),
         yaxis=dict(title="月營收 YoY (%)"),
         yaxis2=dict(
-            title=dict(text="月末收盤價", font=dict(color="blue")),
-            tickfont=dict(color="blue"),
+            title=dict(text="月收盤價", font=dict(color="orange")),
+            tickfont=dict(color="orange"),
             overlaying="y",
             side="right",
             showgrid=False
@@ -67,7 +67,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         height=400
     )
 
-    # === 第二張圖：營收 + 月末收盤價 ===
+    # === 第二張圖：營收 + 月收盤價 ===
     fig2 = go.Figure()
 
     fig2.add_trace(go.Bar(
@@ -86,8 +86,8 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         mode="lines+markers",
         yaxis="y2",
         
-        line=dict(color="blue"),
-        marker=dict(color="blue"),
+        line=dict(color="orange"),
+        marker=dict(color="orange"),
         hovertemplate="%{x}<br>收盤: %{y:.1f}"
     ))
 
@@ -96,8 +96,8 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         xaxis=dict(tickfont=dict(size=14), tickangle=-45),
         yaxis=dict(title="月營收 (百萬)"),
         yaxis2=dict(
-            title=dict(text="月末收盤價", font=dict(color="blue")),
-            tickfont=dict(color="blue"),
+            title=dict(text="月收盤價", font=dict(color="orange")),
+            tickfont=dict(color="orange"),
             overlaying="y",
             side="right",
             showgrid=False
