@@ -41,12 +41,12 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
     ))
 
     # 副 Y 軸：月末收盤價（藍色折線）
-    fig1.add_trace(go.Scatter(
+    fig1.add_trace(go.Scatter(name="", showlegend=False, hoverinfo="skip",
         x=df["label"],
         y=df["monthly_last_close"],
         mode="lines+markers",
         yaxis="y2",
-        name="月末收盤價",
+        
         line=dict(color="blue"),
         marker=dict(color="blue"),
         hovertemplate="%{x}<br>收盤: %{y:.1f}"
@@ -80,12 +80,12 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="%{x}<br>%{y:.0f}"
     ))
 
-    fig2.add_trace(go.Scatter(
+    fig2.add_trace(go.Scatter(name="", showlegend=False, hoverinfo="skip",
         x=df["label"],
         y=df["monthly_last_close"],
         mode="lines+markers",
         yaxis="y2",
-        name="月末收盤價",
+        
         line=dict(color="blue"),
         marker=dict(color="blue"),
         hovertemplate="%{x}<br>收盤: %{y:.1f}"
