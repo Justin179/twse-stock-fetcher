@@ -57,7 +57,7 @@ def save_to_db(stock_id: str, df: pd.DataFrame):
 
 def fetch_with_finmind(stock_id: str):
     today = datetime.today()
-    start_date = (today - relativedelta(months=12)).strftime('%Y-%m-%d')
+    start_date = (today - relativedelta(months=36)).strftime('%Y-%m-%d')
     end_date = today.strftime('%Y-%m-%d')
 
     dl = DataLoader()
@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     skip, done, msg = 0, 0, []
 
-    print(f"📦 使用 FinMind 抓取近 12 個月歷史資料（共 {len(stock_list)} 檔）...")
+    print(f"📦 使用 FinMind 抓取近 36 個月歷史資料（共 {len(stock_list)} 檔）...")
 
     for stock_id in tqdm(stock_list, desc="處理中", ncols=80):
         result = fetch_with_finmind(stock_id)
