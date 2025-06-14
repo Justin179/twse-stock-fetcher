@@ -2,6 +2,12 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 
+"""
+補上 monthly_revenue 資料庫中缺少的 monthly_avg_close 和 monthly_last_close 欄位
+這些欄位是從 twse_prices 資料庫中計算得來的。
+finmind_db_fetcher.py 可以補上 twse_prices 資料庫的資料。
+"""
+
 DB_PATH = "data/institution.db"
 
 def get_missing_rows():
