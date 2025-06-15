@@ -28,9 +28,11 @@ def load_stock_list_with_names(file_path="my_stock_holdings.txt", db_path="data/
     ]
     return stocks, display_options
 
-# 法人買賣超圖表
-# 籌碼集中度圖表
-# 月營收&年增率圖表
+# 每日收盤價互動圖
+# 外資、投信買賣超與持股比率互動圖
+# 籌碼集中度與千張大戶持股比率互動圖
+# 月營收與年增率互動圖
+
 
 # --- Streamlit ---
 st.set_page_config(layout="wide")
@@ -41,9 +43,9 @@ with st.expander("📘 說明：這是什麼？"):
     - 自動更新資料至 `institution.db`
     - 圖表類型包含：
         - 收盤價互動圖（近60交易日）        
-        - 外資 / 投信 買賣超與持股比率（互動式）
+        - 外資 / 投信 買賣超與持股比率
         - 籌碼集中度與大戶比率
-        - 月營收與年增率（互動圖）
+        - 月營收與年增率
     """)
 
 col1, col2 = st.columns([1, 6])
