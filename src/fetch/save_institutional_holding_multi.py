@@ -9,8 +9,8 @@ import time
 import os
 from datetime import datetime, timedelta
 
-# 載入股票代碼清單
-with open("my_stock_holdings.txt", "r", encoding="utf-8") as f:
+# 載入股票代碼清單 my_stock_holdings.txt
+with open("temp_list.txt", "r", encoding="utf-8") as f:
     stock_list = [line.strip() for line in f if line.strip()]
 
 # 設定 DB
