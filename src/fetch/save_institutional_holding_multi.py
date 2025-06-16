@@ -9,6 +9,16 @@ import time
 import os
 from datetime import datetime, timedelta
 
+"""
+讀取股票清單 →
+逐一打開該股的網頁 →
+設定查詢起始日 →
+取得法人表格 →
+抓資料逐筆解析 & 檢查是否已寫入 →
+若尚未寫入 → 寫入 DB →
+完成後繼續處理下一檔 →
+全部完成 → 關閉 DB
+"""
 # 載入股票代碼清單 my_stock_holdings.txt
 with open("temp_list.txt", "r", encoding="utf-8") as f:
     stock_list = [line.strip() for line in f if line.strip()]
