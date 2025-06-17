@@ -1,7 +1,10 @@
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 import sqlite3
 import time
 import os
-import sys
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service

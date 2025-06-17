@@ -1,4 +1,6 @@
 import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 import os
 from datetime import datetime
@@ -46,7 +48,6 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
 import sqlite3
 import time
-import os
 
 # 載入股票清單，可從命令列參數傳入 txt 檔路徑，否則預設使用 my_stock_holdings.txt
 stock_file = "my_stock_holdings.txt"

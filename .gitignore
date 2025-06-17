@@ -33,6 +33,9 @@ output/
 data/*.db
 data/*.sql
 
+logs/
+src/fetch/data/institution.db
+
 # Backup
 backup/
 

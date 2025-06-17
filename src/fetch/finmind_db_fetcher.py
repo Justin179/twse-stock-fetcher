@@ -1,10 +1,12 @@
+import sys, io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 import sqlite3
 import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from pathlib import Path
 from tqdm import tqdm
-import sys
 from FinMind.data import DataLoader
 
 DB_PATH = "data/institution.db"
