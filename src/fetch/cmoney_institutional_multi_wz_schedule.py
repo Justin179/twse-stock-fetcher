@@ -48,9 +48,17 @@ import sqlite3
 import time
 import os
 
-# 載入股票清單
-with open("my_stock_holdings.txt", "r", encoding="utf-8") as f:
+# 載入股票清單，可從命令列參數傳入 txt 檔路徑，否則預設使用 my_stock_holdings.txt
+stock_file = "my_stock_holdings.txt"
+for arg in sys.argv:
+    if arg.endswith(".txt") and os.path.exists(arg):
+        stock_file = arg
+        break
+
+print(f"📄 使用的股票清單：{stock_file}")
+with open(stock_file, "r", encoding="utf-8") as f:
     stock_list = [line.strip() for line in f if line.strip()]
+
 
 # DB 初始化
 db_path = os.path.join("data", "institution.db")
