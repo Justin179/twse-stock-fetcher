@@ -104,8 +104,17 @@ if __name__ == "__main__":
             print("📅 今日非月營收公告期間（6~14 號），排程模式下不執行。")
             exit(0)
 
-    with open("my_stock_holdings.txt", "r", encoding="utf-8") as f:
+    # 若有傳入 txt 檔參數，使用該檔案；否則預設為 my_stock_holdings.txt
+    stock_file = "my_stock_holdings.txt"
+    for arg in sys.argv:
+        if arg.endswith(".txt") and os.path.exists(arg):
+            stock_file = arg
+            break
+
+    print(f"📄 使用的股票清單：{stock_file}")
+    with open(stock_file, "r", encoding="utf-8") as f:
         stock_list = [line.strip() for line in f if line.strip()]
+
 
     for stock_id in stock_list:
         print(f"📥 抓取 {stock_id} 月營收資料...")
