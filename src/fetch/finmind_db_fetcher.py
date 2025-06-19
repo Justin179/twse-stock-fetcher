@@ -73,11 +73,12 @@ def fetch_with_finmind(stock_id: str):
         return (stock_id, "No data")
 
     existing_dates = get_existing_dates(stock_id)
+    # 資料集df，排除資料庫中已存在的日期
     df = df[~df["date"].isin(existing_dates)]
-
+    # 如一筆不剩，代表資料庫中已經有最新資料，則不需要再寫入
     if df.empty:
         return (stock_id, "Already up-to-date")
-
+    # 有新東西，則寫入資料庫
     save_to_db(stock_id, df)
     return None
 
