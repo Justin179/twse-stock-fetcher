@@ -5,6 +5,15 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 
+'''
+補上 profitability_ratios 資料表中缺少的季收盤價
+1 確認欄位存在
+2 讀取股票清單
+3 篩出該股票哪些季的收盤價還沒補
+4 從 twse_prices 資料表中抓取最近的收盤價
+5 更新 profitability_ratios 資料表
+'''
+
 DB_PATH = "data/institution.db"
 
 def ensure_column_exists():
