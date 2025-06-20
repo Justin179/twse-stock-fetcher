@@ -92,7 +92,16 @@ def save_to_db(data, db_path="data/institution.db"):
     return success_count
 
 if __name__ == "__main__":
-    stock_list = ["3017"]  # 僅測試單一個股
+    # 決定股票清單來源：命令列參數 txt 或預設檔案
+    stock_file = "my_stock_holdings.txt"
+    for arg in sys.argv:
+        if arg.endswith(".txt") and os.path.exists(arg):
+            stock_file = arg
+            break
+
+    print(f"📄 使用的股票清單: {stock_file}")
+    with open(stock_file, "r", encoding="utf-8") as f:
+        stock_list = [line.strip() for line in f if line.strip()]
 
     for stock_id in stock_list:
         print(f"📥 抓取 {stock_id} 財報三率（HiStock）...")

@@ -35,6 +35,11 @@ echo ===== [10:25] 補齊月收盤與月均價 ===== >> %LOG_FILE%
 python src\fetch\update_monthly_avg_price_from_local_db.py >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
+echo ===== [10:28] 更新三率(季報) ===== >> %LOG_FILE%
+python src\fetch\fetch_profitability_histock.py temp_list.txt >> %LOG_FILE% 2>&1
+
+
+echo. >> %LOG_FILE%
 echo ✅ 所有任務完成，請查看 %LOG_FILE% >> %LOG_FILE%
 echo ✅ 所有任務完成，請查看 %LOG_FILE%
 pause
