@@ -8,7 +8,7 @@ from src.ui.plot_price_interactive_final import plot_price_interactive
 from src.ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
 from src.ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from src.ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
-from src.ui.plot_profitability_ratios_final_with_name import plot_profitability_ratios_with_close_price
+from src.ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -33,6 +33,7 @@ def load_stock_list_with_names(file_path="my_stock_holdings.txt", db_path="data/
 # 外資、投信買賣超與持股比率互動圖
 # 籌碼集中度與千張大戶持股比率互動圖
 # 月營收與年增率互動圖
+# 三率與季收盤價互動圖
 
 
 # --- Streamlit ---
@@ -76,7 +77,7 @@ with col2:
         st.plotly_chart(fig5, use_container_width=True)
         st.plotly_chart(fig6, use_container_width=True)
 
-        st.subheader("📊 三率與季收盤價 (20季)")
+        st.subheader("📊 三率 & 季收盤價 (20季)")
         try:
             fig7 = plot_profitability_ratios_with_close_price(selected)
             st.plotly_chart(fig7, use_container_width=True)
