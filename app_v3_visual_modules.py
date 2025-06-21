@@ -8,6 +8,7 @@ from src.ui.plot_price_interactive_final import plot_price_interactive
 from src.ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
 from src.ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from src.ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
+from src.ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -75,3 +76,9 @@ with col2:
         st.plotly_chart(fig5, use_container_width=True)
         st.plotly_chart(fig6, use_container_width=True)
 
+        st.subheader("📊 三率與季收盤價 (20季)")
+        try:
+            fig7 = plot_profitability_ratios_with_close_price(selected)
+            st.plotly_chart(fig7, use_container_width=True)
+        except ValueError as e:
+            st.warning(str(e))
