@@ -13,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
+
 """
 排程3: 更新 每個月的6號-14號，公司會公佈上個月的營收
 INSERT OR IGNORE INTO monthly_revenue
@@ -48,12 +49,17 @@ def fetch_monthly_revenue(stock_id):
                 if len(cols) >= 4:
                     year_month = cols[0].text.strip()
                     monthly_revenue = cols[1].text.strip().replace(",", "")
+                    mom_rate = cols[2].text.strip().replace("%", "")
+                    if mom_rate == "--":
+                        mom_rate = "0"
                     yoy_rate = cols[3].text.strip().replace("%", "")
+
                     if year_month.isdigit() and len(year_month) == 6:
                         try:
                             revenue_val = float(monthly_revenue)
+                            mom_val = float(mom_rate)
                             yoy_val = float(yoy_rate)
-                            data.append((stock_id, year_month, revenue_val, yoy_val))
+                            data.append((stock_id, year_month, revenue_val, mom_val, yoy_val))
                         except ValueError:
                             continue
 
@@ -81,6 +87,7 @@ def save_to_db(data, db_path="data/institution.db"):
             stock_id TEXT,
             year_month TEXT,
             revenue REAL,
+            mom_rate REAL,
             yoy_rate REAL,
             PRIMARY KEY (stock_id, year_month)
         )
@@ -89,8 +96,8 @@ def save_to_db(data, db_path="data/institution.db"):
     for row in data:
         cursor.execute("""
             INSERT OR IGNORE INTO monthly_revenue
-            (stock_id, year_month, revenue, yoy_rate)
-            VALUES (?, ?, ?, ?)
+            (stock_id, year_month, revenue, mom_rate, yoy_rate)
+            VALUES (?, ?, ?, ?, ?)
         """, row)
         if cursor.rowcount > 0:
             success_count += 1
@@ -117,7 +124,6 @@ if __name__ == "__main__":
     print(f"📄 使用的股票清單：{stock_file}")
     with open(stock_file, "r", encoding="utf-8") as f:
         stock_list = [line.strip() for line in f if line.strip()]
-
 
     for stock_id in stock_list:
         print(f"📥 抓取 {stock_id} 月營收資料...")
