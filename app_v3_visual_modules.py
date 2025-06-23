@@ -72,14 +72,15 @@ with col2:
         st.plotly_chart(fig3, use_container_width=True)
         st.plotly_chart(fig4, use_container_width=True)
 
-        st.subheader("📈 月營收年增率 & 月營收")
-        fig5, fig6 = plot_monthly_revenue_plotly(selected)
+        st.subheader("📈 營收年增率 & 月營收 & 營收月增率")
+        fig5, fig6, fig7 = plot_monthly_revenue_plotly(selected)
         st.plotly_chart(fig5, use_container_width=True)
         st.plotly_chart(fig6, use_container_width=True)
+        st.plotly_chart(fig7, use_container_width=True)
 
         st.subheader("📊 三率 & 季收盤價 (20季)")
         try:
-            fig7 = plot_profitability_ratios_with_close_price(selected)
-            st.plotly_chart(fig7, use_container_width=True)
+            fig8 = plot_profitability_ratios_with_close_price(selected)
+            st.plotly_chart(fig8, use_container_width=True)
         except ValueError as e:
             st.warning(str(e))
