@@ -50,14 +50,14 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
     ])
 
     fig1.update_layout(
-        title=f"{full_title} 月營收 YoY",
+        title=f"{full_title} 營收年增率 YoY",
         xaxis=dict(tickfont=dict(size=14), tickangle=-45),
         yaxis=dict(
             title=dict(text="月收盤價", font=dict(color="orange")),
             tickfont=dict(color="orange"),
         ),
         yaxis2=dict(
-            title="月營收 YoY (%)",
+            title="營收年增率 YoY (%)",
             overlaying="y",
             side="right"
         ),
@@ -111,6 +111,9 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
     return fig1, fig2
 
 if __name__ == "__main__":
+    # For testing purposes, you can run this script directly
+    import plotly.io as pio
+    pio.renderers.default = "browser"
     fig1, fig2 = plot_monthly_revenue_plotly("3017", "data/institution.db")
     fig1.show()
     fig2.show()
