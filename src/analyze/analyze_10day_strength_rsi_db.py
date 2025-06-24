@@ -95,13 +95,13 @@ for _, row in analysis_days.iterrows():
 
     results.append({
         "日期": date,
-        "價漲量增or價跌量縮": check(c1),
-        "站上5日均線": check(c2),
-        "5日均線上彎": check(c3),
+        "價量同步": check(c1),
+        "扣抵變高但價漲量增(強勢股)": check(c7),
+        "站上 5日均線": check(c2),
+        "上彎 5日均線": check(c3),
         "創10日新高": check(c4),
-        "短中均線多頭排列": check(c5),
-        "短中均線皆上彎": check(c6),
-        "明壓變大但價漲量增": check(c7),
+        "短中均線(5 10 24)多頭排列": check(c5),
+        "短中均線(5 10 24)皆上彎": check(c6),
         "KD 金叉（低檔）": check(c8),
         "RSI 低檔翻揚": check(c9)
     })
