@@ -65,7 +65,7 @@ with col2:
         fig_price = plot_price_interactive(selected)
         st.plotly_chart(fig_price, use_container_width=True)
 
-        st.subheader("📊 法人買賣超 + 持股比率 (日)")
+        st.subheader("📊 法人買賣超 & 持股比率 (日)")
         fig1, fig2 = plot_institution_combo_plotly(selected)
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)

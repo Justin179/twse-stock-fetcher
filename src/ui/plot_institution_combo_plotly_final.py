@@ -42,7 +42,7 @@ def plot_institution_combo_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="持股比率：%{y:.2f}%<extra></extra>"
     ))
     fig1.update_layout(
-        title=f"{stock_name} ({stock_id}) 外資：買賣超 + 持股比率",
+        title=f"{stock_name} ({stock_id}) 外資買賣超 vs 持股比率",
         xaxis=dict(type="category", title="日期", tickfont=dict(size=12), tickangle=-45),
         yaxis=dict(title="買賣超(張)"),
         yaxis2=dict(title=dict(text="外資持股比率(%)", font=dict(color="blue")), overlaying="y", side="right",
@@ -66,17 +66,17 @@ def plot_institution_combo_plotly(stock_id, db_path="data/institution.db"):
         y=df["trust_ratio"],
         mode="lines+markers",
         yaxis="y2",
-        line=dict(color="purple", width=2),
+        line=dict(color="blue", width=2),
         marker=dict(size=6),
         name="投信持股比率",
         hovertemplate="持股比率：%{y:.2f}%<extra></extra>"
     ))
     fig2.update_layout(
-        title=f"{stock_name} ({stock_id}) 投信：買賣超 + 持股比率",
+        title=f"{stock_name} ({stock_id}) 投信買賣超 vs 持股比率",
         xaxis=dict(type="category", title="日期", tickfont=dict(size=12), tickangle=-45),
         yaxis=dict(title="買賣超(張)"),
-        yaxis2=dict(title=dict(text="投信持股比率(%)", font=dict(color="purple")), overlaying="y", side="right",
-                    tickfont=dict(color="purple")),
+        yaxis2=dict(title=dict(text="投信持股比率(%)", font=dict(color="blue")), overlaying="y", side="right",
+                    tickfont=dict(color="blue")),
         showlegend=False,
         height=400,
         hovermode="x unified",

@@ -38,7 +38,7 @@ def plot_holder_concentration_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="集中度：%{y:.2f} 張<extra></extra>"
     ))
     fig1.update_layout(
-        title=f"{stock_name} ({stock_id}) 週收盤價 vs 籌碼集中度",
+        title=f"{stock_name} ({stock_id}) 籌碼集中度 vs 週收盤價",
         xaxis=dict(type="category", tickangle=-45, tickfont=dict(size=12)),
         yaxis=dict(
             title=dict(text='週收盤價', font=dict(color="orange")),
@@ -69,7 +69,7 @@ def plot_holder_concentration_plotly(stock_id, db_path="data/institution.db"):
         hovertemplate="千張大戶佔比：%{y:.2f}%<extra></extra>"
     ))
     fig2.update_layout(
-        title=f"{stock_name} ({stock_id}) 週收盤價 vs 千張大戶持股比率",
+        title=f"{stock_name} ({stock_id}) 千張大戶持股比率 vs 週收盤價",
         xaxis=dict(type="category", tickangle=-45, tickfont=dict(size=12)),
         yaxis=dict(
             title=dict(text='週收盤價', font=dict(color="orange")),
