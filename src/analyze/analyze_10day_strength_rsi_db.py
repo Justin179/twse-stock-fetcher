@@ -70,7 +70,8 @@ for _, row in analysis_days.iterrows():
     )
     c2 = row["Close"] > row["MA5"]
     c3 = row["Close"] > row["Close_5days_ago"]
-    c4 = row["Close"] >= row["High10"]
+    c10 = row["Close"] > row["Close_4days_ago"]
+    c4 = row["Close"] > row["High10"]
     c5 = row["MA5"] > row["MA10"] > row["MA24"]
     c6 = (
         row["Close"] > row["Close_5days_ago"]
@@ -97,9 +98,10 @@ for _, row in analysis_days.iterrows():
         "日期": date,
         "價量同步": check(c1),
         "扣抵變高但價漲量增(強勢股)": check(c7),
-        "站上 5日均線": check(c2),
-        "上彎 5日均線": check(c3),
-        "創10日新高": check(c4),
+        "站上 5日均線(> MA5)": check(c2),
+        "上彎 5日均線(> 基準價)": check(c3),
+        "站上扣抵值(>)": check(c10),
+        "創10日新高(>)": check(c4),
         "短中均線(5 10 24)多頭排列": check(c5),
         "短中均線(5 10 24)皆上彎": check(c6),
         "KD 金叉（低檔）": check(c8),
