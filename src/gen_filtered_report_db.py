@@ -1,4 +1,3 @@
-
 import pandas as pd
 import sqlite3
 from pathlib import Path
@@ -12,11 +11,9 @@ use_gui = True  # 或 False for CLI/排程
 conditions = get_user_selected_conditions(use_gui=use_gui)
 bias_threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 2
 
-
 def read_stock_list(file_path="stock_list.txt") -> list:
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
-
 
 def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
     query = '''
@@ -32,7 +29,6 @@ def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
     df.set_index("date", inplace=True)
     return df
 
-
 if __name__ == "__main__":
     db_path = str(Path(__file__).resolve().parent.parent / "data" / "institution.db")
     stock_list = read_stock_list("stock_list.txt")
@@ -43,9 +39,11 @@ if __name__ == "__main__":
     with sqlite3.connect(db_path) as conn:
         for stock_code in stock_list:
             try:
+                print(f"\n🔍 正在處理 {stock_code}...")
                 df = fetch_stock_history_from_db(conn, stock_code)
 
                 if df.empty or len(df) < 200:
+                    print(f"⚠️ {stock_code} 資料不足（筆數：{len(df)}）")
                     missing_data_count += 1
                     continue
 
@@ -56,6 +54,9 @@ if __name__ == "__main__":
                 df["MA200"] = df["Close"].rolling(window=200).mean()
                 df[["MA5", "MA10", "MA24", "MA72", "MA200"]] = df[["MA5", "MA10", "MA24", "MA72", "MA200"]].round(2)
                 df["Volume"] = (df["Volume"] / 1000).round().astype(int)
+
+                if df["MA5"].isnull().all():
+                    print(f"⚠️ {stock_code} 所有 MA5 均為 NaN，無法進行條件判斷")
 
                 df = apply_conditions(df, bias_threshold)
 
@@ -70,7 +71,7 @@ if __name__ == "__main__":
                 print(f"❌ {stock_code} 處理失敗: {e}")
 
     print(
-        f"📊 總覽：載入 {len(stock_list)} 檔，"
+        f"\n📊 總覽：載入 {len(stock_list)} 檔，"
         f"遺失資料 {missing_data_count} 檔，"
         f"篩選排除 {filtered_out_count} 檔，"
         f"符合條件 {len(all_report_rows)} 檔"
@@ -87,6 +88,5 @@ if __name__ == "__main__":
 
         print(
             f"📁 報表輸出：all_report.csv（{bias_threshold}%），"
-            f"XQ 匯入：匯入XQ.csv（共 {len(xq_list)} 檔）"
+            f"XQ 匯入：匯入XQ.csv（共 {len(xq_list)} 檔）\n"
         )
-        print()
