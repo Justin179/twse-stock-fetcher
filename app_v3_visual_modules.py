@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from src.ui.plot_price_interactive_final import plot_price_interactive
 from src.ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
+
+from src.ui.plot_main_force_plotly_final import plot_main_force_charts
+
 from src.ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from src.ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
 from src.ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
@@ -66,6 +69,13 @@ with col2:
         fig1, fig2 = plot_institution_combo_plotly(selected)
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
+
+
+        st.subheader("📈 主力買賣超 & 買賣家數差 (日)")
+        fig_main1, fig_main2 = plot_main_force_charts(selected)
+        st.plotly_chart(fig_main1, use_container_width=True)
+        st.plotly_chart(fig_main2, use_container_width=True)
+
 
         st.subheader("📈 籌碼集中度 & 千張大戶持股比率 (週)")
         fig3, fig4 = plot_holder_concentration_plotly(selected)
