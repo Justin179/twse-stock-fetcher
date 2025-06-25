@@ -32,9 +32,9 @@ def fetch_twii_sample():
     df['stock_id'] = '^TWII'
 
     # 只保留最後 5 筆
-    df = df.tail(5).copy()
-    print(f"✅ A3")
-    print(df)
+    # df = df.tail(5).copy()
+    # print(f"✅ A3")
+    # print(df)
 
     return df[['stock_id', 'date', 'open', 'high', 'low', 'close', 'volume']]
 
