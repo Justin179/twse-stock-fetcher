@@ -10,6 +10,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 
+# ^OTCI
 
 def convert_date(minguo_date_str):
     y, m, d = minguo_date_str.split('/')
@@ -21,7 +22,11 @@ def fetch_otc_index(months=1):
     url = "https://www.tpex.org.tw/zh-tw/mainboard/trading/info/daily-indices.html"
 
     options = webdriver.ChromeOptions()
-    # 測試階段顯示瀏覽器
+    options.add_argument("--headless")  # ✅ 想在本地「暫時開啟」視窗做測試，只要把這行註解掉
+    options.add_argument("--disable-gpu")  # ✅ 兼容性更好
+    options.add_argument("--no-sandbox")  # ✅ Linux 環境需要
+    options.add_argument("--window-size=1920,1080")  # ✅ 預防無法點選選單
+
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(url)
     time.sleep(3)
@@ -101,8 +106,8 @@ def save_to_db(df, db_path="data/institution.db"):
 
 
 if __name__ == "__main__":
-    # 設為 69 抓取過去 69 個月（含當月），平時日更改為 1
-    months_to_fetch = 69
+    # 設為 69 抓取過去 69 個月（含當月），平時日更改為 1(即只抓取當月，不往前翻頁)
+    months_to_fetch = 1
     df = fetch_otc_index(months=months_to_fetch)
     print(df.head())
     save_to_db(df)
