@@ -63,9 +63,9 @@ def fetch_twse_index(months_to_fetch=1):
                             "^TWII",
                             cols[0].replace("-", "/"),
                             round(float(cols[4]), 2),  # close
-                            round(float(cols[2]), 2),  # high
-                            round(float(cols[3]), 2),  # low
-                            round(float(cols[1]), 2),  # open
+                            None,  # high
+                            None,  # low
+                            None,  # open
                             0  # volume
                         ])
             except Exception as e:
@@ -76,10 +76,8 @@ def fetch_twse_index(months_to_fetch=1):
         driver.quit()
 
     df = pd.DataFrame(all_data, columns=["stock_id", "date", "close", "high", "low", "open", "volume"])
-    # print("📋 抓取結果前幾筆：")
-    # print(df.head())
     print("📋 抓取結果所有資料：")
-    print(df.to_string(index=False))  # 這行會完整印出所有資料
+    print(df.to_string(index=False))  # 完整印出所有資料
 
     if not df.empty:
         conn = sqlite3.connect("data/institution.db")
@@ -104,4 +102,4 @@ def fetch_twse_index(months_to_fetch=1):
         print("⚠️ 無資料寫入")
 
 if __name__ == "__main__":
-    fetch_twse_index(months_to_fetch=3)
+    fetch_twse_index(months_to_fetch=2)
