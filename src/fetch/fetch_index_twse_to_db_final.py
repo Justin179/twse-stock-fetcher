@@ -110,4 +110,4 @@ def fetch_twse_index(months_to_fetch=1):
         print("⚠️ 無資料寫入")
 
 if __name__ == "__main__":
-    fetch_twse_index(months_to_fetch=2)
+    fetch_twse_index(months_to_fetch=1) # 設為 1 抓取當月資料
