@@ -8,16 +8,22 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 
+def convert_roc_to_ad(roc_date_str):
+    """將民國日期字串 (例如 114/06/27) 轉為西元日期 (2025-06-27)"""
+    try:
+        roc_year, month, day = map(int, roc_date_str.split("/"))
+        ad_year = roc_year + 1911
+        return f"{ad_year}-{month:02d}-{day:02d}"
+    except:
+        return None
+
 def fetch_twse_index(months_to_fetch=1):
     url = "https://www.twse.com.tw/zh/indices/taiex/mi-5min-hist.html"
 
-    # 設定 Chrome 選項（顯示畫面）
     options = Options()
-
-    options.add_argument("--headless")         # 👈 無頭模式
+    options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-
     options.add_argument("--start-maximized")
     driver = webdriver.Chrome(options=options)
     wait = WebDriverWait(driver, 10)
@@ -26,7 +32,6 @@ def fetch_twse_index(months_to_fetch=1):
         driver.get(url)
         time.sleep(2)
 
-        # 嘗試關閉聲明彈窗
         try:
             close_btn = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "close")))
             close_btn.click()
@@ -43,12 +48,10 @@ def fetch_twse_index(months_to_fetch=1):
             month = target_date.month
             print(f"\n🔁 抓取：{year} 年 {month} 月")
 
-            # 選擇年份與月份
             Select(wait.until(EC.presence_of_element_located((By.ID, "label0")))).select_by_value(str(year))
             Select(wait.until(EC.presence_of_element_located((By.NAME, "mm")))).select_by_value(str(month))
             time.sleep(0.5)
 
-            # 送出表單
             try:
                 form = driver.find_element(By.ID, "form")
                 form.submit()
@@ -64,15 +67,17 @@ def fetch_twse_index(months_to_fetch=1):
                 for row in rows:
                     cols = [td.text.strip().replace(",", "") for td in row.find_elements(By.TAG_NAME, "td")]
                     if len(cols) >= 5:
-                        all_data.append([
-                            "^TWII",
-                            cols[0].replace("-", "/"),
-                            round(float(cols[4]), 2),  # close
-                            None,  # high
-                            None,  # low
-                            None,  # open
-                            0  # volume
-                        ])
+                        ad_date = convert_roc_to_ad(cols[0].replace("-", "/"))
+                        if ad_date:
+                            all_data.append([
+                                "^TWII",
+                                ad_date,
+                                round(float(cols[4]), 2),  # close
+                                None,  # high
+                                None,  # low
+                                None,  # open
+                                None  # volume
+                            ])
             except Exception as e:
                 print(f"❌ 異常跳過：{year} 年 {month} 月，錯誤: {e}")
                 continue
@@ -81,8 +86,6 @@ def fetch_twse_index(months_to_fetch=1):
         driver.quit()
 
     df = pd.DataFrame(all_data, columns=["stock_id", "date", "close", "high", "low", "open", "volume"])
-    # print("📋 抓取結果所有資料：")
-    # print(df.to_string(index=False))  # 完整印出所有資料
 
     if not df.empty:
         conn = sqlite3.connect("data/institution.db")
@@ -107,4 +110,4 @@ def fetch_twse_index(months_to_fetch=1):
         print("⚠️ 無資料寫入")
 
 if __name__ == "__main__":
-    fetch_twse_index(months_to_fetch=69)
+    fetch_twse_index(months_to_fetch=2)
