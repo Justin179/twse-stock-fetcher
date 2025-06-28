@@ -11,7 +11,7 @@ import pandas as pd
 def fetch_twse_index(months_to_fetch=1):
     url = "https://www.twse.com.tw/zh/indices/taiex/mi-5min-hist.html"
 
-    # 設定 Chrome 選項（不使用 headless，方便觀察畫面）
+    # 設定 Chrome 選項（顯示畫面）
     options = Options()
     options.add_argument("--start-maximized")
     driver = webdriver.Chrome(options=options)
@@ -35,18 +35,12 @@ def fetch_twse_index(months_to_fetch=1):
         for i in range(months_to_fetch):
             target_date = today.replace(day=1) - timedelta(days=30 * i)
             year = target_date.year
-            roc_year = year - 1911
             month = target_date.month
             print(f"\n🔁 抓取：{year} 年 {month} 月")
 
-            # 選擇年份
-            year_select = Select(wait.until(EC.presence_of_element_located((By.ID, "label0"))))
-            year_select.select_by_value(str(year))
-            time.sleep(0.5)
-
-            # 選擇月份
-            month_select = Select(wait.until(EC.presence_of_element_located((By.NAME, "mm"))))
-            month_select.select_by_value(str(month))
+            # 選擇年份與月份
+            Select(wait.until(EC.presence_of_element_located((By.ID, "label0")))).select_by_value(str(year))
+            Select(wait.until(EC.presence_of_element_located((By.NAME, "mm")))).select_by_value(str(month))
             time.sleep(0.5)
 
             # 送出表單
@@ -67,7 +61,7 @@ def fetch_twse_index(months_to_fetch=1):
                     if len(cols) >= 5:
                         all_data.append([
                             "^TWII",
-                            cols[0],
+                            cols[0].replace("-", "/"),
                             round(float(cols[4]), 2),  # close
                             round(float(cols[2]), 2),  # high
                             round(float(cols[3]), 2),  # low
@@ -82,19 +76,30 @@ def fetch_twse_index(months_to_fetch=1):
         driver.quit()
 
     df = pd.DataFrame(all_data, columns=["stock_id", "date", "close", "high", "low", "open", "volume"])
-    print("📋 抓取結果前幾筆：")
-    print(df.head())
+    # print("📋 抓取結果前幾筆：")
+    # print(df.head())
+    print("📋 抓取結果所有資料：")
+    print(df.to_string(index=False))  # 這行會完整印出所有資料
 
     if not df.empty:
         conn = sqlite3.connect("data/institution.db")
+        cursor = conn.cursor()
         table_name = "twse_prices"
-        try:
-            df.to_sql(table_name, conn, if_exists="append", index=False)
-            print(f"✅ 共寫入 {len(df)} 筆資料")
-        except sqlite3.IntegrityError as e:
-            print(f"⚠️ 資料寫入失敗：{e}")
-        finally:
-            conn.close()
+        inserted_count = 0
+
+        for _, row in df.iterrows():
+            try:
+                cursor.execute(f"""
+                    REPLACE INTO {table_name} (stock_id, date, close, high, low, open, volume)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, tuple(row))
+                inserted_count += 1
+            except Exception as e:
+                print(f"⚠️ 無法寫入資料: {row['date']}，錯誤: {e}")
+
+        conn.commit()
+        conn.close()
+        print(f"✅ 共寫入或更新 {inserted_count} 筆資料")
     else:
         print("⚠️ 無資料寫入")
 
