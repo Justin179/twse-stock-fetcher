@@ -39,7 +39,7 @@ def fetch_monthly_data(stock_id: str, roc_year: int, month: int):
         print(f"❌ 無法解析 {roc_year}/{month:02d} 的表格")
         return []
 
-    rows = table.find_all("tr", {"class": "stockalllistbg2"})
+    rows = table.find_all("tr", class_=["stockalllistbg1", "stockalllistbg2"])
     data_list = []
 
     for row in rows:
