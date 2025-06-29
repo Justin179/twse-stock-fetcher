@@ -96,12 +96,14 @@ def fetch_twse_index(months_to_fetch=1):
         for _, row in df.iterrows():
             try:
                 cursor.execute(f"""
-                    REPLACE INTO {table_name} (stock_id, date, close, high, low, open, volume)
+                    INSERT OR IGNORE INTO {table_name} (stock_id, date, close, high, low, open, volume)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 """, tuple(row))
-                inserted_count += 1
+                if cursor.rowcount > 0:
+                    inserted_count += 1
             except Exception as e:
                 print(f"⚠️ 無法寫入資料: {row['date']}，錯誤: {e}")
+
 
         conn.commit()
         conn.close()
