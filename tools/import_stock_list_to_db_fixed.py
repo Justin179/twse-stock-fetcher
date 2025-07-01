@@ -19,7 +19,7 @@ cursor = conn.cursor()
 cursor.execute("DROP TABLE IF EXISTS stock_meta")
 cursor.execute("""
     CREATE TABLE stock_meta (
-        stock_id INTEGER PRIMARY KEY,
+        stock_id TEXT PRIMARY KEY,
         name TEXT,
         market TEXT
     )
