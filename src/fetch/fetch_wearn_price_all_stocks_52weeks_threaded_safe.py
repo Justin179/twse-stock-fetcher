@@ -8,13 +8,20 @@ from tqdm import tqdm
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import argparse
 
 DB_PATH = "data/institution.db"
 TABLE = "twse_prices"
 PROGRESS_LOG = "wearn_completed.log"
 MAX_RETRIES = 3
 THREADS = 6
+'''
+➤ 預設（抓當月）
+python fetch_wearn_price_all_stocks_52weeks_threaded_safe.py
+➤ 自訂（抓過去 13 個月）
+python fetch_wearn_price_all_stocks_52weeks_threaded_safe.py --months 13
 
+'''
 lock = threading.Lock()
 
 def init_db():
@@ -101,7 +108,7 @@ def parse_number(text, integer=False):
 
 def save_to_db(records):
     inserted = 0
-    with lock:  # ✅ 避免 DB lock
+    with lock: # ✅ 避免 DB lock
         with sqlite3.connect(DB_PATH) as conn:
             cursor = conn.cursor()
             for record in records:
@@ -122,19 +129,25 @@ def process_stock(stock_id, months):
     mark_complete(stock_id)
     return stock_id, total_inserted
 
+def get_target_months(months_back: int = 1):
+    today = datetime.today()
+    months = [(today - relativedelta(months=i)).replace(day=1) for i in range(months_back)]
+    return [(d.year - 1911, d.month) for d in months]
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--months", type=int, default=1, help="要抓取幾個月的資料（預設=1，即當月）")
+    args = parser.parse_args()
+
     init_db()
     all_stocks = get_all_stock_ids()
-    print(f"🧪 測試抓取股票：{all_stocks[:6]}")
 
     completed = load_progress()
     stock_list = [s for s in all_stocks if s not in completed]
 
-    today = datetime.today()
-    months = [(today - relativedelta(months=i)).replace(day=1) for i in range(13)]
-    month_params = [(d.year - 1911, d.month) for d in months]
+    month_params = get_target_months(args.months)
 
-    print(f"🧪 本次待處理股票數：{len(stock_list)}，已完成數：{len(completed)}")
+    print(f"🧪 本次待處理股票數：{len(stock_list)}，已完成數：{len(completed)}，月份數：{len(month_params)}")
 
     with ThreadPoolExecutor(max_workers=THREADS) as executor:
         futures = {executor.submit(process_stock, sid, month_params): sid for sid in stock_list}
