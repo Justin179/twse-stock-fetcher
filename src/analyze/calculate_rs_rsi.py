@@ -1,7 +1,7 @@
 import pandas as pd
 import sqlite3
 import numpy as np
-from pathlib import Path
+from datetime import datetime
 
 def compute_rsi_wilder(series: pd.Series, period: int = 14) -> pd.Series:
     delta = series.diff()
@@ -18,16 +18,14 @@ def compute_rsi_wilder(series: pd.Series, period: int = 14) -> pd.Series:
 def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", months=12):
     conn = sqlite3.connect(db_path)
 
-    # 排除 stock_id 以 0 開頭（ETF），以及名稱以 -DR 結尾（DR 股票）
     df_meta = pd.read_sql_query("SELECT stock_id, name FROM stock_meta", conn)
     df_meta["stock_id"] = df_meta["stock_id"].astype(str)
     df_meta = df_meta[
-        (~df_meta["stock_id"].str.startswith("0")) &     # 排除 ETF
-        (~df_meta["name"].str.endswith("-DR"))           # 排除 DR
+        (~df_meta["stock_id"].str.startswith("0")) &
+        (~df_meta["name"].str.endswith("-DR"))
     ]
     valid_ids = df_meta["stock_id"].tolist()
 
-    # 抓取股價資料
     query = f"""
     SELECT stock_id, date, close FROM {table}
     WHERE stock_id IN ({','.join(['?']*len(valid_ids))})
@@ -35,28 +33,37 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
     df = pd.read_sql_query(query, conn, params=valid_ids, parse_dates=["date"])
     conn.close()
 
+    df["stock_id"] = df["stock_id"].astype(str)
     df = df.sort_values(by=["stock_id", "date"])
     df = df.dropna(subset=["close"])
 
     latest_date = df["date"].max()
-    past_date = latest_date - pd.DateOffset(months=months)
+    past_1y_date = latest_date - pd.DateOffset(months=months)
+    year_start = datetime(latest_date.year, 1, 1)
 
-    # 保留最近 N 個月資料
-    df_recent = df[df["date"] >= past_date]
-
-    # 計算報酬率
-    returns = (
-        df_recent.groupby("stock_id").apply(
+    # === 計算 1Y 報酬率與 RS ===
+    df_1y = df[df["date"] >= past_1y_date]
+    returns_1y = (
+        df_1y.groupby("stock_id").apply(
             lambda g: (g["close"].iloc[-1] - g["close"].iloc[0]) / g["close"].iloc[0]
         )
-        .rename("return")
+        .rename("return_1y")
         .reset_index()
     )
+    returns_1y["rs_score_1y"] = returns_1y["return_1y"].rank(pct=True) * 100
 
-    # RS 百分等級（0~100）
-    returns["rs_score"] = returns["return"].rank(pct=True) * 100
+    # === 計算 YTD 報酬率與 RS ===
+    df_ytd = df[df["date"] >= pd.Timestamp(year_start)]
+    returns_ytd = (
+        df_ytd.groupby("stock_id").apply(
+            lambda g: (g["close"].iloc[-1] - g["close"].iloc[0]) / g["close"].iloc[0]
+        )
+        .rename("return_ytd")
+        .reset_index()
+    )
+    returns_ytd["rs_score_ytd"] = returns_ytd["return_ytd"].rank(pct=True) * 100
 
-    # RSI 計算（90 天內）
+    # === RSI ===
     df_rsi_input = df[df["date"] >= (latest_date - pd.Timedelta(days=90))].copy()
     rsi_df = []
     for sid, group in df_rsi_input.groupby("stock_id"):
@@ -66,21 +73,54 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
         rsi_df.append({"stock_id": sid, "rsi14": rsi_value})
     rsi_df = pd.DataFrame(rsi_df)
 
-    # 合併資料
-    result = pd.merge(returns, rsi_df, on="stock_id", how="left")
+    # === 合併所有欄位 ===
+    result = (
+        returns_1y
+        .merge(returns_ytd, on="stock_id", how="outer")
+        .merge(rsi_df, on="stock_id", how="left")
+        .merge(df_meta, on="stock_id", how="left")
+    )
 
-    # 四捨五入到小數點後兩位
     result = result.round({
-        "return": 2,
-        "rs_score": 2,
+        "return_1y": 2,
+        "rs_score_1y": 2,
+        "return_ytd": 2,
+        "rs_score_ytd": 2,
         "rsi14": 2
     })
 
-    return result
+    # === 寫入 SQLite ===
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS stock_rs_rsi (
+                stock_id TEXT PRIMARY KEY,
+                name TEXT,
+                return_1y REAL,
+                rs_score_1y REAL,
+                return_ytd REAL,
+                rs_score_ytd REAL,
+                rsi14 REAL
+            )
+        """)
+        cursor.execute("DELETE FROM stock_rs_rsi")
+        conn.commit()
+
+        for _, row in result.iterrows():
+            cursor.execute("""
+                INSERT INTO stock_rs_rsi (
+                    stock_id, name, return_1y, rs_score_1y,
+                    return_ytd, rs_score_ytd, rsi14
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                row["stock_id"], row["name"],
+                row.get("return_1y"), row.get("rs_score_1y"),
+                row.get("return_ytd"), row.get("rs_score_ytd"),
+                row.get("rsi14")
+            ))
+        conn.commit()
+
+    print("✅ 計算完成，已寫入資料表 stock_rs_rsi")
 
 if __name__ == "__main__":
-    df = compute_minervini_rs()
-    output_dir = Path("output")
-    output_dir.mkdir(exist_ok=True)
-    df.to_csv(output_dir / "rs_rsi_result.csv", index=False)
-    print("✅ RS + RSI 結果已輸出至 output/rs_rsi_result.csv")
+    compute_minervini_rs()
