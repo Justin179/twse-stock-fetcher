@@ -41,25 +41,23 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
     past_1y_date = latest_date - pd.DateOffset(months=months)
     year_start = datetime(latest_date.year, 1, 1)
 
-    # === 計算 1Y 報酬率與 RS ===
+    # === 1Y 報酬率 + RS ===
     df_1y = df[df["date"] >= past_1y_date]
     returns_1y = (
-        df_1y.groupby("stock_id").apply(
-            lambda g: (g["close"].iloc[-1] - g["close"].iloc[0]) / g["close"].iloc[0]
+        df_1y.groupby("stock_id")["close"].apply(
+            lambda s: (s.iloc[-1] - s.iloc[0]) / s.iloc[0]
         )
-        .rename("return_1y")
-        .reset_index()
+        .rename("return_1y").reset_index()
     )
     returns_1y["rs_score_1y"] = returns_1y["return_1y"].rank(pct=True) * 100
 
-    # === 計算 YTD 報酬率與 RS ===
+    # === YTD 報酬率 + RS ===
     df_ytd = df[df["date"] >= pd.Timestamp(year_start)]
     returns_ytd = (
-        df_ytd.groupby("stock_id").apply(
-            lambda g: (g["close"].iloc[-1] - g["close"].iloc[0]) / g["close"].iloc[0]
+        df_ytd.groupby("stock_id")["close"].apply(
+            lambda s: (s.iloc[-1] - s.iloc[0]) / s.iloc[0]
         )
-        .rename("return_ytd")
-        .reset_index()
+        .rename("return_ytd").reset_index()
     )
     returns_ytd["rs_score_ytd"] = returns_ytd["return_ytd"].rank(pct=True) * 100
 
@@ -89,7 +87,7 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
         "rsi14": 2
     })
 
-    # === 寫入 SQLite ===
+    # === 寫入 SQLite（on conflict update）===
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -103,7 +101,6 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
                 rsi14 REAL
             )
         """)
-        cursor.execute("DELETE FROM stock_rs_rsi")
         conn.commit()
 
         for _, row in result.iterrows():
@@ -111,7 +108,15 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
                 INSERT INTO stock_rs_rsi (
                     stock_id, name, return_1y, rs_score_1y,
                     return_ytd, rs_score_ytd, rsi14
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(stock_id) DO UPDATE SET
+                    name=excluded.name,
+                    return_1y=excluded.return_1y,
+                    rs_score_1y=excluded.rs_score_1y,
+                    return_ytd=excluded.return_ytd,
+                    rs_score_ytd=excluded.rs_score_ytd,
+                    rsi14=excluded.rsi14
             """, (
                 row["stock_id"], row["name"],
                 row.get("return_1y"), row.get("rs_score_1y"),
@@ -120,7 +125,12 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
             ))
         conn.commit()
 
-    print("✅ 計算完成，已寫入資料表 stock_rs_rsi")
+    print("✅ 計算完成，已寫入資料表 stock_rs_rsi（含自動更新）")
 
 if __name__ == "__main__":
+    # ⛔ 星期天不執行
+    if datetime.today().weekday() == 6:
+        print("⛔ 今天是星期日，不執行 RS/RSI 計算")
+        exit()
+
     compute_minervini_rs()
