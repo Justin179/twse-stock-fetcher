@@ -46,8 +46,7 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
     returns_1y = (
         df_1y.groupby("stock_id")["close"].apply(
             lambda s: (s.iloc[-1] - s.iloc[0]) / s.iloc[0]
-        )
-        .rename("return_1y").reset_index()
+        ).rename("return_1y").reset_index()
     )
     returns_1y["rs_score_1y"] = returns_1y["return_1y"].rank(pct=True) * 100
 
@@ -56,8 +55,7 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
     returns_ytd = (
         df_ytd.groupby("stock_id")["close"].apply(
             lambda s: (s.iloc[-1] - s.iloc[0]) / s.iloc[0]
-        )
-        .rename("return_ytd").reset_index()
+        ).rename("return_ytd").reset_index()
     )
     returns_ytd["rs_score_ytd"] = returns_ytd["return_ytd"].rank(pct=True) * 100
 
@@ -87,7 +85,9 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
         "rsi14": 2
     })
 
-    # === 寫入 SQLite（on conflict update）===
+    today_str = datetime.today().date().isoformat()
+
+    # === 寫入 SQLite（含 updated_at）===
     with sqlite3.connect(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -98,7 +98,8 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
                 rs_score_1y REAL,
                 return_ytd REAL,
                 rs_score_ytd REAL,
-                rsi14 REAL
+                rsi14 REAL,
+                updated_at TEXT
             )
         """)
         conn.commit()
@@ -107,28 +108,28 @@ def compute_minervini_rs(db_path="data/institution.db", table="twse_prices", mon
             cursor.execute("""
                 INSERT INTO stock_rs_rsi (
                     stock_id, name, return_1y, rs_score_1y,
-                    return_ytd, rs_score_ytd, rsi14
+                    return_ytd, rs_score_ytd, rsi14, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(stock_id) DO UPDATE SET
                     name=excluded.name,
                     return_1y=excluded.return_1y,
                     rs_score_1y=excluded.rs_score_1y,
                     return_ytd=excluded.return_ytd,
                     rs_score_ytd=excluded.rs_score_ytd,
-                    rsi14=excluded.rsi14
+                    rsi14=excluded.rsi14,
+                    updated_at=excluded.updated_at
             """, (
                 row["stock_id"], row["name"],
                 row.get("return_1y"), row.get("rs_score_1y"),
                 row.get("return_ytd"), row.get("rs_score_ytd"),
-                row.get("rsi14")
+                row.get("rsi14"), today_str
             ))
         conn.commit()
 
-    print("✅ 計算完成，已寫入資料表 stock_rs_rsi（含自動更新）")
+    print(f"✅ 計算完成，已寫入資料表 stock_rs_rsi（更新日：{today_str}）")
 
 if __name__ == "__main__":
-    # ⛔ 星期天不執行
     if datetime.today().weekday() == 6:
         print("⛔ 今天是星期日，不執行 RS/RSI 計算")
         exit()
