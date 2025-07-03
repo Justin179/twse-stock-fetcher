@@ -1,4 +1,4 @@
-:: 專門處理 RS>90的強勢股 清單
+:: 專門處理 RS>90的強勢股 清單 (277檔)
 @echo off
 python src\fetch\finmind_db_fetcher.py high_relative_strength_stocks.txt
 
