@@ -109,6 +109,11 @@ if __name__ == "__main__":
 
     skip, done, msg, request_count = 0, 0, [], 0
 
+    # ✅ 加入這段 log 分隔線
+    logging.info("-" * 60)
+    logging.info(f"🔄 新一輪執行開始（{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}）")
+    logging.info("-" * 60)
+
     print(f"📦 使用 FinMind 抓取近 69 個月歷史資料（共 {len(stock_list)} 檔）...")
 
     for stock_id in tqdm(stock_list, desc="處理中", ncols=80):
