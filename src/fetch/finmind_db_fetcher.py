@@ -9,6 +9,8 @@ from pathlib import Path
 from tqdm import tqdm
 from FinMind.data import DataLoader
 import logging
+from dotenv import load_dotenv
+import os
 
 DB_PATH = "data/institution.db"
 
@@ -69,19 +71,17 @@ def save_to_db(stock_id: str, df: pd.DataFrame):
     conn.commit()
     conn.close()
 
-def fetch_with_finmind(stock_id: str, request_count: int):
+def fetch_with_finmind(stock_id: str, request_count: int, dl: DataLoader):
     today = datetime.today()
     start_date = (today - relativedelta(months=69)).strftime('%Y-%m-%d')
     end_date = today.strftime('%Y-%m-%d')
 
-    dl = DataLoader()
     df = dl.taiwan_stock_daily(
         stock_id=stock_id,
         start_date=start_date,
         end_date=end_date,
     )
 
-    # 記錄 request log
     logging.info(f"Request #{request_count}: {stock_id}")
 
     if df.empty:
@@ -107,9 +107,22 @@ if __name__ == "__main__":
     init_db()
     stock_list = read_stock_list(input_file)
 
+    # ✅ 載入 .env 並登入
+    load_dotenv()
+    user = os.getenv("FINMIND_USER")
+    password = os.getenv("FINMIND_PASSWORD")
+    dl = DataLoader()
+
+    success = dl.login(user_id=user, password=password)
+    if not success:
+        print("❌ FinMind 登入失敗")
+        logging.error("FinMind 登入失敗")
+        exit(1)
+    logging.info("✅ 成功登入 FinMind")
+
+
     skip, done, msg, request_count = 0, 0, [], 0
 
-    # ✅ 加入這段 log 分隔線
     logging.info("-" * 60)
     logging.info(f"🔄 新一輪執行開始（{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}）")
     logging.info("-" * 60)
@@ -118,7 +131,7 @@ if __name__ == "__main__":
 
     for stock_id in tqdm(stock_list, desc="處理中", ncols=80):
         request_count += 1
-        result = fetch_with_finmind(stock_id, request_count)
+        result = fetch_with_finmind(stock_id, request_count, dl)
         if result is None:
             done += 1
         else:

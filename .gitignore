@@ -11,6 +11,10 @@ __pycache__/
 venv/
 env/
 
+
+
+
+
 # VS Code
 .vscode/
 .idea/
@@ -33,6 +37,7 @@ output/
 data/*.db
 data/*.sql
 
+.env
 logs/
 src/fetch/data/institution.db
 
