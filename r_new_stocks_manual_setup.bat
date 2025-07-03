@@ -1,3 +1,4 @@
+:: 當手上的持股庫存有新增的股票時，要先手動新增到 temp_list.txt，然後執行此腳本(建立初始資料)
 @echo off
 chcp 65001 > nul
 cd /d %~dp0
