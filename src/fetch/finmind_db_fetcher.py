@@ -82,12 +82,12 @@ def fetch_with_finmind(stock_id: str):
     save_to_db(stock_id, df)
     return None
 
-def read_stock_list(file_path="stock_list.txt") -> list:
+def read_stock_list(file_path="shareholding_concentration_list.txt") -> list:
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
 if __name__ == "__main__":
-    input_file = sys.argv[1] if len(sys.argv) > 1 else "stock_list.txt"
+    input_file = sys.argv[1] if len(sys.argv) > 1 else "shareholding_concentration_list.txt"
     init_db()
     stock_list = read_stock_list(input_file)
 

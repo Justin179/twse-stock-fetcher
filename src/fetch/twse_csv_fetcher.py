@@ -77,12 +77,12 @@ def fetch_twse_history(stock_code: str):
     else:
         return (stock_code, ["無有效資料"])
 
-def read_stock_list(file_path="stock_list.txt") -> list:
+def read_stock_list(file_path="shareholding_concentration_list.txt") -> list:
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
 if __name__ == "__main__":
-    stock_list = read_stock_list("stock_list.txt")
+    stock_list = read_stock_list("shareholding_concentration_list.txt")
     skip_count = 0
     success_count = 0
     failed_summary = []

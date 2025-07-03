@@ -11,7 +11,7 @@ use_gui = True  # 或 False for CLI/排程
 conditions = get_user_selected_conditions(use_gui=use_gui)
 bias_threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 2
 
-def read_stock_list(file_path="stock_list.txt") -> list:
+def read_stock_list(file_path="shareholding_concentration_list.txt") -> list:
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
@@ -31,7 +31,7 @@ def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
 
 if __name__ == "__main__":
     db_path = str(Path(__file__).resolve().parent.parent / "data" / "institution.db")
-    stock_list = read_stock_list("stock_list.txt")
+    stock_list = read_stock_list("shareholding_concentration_list.txt")
     all_report_rows = []
     missing_data_count = 0
     filtered_out_count = 0
