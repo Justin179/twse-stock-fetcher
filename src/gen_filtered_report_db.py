@@ -9,9 +9,22 @@ from src.ui.condition_selector import get_user_selected_conditions
 
 use_gui = True  # 或 False for CLI/排程
 conditions = get_user_selected_conditions(use_gui=use_gui)
-bias_threshold = float(sys.argv[1]) if len(sys.argv) > 1 else 2
 
-def read_stock_list(file_path="shareholding_concentration_list.txt") -> list:
+# ✅ 處理傳入參數（txt 檔案與 bias 閾值）
+bias_threshold = 2
+input_txt = None
+for arg in sys.argv[1:]:
+    if arg.lower().endswith(".txt"):
+        input_txt = arg
+    else:
+        try:
+            bias_threshold = float(arg)
+        except ValueError:
+            pass
+if not input_txt:
+    input_txt = "shareholding_concentration_list.txt"
+
+def read_stock_list(file_path: str) -> list:
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
@@ -29,9 +42,18 @@ def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
     df.set_index("date", inplace=True)
     return df
 
+# ✅ 根據 input txt 檔案名稱決定輸出檔名
+input_name = Path(input_txt).stem.lower()
+if input_name == "shareholding_concentration_list":
+    xq_filename = "匯入XQ_籌碼集中度.csv"
+elif input_name == "high_relative_strength_stocks":
+    xq_filename = "匯入XQ_rs90強勢股.csv"
+else:
+    xq_filename = f"{input_name}_output.csv"
+
 if __name__ == "__main__":
     db_path = str(Path(__file__).resolve().parent.parent / "data" / "institution.db")
-    stock_list = read_stock_list("shareholding_concentration_list.txt")
+    stock_list = read_stock_list(input_txt)
     all_report_rows = []
     missing_data_count = 0
     filtered_out_count = 0
@@ -83,10 +105,10 @@ if __name__ == "__main__":
         report_df.to_csv("output/all_report.csv", index=False, encoding="utf-8-sig")
 
         xq_list = report_df["Stock"].astype(str) + ".TW"
-        xq_path = Path("output") / "匯入XQ.csv"
+        xq_path = Path("output") / xq_filename
         xq_list.to_csv(xq_path, index=False, header=False, encoding="utf-8-sig")
 
         print(
             f"📁 報表輸出：all_report.csv（{bias_threshold}%），"
-            f"XQ 匯入：匯入XQ.csv（共 {len(xq_list)} 檔）\n"
+            f"XQ 匯入：{xq_filename}（共 {len(xq_list)} 檔）\n"
         )
