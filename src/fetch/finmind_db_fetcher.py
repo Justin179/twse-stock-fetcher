@@ -8,8 +8,20 @@ from dateutil.relativedelta import relativedelta
 from pathlib import Path
 from tqdm import tqdm
 from FinMind.data import DataLoader
+import logging
 
 DB_PATH = "data/institution.db"
+
+# 初始化 log 系統
+log_dir = Path("logs")
+log_dir.mkdir(exist_ok=True)
+log_filename = log_dir / f"finmind_{datetime.today().strftime('%Y%m%d')}.txt"
+logging.basicConfig(
+    filename=log_filename,
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    encoding="utf-8"
+)
 
 def init_db():
     Path("data").mkdir(exist_ok=True)
@@ -57,7 +69,7 @@ def save_to_db(stock_id: str, df: pd.DataFrame):
     conn.commit()
     conn.close()
 
-def fetch_with_finmind(stock_id: str):
+def fetch_with_finmind(stock_id: str, request_count: int):
     today = datetime.today()
     start_date = (today - relativedelta(months=69)).strftime('%Y-%m-%d')
     end_date = today.strftime('%Y-%m-%d')
@@ -69,17 +81,21 @@ def fetch_with_finmind(stock_id: str):
         end_date=end_date,
     )
 
+    # 記錄 request log
+    logging.info(f"Request #{request_count}: {stock_id}")
+
     if df.empty:
+        logging.warning(f"Request #{request_count}: {stock_id} - No data or API limit?")
         return (stock_id, "No data")
 
     existing_dates = get_existing_dates(stock_id)
-    # 資料集df，排除資料庫中已存在的日期
     df = df[~df["date"].isin(existing_dates)]
-    # 如一筆不剩，代表資料庫中已經有最新資料，則不需要再寫入
     if df.empty:
+        logging.info(f"Request #{request_count}: {stock_id} - Already up-to-date")
         return (stock_id, "Already up-to-date")
-    # 有新東西，則寫入資料庫
+
     save_to_db(stock_id, df)
+    logging.info(f"Request #{request_count}: {stock_id} - Saved {len(df)} rows to DB")
     return None
 
 def read_stock_list(file_path="shareholding_concentration_list.txt") -> list:
@@ -91,12 +107,13 @@ if __name__ == "__main__":
     init_db()
     stock_list = read_stock_list(input_file)
 
-    skip, done, msg = 0, 0, []
+    skip, done, msg, request_count = 0, 0, [], 0
 
     print(f"📦 使用 FinMind 抓取近 69 個月歷史資料（共 {len(stock_list)} 檔）...")
 
     for stock_id in tqdm(stock_list, desc="處理中", ncols=80):
-        result = fetch_with_finmind(stock_id)
+        request_count += 1
+        result = fetch_with_finmind(stock_id, request_count)
         if result is None:
             done += 1
         else:
@@ -106,6 +123,8 @@ if __name__ == "__main__":
     print("\n📊 抓取完畢")
     print(f"✅ 成功寫入 DB：{done} 檔")
     print(f"⚠️ 跳過（無資料或已存在）：{skip} 檔")
+    logging.info(f"總共 request 次數: {request_count}")
+    logging.info(f"成功寫入: {done} 檔，跳過: {skip} 檔")
 
     if msg:
         print("\n🚫 跳過清單：")
