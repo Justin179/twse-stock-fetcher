@@ -2,7 +2,7 @@ import sqlite3
 import pandas as pd
 
 DB_PATH = "data/institution.db"
-OUTPUT_FILE = "temp_list.txt"
+OUTPUT_FILE = "high_relative_strength_stocks.txt"
 
 def filter_strong_stocks():
     # 連接資料庫
