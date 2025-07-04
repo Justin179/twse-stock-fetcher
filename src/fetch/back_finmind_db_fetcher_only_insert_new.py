@@ -57,7 +57,7 @@ def save_to_db(stock_id: str, df: pd.DataFrame):
     cursor = conn.cursor()
     for _, row in df.iterrows():
         cursor.execute("""
-            INSERT OR REPLACE INTO twse_prices (stock_id, date, open, high, low, close, volume)
+            INSERT OR IGNORE INTO twse_prices (stock_id, date, open, high, low, close, volume)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             stock_id,
@@ -88,7 +88,12 @@ def fetch_with_finmind(stock_id: str, request_count: int, dl: DataLoader):
         logging.warning(f"Request #{request_count}: {stock_id} - No data or API limit?")
         return (stock_id, "No data")
 
-    
+    existing_dates = get_existing_dates(stock_id)
+    df = df[~df["date"].isin(existing_dates)]
+    if df.empty:
+        logging.info(f"Request #{request_count}: {stock_id} - Already up-to-date")
+        return (stock_id, "Already up-to-date")
+
     save_to_db(stock_id, df)
     logging.info(f"Request #{request_count}: {stock_id} - Saved {len(df)} rows to DB")
     return None
