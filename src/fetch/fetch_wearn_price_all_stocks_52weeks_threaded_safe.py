@@ -83,7 +83,7 @@ def fetch_monthly_data(stock_id: str, roc_year: int, month: int):
                     high_price = parse_number(cols[2].text)
                     low_price = parse_number(cols[3].text)
                     close_price = parse_number(cols[4].text)
-                    volume = parse_number(cols[5].text, integer=True)
+                    volume = None # ✅ 改為不寫 volume，避免單位誤差
                     data_list.append((stock_id, ad_date, open_price, high_price, low_price, close_price, volume))
                 except:
                     continue
