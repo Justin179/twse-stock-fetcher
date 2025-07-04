@@ -18,7 +18,7 @@ THREADS = 6
 '''
 ➤ 預設（抓當月）
 python fetch_wearn_price_all_stocks_52weeks_threaded_safe.py
-➤ 自訂（抓過去 13 個月）
+➤ 自訂（抓過去 13 個月）(因為RS指標的標準時間是 52 週，所以抓 13 個月)
 python fetch_wearn_price_all_stocks_52weeks_threaded_safe.py --months 13
 
 '''
