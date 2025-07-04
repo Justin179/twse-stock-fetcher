@@ -11,7 +11,7 @@ use_gui = True  # 或 False for CLI/排程
 conditions = get_user_selected_conditions(use_gui=use_gui)
 
 # ✅ 處理傳入參數（txt 檔案與 bias 閾值）
-bias_threshold = 2
+bias_threshold = 1.5
 input_txt = None
 for arg in sys.argv[1:]:
     if arg.lower().endswith(".txt"):
