@@ -24,7 +24,11 @@ echo ===== [10:00] 更新近5日法人資料 ===== >> %LOG_FILE%
 python src\fetch\cmoney_institutional_multi_wz_schedule.py temp_list.txt >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
-echo ===== [10:10] 更新籌碼集中度與千張大戶比率 ===== >> %LOG_FILE%
+echo ===== [10:07] 主力買賣超 & 買賣家數差 ===== >> %LOG_FILE%
+python src\fetch\fetch_main_force_multi.py temp_list.txt >> %LOG_FILE% 2>&1
+
+echo. >> %LOG_FILE%
+echo ===== [10:14] 更新籌碼集中度與千張大戶比率 ===== >> %LOG_FILE%
 python src\fetch\save_holder_concentration_manual.py >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
