@@ -17,7 +17,7 @@ def get_window_position(width, height, offset_x=400, offset_y=100):
 def get_user_selected_conditions(use_gui=True):
     default_conditions = {
         "站上上彎5日均 且乖離小": True,
-        "5 10 24均線上彎 多頭排列 開口小": True,
+        "5 10 24均線上彎, 多頭排列, 5 10開口小": True,
         "24日均乖離<15%": True,
         "量價同步": True,
         "站上上彎72日均": False
@@ -44,7 +44,7 @@ def get_user_selected_conditions(use_gui=True):
         exit()
 
     # 🎯 建立 GUI 視窗並配置到右下角
-    width, height = 300, 250
+    width, height = 350, 250
     x, y = get_window_position(width=400, height=250, offset_x=200, offset_y=200)
 
 
