@@ -4,6 +4,8 @@ import os
 import sqlite3
 import pandas as pd
 from datetime import datetime
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 '''
 補上 profitability_ratios 資料表中缺少的季收盤價
