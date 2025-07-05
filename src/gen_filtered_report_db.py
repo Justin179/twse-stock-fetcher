@@ -44,12 +44,14 @@ def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
     df.set_index("date", inplace=True)
     return df
 
-# ✅ 根據 input txt 檔案名稱決定輸出檔名
+# ✅ 根據 input txt 檔案名稱決定輸出檔名 hermit_watchlist.txt
 input_name = Path(input_txt).stem.lower()
 if input_name == "shareholding_concentration_list":
     xq_filename = "匯入XQ_籌碼集中度.csv"
 elif input_name == "high_relative_strength_stocks":
     xq_filename = "匯入XQ_rs90強勢股.csv"
+elif input_name == "hermit_watchlist":
+    xq_filename = "匯入XQ_隱者App選股.csv"
 else:
     xq_filename = f"{input_name}_output.csv"
 
