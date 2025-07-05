@@ -12,11 +12,11 @@ if not exist logs (
 )
 set LOG_FILE=logs\%date:~0,4%%date:~5,2%%date:~8,2%_log.txt
 
-echo ===== [09:50] 更新持倉 (回補 69 個月) ===== >> %LOG_FILE%
+echo ===== [09:30] 更新持倉 (回補 69 個月) ===== >> %LOG_FILE%
 python src\fetch\finmind_db_fetcher.py temp_list.txt >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
-echo ===== [10:00] 建立初始法人資料 (近99日) ===== >> %LOG_FILE%
+echo ===== [手動] 建立初始法人資料 (近99日) ===== >> %LOG_FILE%
 python src\fetch\save_institutional_holding_multi.py >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
