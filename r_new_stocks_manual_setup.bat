@@ -1,4 +1,5 @@
 :: 當手上的持股庫存有新增的股票時，要先手動新增到 temp_list.txt，然後執行此腳本(建立初始資料)
+:: 此腳本的用途是手動+指定更新特定股票，補上排程因時間差的缺失資料，裡面的py也可以單獨執行，缺啥補啥
 @echo off
 chcp 65001 > nul
 cd /d %~dp0
@@ -28,15 +29,15 @@ echo ===== [10:07] 主力買賣超 & 買賣家數差 ===== >> %LOG_FILE%
 python src\fetch\fetch_main_force_multi.py temp_list.txt >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
-echo ===== [10:14] 更新籌碼集中度與千張大戶比率 ===== >> %LOG_FILE%
-python src\fetch\save_holder_concentration_manual.py >> %LOG_FILE% 2>&1
+echo ===== [8:00 & 22:14] 更新籌碼集中度與千張大戶比率 ===== >> %LOG_FILE%
+python src\fetch\save_holder_concentration.py temp_list >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
-echo ===== [10:20] 更新月營收資料 ===== >> %LOG_FILE%
+echo ===== [8:07 & 22:20] 更新月營收資料 ===== >> %LOG_FILE%
 python src\fetch\fetch_monthly_revenue_multi_v5.py temp_list.txt >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
-echo ===== [10:25] 補齊月收盤與月均價 ===== >> %LOG_FILE%
+echo ===== [8:12 & 10:25] 補齊月收盤與月均價 ===== >> %LOG_FILE%
 python src\fetch\update_monthly_avg_price_from_local_db.py >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
