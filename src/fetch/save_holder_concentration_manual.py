@@ -13,6 +13,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 
 """
+手動的建立初始資料「專用」
 排程2: 更新每週 籌碼集中度 與 千張大戶持股比率
 INSERT OR IGNORE INTO holder_concentration
 爬蟲資料很多的神秘金字塔

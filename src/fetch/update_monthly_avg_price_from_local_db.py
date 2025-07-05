@@ -7,9 +7,9 @@ import pandas as pd
 from datetime import datetime
 
 """
-補上 monthly_revenue 資料庫中缺少的 monthly_avg_close 和 monthly_last_close 欄位
+補上 monthly_revenue 資料庫中 所有缺少的 monthly_avg_close 和 monthly_last_close 欄位
 這些欄位是從 twse_prices 資料庫中計算得來的(所以需要先有 twse_prices 的資料就能補)。
-finmind_db_fetcher.py 可以抓寫38個月的 twse_prices 資料。
+finmind_db_fetcher.py 可以抓寫69個月的 twse_prices 資料。
 """
 
 DB_PATH = "data/institution.db"
