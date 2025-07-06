@@ -24,7 +24,7 @@ for arg in sys.argv[1:]:
         except ValueError:
             pass
 if not input_txt:
-    input_txt = "shareholding_concentration_list.txt"
+    input_txt = "shareholding_concentration_list.txt" # 預設，因為一開始就是為過濾 籌碼集中度選股 而寫的
 
 def read_stock_list(file_path: str) -> list:
     with open(file_path, "r", encoding="utf-8") as f:
