@@ -39,6 +39,7 @@ data/*.sql
 
 .env
 logs/
+log/
 src/fetch/data/institution.db
 
 # Backup
@@ -47,6 +48,6 @@ backup/
 *.txt
 zip_my_project.py
 *.zip
-
+*.whl
 
 # Temporary files
