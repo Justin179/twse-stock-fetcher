@@ -1,10 +1,9 @@
 # fetch_close_price_webapi.py
 
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'tools')))
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from login_helper import get_logged_in_sdk
+from common.login_helper import get_logged_in_sdk
 
 def fetch_close_price(stock_id='2330'):
     sdk = get_logged_in_sdk()
@@ -19,4 +18,4 @@ def fetch_close_price(stock_id='2330'):
     sdk.logout()
 
 if __name__ == "__main__":
-    fetch_close_price("2330")
+    fetch_close_price("3017")
