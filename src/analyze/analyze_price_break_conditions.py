@@ -5,29 +5,42 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from common.login_helper import get_logged_in_sdk
+from src.fetch.fetch_latest_price_full import fetch_and_store_price
 
 DB_PATH = "data/institution.db"
 
-def get_recent_prices(stock_id):
+def get_recent_prices(stock_id, today_date):
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(
-        "SELECT date, close, high, low, volume FROM twse_prices WHERE stock_id = ? ORDER BY date DESC LIMIT 3",
-        conn, params=(stock_id,)
+        """
+        SELECT date, close, high, low, volume 
+        FROM twse_prices 
+        WHERE stock_id = ? AND date < ? 
+        ORDER BY date DESC LIMIT 2
+        """,
+        conn, params=(stock_id, today_date)
     )
     conn.close()
     df["date"] = pd.to_datetime(df["date"])
     return df
 
-def get_yesterday_hl(stock_id):
+
+def get_yesterday_hl(stock_id, today_date):
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(
-        "SELECT date, high, low FROM twse_prices WHERE stock_id = ? ORDER BY date DESC LIMIT 2",
-        conn, params=(stock_id,)
+        """
+        SELECT date, high, low 
+        FROM twse_prices 
+        WHERE stock_id = ? AND date < ? 
+        ORDER BY date DESC LIMIT 1
+        """,
+        conn, params=(stock_id, today_date)
     )
     conn.close()
     if len(df) < 1:
         return None, None
     return df.iloc[0]["high"], df.iloc[0]["low"]
+
 
 def get_week_month_high_low(stock_id):
     today = datetime.today()
@@ -86,10 +99,13 @@ def get_today_prices(stock_id):
     }
 
 def analyze_stock(stock_id):
+    fetch_and_store_price(stock_id)  # 確保資料最新
     today = get_today_prices(stock_id)
-    db_data = get_recent_prices(stock_id)
+    today_date = today["date"]  # 這是今天的日期字串
+
+    db_data = get_recent_prices(stock_id, today_date)
     w1, w2, m1, m2 = get_week_month_high_low(stock_id)
-    h, l = get_yesterday_hl(stock_id)
+    h, l = get_yesterday_hl(stock_id, today_date)
 
     c1, o, c2 = today["c1"], today["o"], today["c2"]
     v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
@@ -134,38 +150,38 @@ def analyze_stock(stock_id):
     # 今天開盤
     if o and c2:
         if o > c2:
-            signals.append("開盤開高")
+            signals.append("今開盤開高")
         elif o == c2:
-            signals.append("開盤開平盤")
+            signals.append("今開盤開平盤")
         elif o < c2:
-            signals.append("開盤開低")
+            signals.append("今開盤開低")
         if h and o > h:
-            signals.append("開盤過昨高")
+            signals.append("今開盤過昨高")
         if l and o < l:
-            signals.append("開盤破昨低")
+            signals.append("今開盤破昨低")
         if w1 and o > w1:
-            signals.append("開盤過上週高點")
+            signals.append("今開盤過上週高點")
         if m1 and o > m1:
-            signals.append("開盤過上月高點")
+            signals.append("今開盤過上月高點")
         if w2 and o < w2:
-            signals.append("開盤破上週低點")
+            signals.append("今開盤破上週低點")
         if m2 and o < m2:
-            signals.append("開盤破上月低點")
+            signals.append("今開盤破上月低點")
 
     # 今天盤中
     if c1:
         if h and c1 > h:
-            signals.append("現價過昨高")
+            signals.append("今收盤過昨高")
         if l and c1 < l:
-            signals.append("現價破昨低")
+            signals.append("今收盤破昨低")
         if w1 and c1 > w1:
-            signals.append("現價過上週高點")
+            signals.append("今收盤過上週高點")
         if w2 and c1 < w2:
-            signals.append("現價破上週低點")
+            signals.append("今收盤破上週低點")
         if m1 and c1 > m1:
-            signals.append("現價過上月高點")
+            signals.append("今收盤過上月高點")
         if m2 and c1 < m2:
-            signals.append("現價破上月低點")
+            signals.append("今收盤破上月低點")
 
     return signals
 
