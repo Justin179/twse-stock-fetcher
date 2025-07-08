@@ -1,3 +1,5 @@
+# fetch_latest_price_full.py
+
 import requests
 import os
 from dotenv import load_dotenv
@@ -6,7 +8,7 @@ from datetime import datetime, timedelta
 load_dotenv()
 TOKEN = os.getenv("FINMIND_TOKEN")
 
-def fetch_latest_close_price(stock_id="2330"):
+def fetch_latest_price_full(stock_id="2330"):
     if not TOKEN:
         print("❌ 請在 .env 檔案中設定 FINMIND_TOKEN")
         return
@@ -30,10 +32,15 @@ def fetch_latest_close_price(stock_id="2330"):
 
         if results:
             latest = results[-1]
-            print(f"📊 {stock_id} 最近有資料的日期：{latest['date']}，收盤價：{latest['close']} 元")
+            print(f"📊 {stock_id} 最近資料（{latest['date']}）")
+            print(f"    📈 開盤價：{latest['open']} 元")
+            print(f"    🔼 最高價：{latest['max']} 元")
+            print(f"    🔽 最低價：{latest['min']} 元")
+            print(f"    🔚 收盤價：{latest['close']} 元")
+            print(f"    📊 成交量：{latest['Trading_Volume']} 張")
             return
 
     print("❌ 無法在過去15日內找到任何資料")
 
 if __name__ == "__main__":
-    fetch_latest_close_price("2330")
+    fetch_latest_price_full("2330")
