@@ -37,7 +37,7 @@ def fetch_latest_price_full(stock_id="2330"):
             print(f"    🔼 最高價：{latest['max']} 元")
             print(f"    🔽 最低價：{latest['min']} 元")
             print(f"    🔚 收盤價：{latest['close']} 元")
-            print(f"    📊 成交量：{latest['Trading_Volume']} 張")
+            print(f"    📊 成交量：{latest['Trading_Volume']} 股")
             return
 
     print("❌ 無法在過去15日內找到任何資料")
