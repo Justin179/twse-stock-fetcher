@@ -33,7 +33,7 @@ def fetch_and_store_price(stock_id="2330"):
         )
     """)
     count_inserted = 0
-    for i in range(15):
+    for i in range(63):
         date_str = (datetime.today() - timedelta(days=i)).strftime("%Y-%m-%d")
         params = {
             "dataset": "TaiwanStockPrice",
@@ -45,6 +45,7 @@ def fetch_and_store_price(stock_id="2330"):
         response = requests.get(url, params=params, headers=headers)
         data = response.json()
         rows = data.get("data", [])
+        # print([row["date"] for row in rows])  # 只印出日期
         
         for row in rows:
             cursor.execute("""
