@@ -67,7 +67,7 @@ def fetch_and_store_price(stock_id="2330"):
     conn.commit()
     conn.close()
     if count_inserted == 0:
-        print(f"ℹ️ {stock_id} 沒有需要補的資料（過去15天內皆已存在）")
+        print(f"ℹ️ {stock_id} 沒有需要補的資料（過去63天內皆已存在）")
 
 if __name__ == "__main__":
     fetch_and_store_price("2330")
