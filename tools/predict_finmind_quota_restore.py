@@ -43,8 +43,8 @@ def main():
         print("❌ 登入 FinMind 失敗")
         return
 
-    current_quota = dl.api_usage_limit
-    print(f"📊 FinMind 剩餘 quota：{current_quota}")
+    current_quota = dl.api_usage # api 已使用次數
+    print(f"📊 FinMind api 已使用次數：{current_quota}")
 
     today_str = datetime.today().strftime("%Y%m%d")
     log_path = os.path.join(LOG_DIR, f"finmind_{today_str}.txt")

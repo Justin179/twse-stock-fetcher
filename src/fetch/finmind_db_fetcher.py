@@ -160,12 +160,13 @@ if __name__ == "__main__":
     logging.info("✅ 成功登入 FinMind")
 
     # ✅ 檢查 API 使用次數是否足夠
-    remaining_quota = dl.api_usage_limit
+    usage_limit = dl.api_usage_limit
+    quota_used = dl.api_usage
     needed_requests = len(stock_list)
 
-    print(f"📊 FinMind 剩餘可用 request 數：{remaining_quota}")
+    print(f"📊 FinMind api 已使用次數：{quota_used} / {usage_limit}")
     print(f"📋 股票清單共需 request 數：{needed_requests}")
-    if needed_requests > remaining_quota:
+    if needed_requests > quota_used:
         print("❌ 可用 request 數不足，請稍後再試或減少股票清單數量")
         logging.warning("Request 數不足，停止執行")
         exit(1)
@@ -197,7 +198,3 @@ if __name__ == "__main__":
         print("\n🚫 跳過清單：")
         print(" / ".join(msg))
 
-    # ✅ 顯示剩餘 request 數
-    remaining_after = dl.api_usage_limit
-    print(f"\n📉 FinMind 執行完後剩餘 request 數：{remaining_after}")
-    logging.info(f"執行完後剩餘 request 數：{remaining_after}")
