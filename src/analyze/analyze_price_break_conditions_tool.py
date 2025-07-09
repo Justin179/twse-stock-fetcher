@@ -124,24 +124,36 @@ def analyze_stock(stock_id):
 
     signals = []
 
+    
     # 昨天收盤
     if c2:
+        # 上週高點
         if w1 and c2 > w1:
-            signals.append("昨收盤過上週高點")
             if v1 and v2 and v1 > v2:
                 signals.append("昨收盤帶量過上週高點")
+            else:
+                signals.append("昨收盤過上週高點")
+
+        # 上月高點
         if m1 and c2 > m1:
-            signals.append("昨收盤過上月高點")
             if v1 and v2 and v1 > v2:
                 signals.append("昨收盤帶量過上月高點")
+            else:
+                signals.append("昨收盤過上月高點")
+
+        # 上週低點
         if w2 and c2 < w2:
-            signals.append("昨收盤破上週低點")
             if v1 and v2 and v1 > v2:
                 signals.append("昨收盤帶量破上週低點")
+            else:
+                signals.append("昨收盤破上週低點")
+
+        # 上月低點
         if m2 and c2 < m2:
-            signals.append("昨收盤破上月低點")
             if v1 and v2 and v1 > v2:
                 signals.append("昨收盤帶量破上月低點")
+            else:
+                signals.append("昨收盤破上月低點")
 
     # 今天開盤
     if o and c2:
