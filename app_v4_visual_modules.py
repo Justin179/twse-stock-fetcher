@@ -9,6 +9,11 @@ from src.ui.plot_main_force_plotly_final import plot_main_force_charts
 from src.ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from src.ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
 from src.ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
+from src.analyze.analyze_price_break_conditions_dataloader import (
+    analyze_stock, get_today_prices, get_recent_prices,
+    get_yesterday_hl, get_week_month_high_low
+)
+
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -78,6 +83,52 @@ with col2:
             """)
         else:
             st.warning("⚠️ 找不到該股票的 RSI / RS 評分資料。")
+
+        
+        st.subheader("📌 關鍵價位分析")
+        try:
+            today = get_today_prices(selected)
+            today_date = today["date"]
+            db_data = get_recent_prices(selected, today_date)
+            w1, w2, m1, m2 = get_week_month_high_low(selected)
+            h, l = get_yesterday_hl(selected, today_date)
+            c1, o, c2 = today["c1"], today["o"], today["c2"]
+            v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
+            tips = analyze_stock(selected)
+
+            col_left, col_right = st.columns(2)
+
+            with col_left:
+                st.markdown(f"- **今日開盤價**：{o}")
+                st.markdown(f"- **今日收盤價**：{c1}")
+                st.markdown(f"- **昨日收盤價**：{c2}")
+                st.markdown(f"- **昨日高點**：{h}")
+                st.markdown(f"- **昨日低點**：{l}")
+                st.markdown(f"- **昨日成交量**：{v1}")
+                st.markdown(f"- **上週高點**：{w1}")
+                st.markdown(f"- **上週低點**：{w2}")
+                st.markdown(f"- **上月高點**：{m1}")
+                st.markdown(f"- **上月低點**：{m2}")
+
+            
+            with col_right:
+                st.markdown("**提示訊息：**")
+                for tip in tips:
+                    if ("過" in tip and "高" in tip) or ("開高" in tip):
+                        icon = "✅"
+                    elif ("破" in tip and "低" in tip) or ("開低" in tip):
+                        icon = "❌"
+                    elif "開平" in tip:
+                        icon = "➖"
+                    else:
+                        icon = "ℹ️"
+                    st.markdown(f"{icon} {tip}", unsafe_allow_html=True)
+
+
+        except Exception as e:
+            st.warning(f"⚠️ 無法取得關鍵價位分析資料：{e}")
+
+
 
         st.subheader("📉 收盤價 (日)")
         fig_price = plot_price_interactive(selected)
