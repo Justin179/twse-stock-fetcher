@@ -110,10 +110,20 @@ with col2:
                 st.markdown(f"- **上月高點**：{m1}")
                 st.markdown(f"- **上月低點**：{m2}")
 
+            
             with col_right:
                 st.markdown("**提示訊息：**")
                 for tip in tips:
-                    st.success(f"✅ {tip}")
+                    if ("過" in tip and "高" in tip) or ("開高" in tip):
+                        icon = "✅"
+                    elif ("破" in tip and "低" in tip) or ("開低" in tip):
+                        icon = "❌"
+                    elif "開平" in tip:
+                        icon = "➖"
+                    else:
+                        icon = "ℹ️"
+                    st.markdown(f"{icon} {tip}", unsafe_allow_html=True)
+
 
         except Exception as e:
             st.warning(f"⚠️ 無法取得關鍵價位分析資料：{e}")
