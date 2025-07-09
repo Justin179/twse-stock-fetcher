@@ -130,66 +130,66 @@ def analyze_stock(stock_id):
         # 上週高點
         if w1 and c2 > w1:
             if v1 and v2 and v1 > v2:
-                signals.append("昨收盤帶量過上週高點")
+                signals.append("昨收盤 帶量過上週高點")
             else:
-                signals.append("昨收盤過上週高點")
+                signals.append("昨收盤 過上週高點")
 
         # 上月高點
         if m1 and c2 > m1:
             if v1 and v2 and v1 > v2:
-                signals.append("昨收盤帶量過上月高點")
+                signals.append("昨收盤 帶量過上月高點")
             else:
-                signals.append("昨收盤過上月高點")
+                signals.append("昨收盤 過上月高點")
 
         # 上週低點
         if w2 and c2 < w2:
             if v1 and v2 and v1 > v2:
-                signals.append("昨收盤帶量破上週低點")
+                signals.append("昨收盤 帶量破上週低點")
             else:
-                signals.append("昨收盤破上週低點")
+                signals.append("昨收盤 破上週低點")
 
         # 上月低點
         if m2 and c2 < m2:
             if v1 and v2 and v1 > v2:
-                signals.append("昨收盤帶量破上月低點")
+                signals.append("昨收盤 帶量破上月低點")
             else:
-                signals.append("昨收盤破上月低點")
+                signals.append("昨收盤 破上月低點")
 
     # 今天開盤
     if o and c2:
         if o > c2:
-            signals.append("今開盤開高")
+            signals.append("今開盤 開高")
         elif o == c2:
-            signals.append("今開盤開平盤")
+            signals.append("今開盤 開平盤")
         elif o < c2:
-            signals.append("今開盤開低")
+            signals.append("今開盤 開低")
         if h and o > h:
-            signals.append("今開盤過昨高")
+            signals.append("今開盤 過昨高")
         if l and o < l:
-            signals.append("今開盤破昨低")
+            signals.append("今開盤 破昨低")
         if w1 and o > w1:
-            signals.append("今開盤過上週高點")
+            signals.append("今開盤 過上週高點")
         if m1 and o > m1:
-            signals.append("今開盤過上月高點")
+            signals.append("今開盤 過上月高點")
         if w2 and o < w2:
-            signals.append("今開盤破上週低點")
+            signals.append("今開盤 破上週低點")
         if m2 and o < m2:
-            signals.append("今開盤破上月低點")
+            signals.append("今開盤 破上月低點")
 
     # 今天盤中
     if c1:
         if h and c1 > h:
-            signals.append("今收盤過昨高")
+            signals.append("今收盤(現價) 過昨高")
         if l and c1 < l:
-            signals.append("今收盤破昨低")
+            signals.append("今收盤(現價) 破昨低")
         if w1 and c1 > w1:
-            signals.append("今收盤過上週高點")
+            signals.append("今收盤(現價) 過上週高點")
         if w2 and c1 < w2:
-            signals.append("今收盤破上週低點")
+            signals.append("今收盤(現價) 破上週低點")
         if m1 and c1 > m1:
-            signals.append("今收盤過上月高點")
+            signals.append("今收盤(現價) 過上月高點")
         if m2 and c1 < m2:
-            signals.append("今收盤破上月低點")
+            signals.append("今收盤(現價) 破上月低點")
 
     return signals
 
