@@ -30,7 +30,7 @@ python src\fetch\fetch_main_force_multi.py temp_list.txt >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
 echo ===== [8:00 & 22:14] 更新籌碼集中度與千張大戶比率 ===== >> %LOG_FILE%
-python src\fetch\save_holder_concentration.py temp_list >> %LOG_FILE% 2>&1
+python src\fetch\save_holder_concentration.py temp_list.txt >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
 echo ===== [8:07 & 22:20] 更新月營收資料 ===== >> %LOG_FILE%
