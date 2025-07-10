@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from FinMind.data import DataLoader
-from finmind_db_fetcher import fetch_with_finmind_recent, get_existing_dates
+from finmind_db_fetcher import fetch_with_finmind_recent, get_existing_dates, fetch_with_finmind_data_full_wash
 from fetch_wearn_price_all_stocks_52weeks_threaded_safe import get_all_stock_ids
 from dotenv import load_dotenv
 import os
@@ -12,9 +12,9 @@ import logging
 logging.getLogger("FinMind").setLevel(logging.WARNING)
 
 DB_PATH = "data/institution.db"
-WAIT_SECONDS = 900  # 每次等待 15 分鐘
-MIN_AVAILABLE = 500  # ✅ 修正：只有當可用 request ≥ 500 才放行
-MAX_USE_PER_ROUND = 450  # ✅ 修正：每輪最多只使用 450 request
+WAIT_SECONDS = 600  # 每次等待 10 分鐘
+MIN_AVAILABLE = 510  # ✅ 修正：只有當可用 request ≥ 510 才放行
+MAX_USE_PER_ROUND = 480  # ✅ 修正：每輪最多只使用 480 request
 
 log_fp = None  # ✅ 用於 log 紀錄
 
@@ -112,11 +112,11 @@ def main():
 
     round_count = 0
     while pending: # 繼續處理直到沒有待處理的個股
-        wait_for_quota(dl) #（可用 request 數 < 400），就會休息一段時間（預設 5 分鐘）再重試
+        wait_for_quota(dl) # 等待回血到 510個可用requests 才能繼續
         round_count += 1
         safe_print(f"🔄 第 {round_count} 輪開始")
 
-        use_now = min(len(pending), MAX_USE_PER_ROUND) # 這一輪（round）要處理的股票數量 (從 pending 清單中抓出幾檔個股來發送 request, 最多500 檔)
+        use_now = min(len(pending), MAX_USE_PER_ROUND) # 這一輪（round）要處理的股票數量 (從 pending 清單中抓出幾檔個股來發送 request, 最多480檔)
         current_batch = pending[:use_now] # 取出這一輪要處理的股票代碼。
         pending = pending[use_now:] # 更新 pending 清單，移除已處理的股票代碼。
 
@@ -125,7 +125,9 @@ def main():
 
         for stock_id in current_batch:
             for attempt in range(1, 3):  # ✅ 最多嘗試兩次
-                result = fetch_with_finmind_recent(stock_id, dl, months=13)
+                result = fetch_with_finmind_recent(stock_id, dl, months=13) # 52週(insert or ignore)
+                # result = fetch_with_finmind_data_full_wash(stock_id, dl, months=69) # 整個洗一次(update)
+
                 if result is None:
                     done += 1
                     break  # 成功就跳出 retry 迴圈

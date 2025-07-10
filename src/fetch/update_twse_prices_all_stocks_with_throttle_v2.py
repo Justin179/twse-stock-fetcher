@@ -9,9 +9,9 @@ from dotenv import load_dotenv
 import os
 
 DB_PATH = "data/institution.db"
-WAIT_SECONDS = 900  # 每次等待 15 分鐘
-MIN_AVAILABLE = 500  # ✅ 修正：只有當可用 request ≥ 500 才放行
-MAX_USE_PER_ROUND = 450  # ✅ 修正：每輪最多只使用 450 request
+WAIT_SECONDS = 600  # 每次等待 10 分鐘
+MIN_AVAILABLE = 510  # ✅ 修正：只有當可用 request ≥ 510 才放行
+MAX_USE_PER_ROUND = 480  # ✅ 修正：每輪最多只使用 480 request
 
 def safe_print(msg):
     print(f"{datetime.now().strftime('%H:%M:%S')} | {msg}")
@@ -101,11 +101,11 @@ def main():
 
     round_count = 0
     while pending: # 繼續處理直到沒有待處理的個股
-        wait_for_quota(dl) #（可用 request 數 < 400），就會休息一段時間（預設 5 分鐘）再重試
+        wait_for_quota(dl) # 等待回血到 510個可用requests 才能繼續
         round_count += 1
         safe_print(f"🔄 第 {round_count} 輪開始")
 
-        use_now = min(len(pending), MAX_USE_PER_ROUND) # 這一輪（round）要處理的股票數量 (從 pending 清單中抓出幾檔個股來發送 request, 最多500 檔)
+        use_now = min(len(pending), MAX_USE_PER_ROUND) # 這一輪（round）要處理的股票數量 (從 pending 清單中抓出幾檔個股來發送 request, 最多480檔)
         current_batch = pending[:use_now] # 取出這一輪要處理的股票代碼。
         pending = pending[use_now:] # 更新 pending 清單，移除已處理的股票代碼。
 

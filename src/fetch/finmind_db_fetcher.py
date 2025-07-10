@@ -93,6 +93,24 @@ def fetch_with_finmind(stock_id: str, request_count: int, dl: DataLoader):
     logging.info(f"Request #{request_count}: {stock_id} - Saved {len(df)} rows to DB")
     return None
 
+# 資料完全重洗(69個月)，會刪除舊資料並重新寫入
+def fetch_with_finmind_data_full_wash(stock_id: str, dl: DataLoader, months: int = 69):
+    today = datetime.today()
+    start_date = (today - relativedelta(months=months)).strftime('%Y-%m-%d')
+    end_date = today.strftime('%Y-%m-%d')
+
+    df = dl.taiwan_stock_daily(
+        stock_id=stock_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    if df.empty:
+        return (stock_id, "No data")
+    
+    save_to_db(stock_id, df) # update
+    return None
+
 
 def fetch_with_finmind_recent(stock_id: str, dl: DataLoader, months: int = 2):
     """僅抓取最近 N 個月資料，並採 INSERT OR IGNORE 模式補足缺資料"""
