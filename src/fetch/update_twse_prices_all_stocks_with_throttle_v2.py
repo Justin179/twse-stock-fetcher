@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import os
 
 DB_PATH = "data/institution.db"
-WAIT_SECONDS = 600  # 每次等待 10 分鐘
+WAIT_SECONDS = 900  # 每次等待 15 分鐘
 MIN_AVAILABLE = 500  # ✅ 修正：只有當可用 request ≥ 500 才放行
 MAX_USE_PER_ROUND = 450  # ✅ 修正：每輪最多只使用 450 request
 
