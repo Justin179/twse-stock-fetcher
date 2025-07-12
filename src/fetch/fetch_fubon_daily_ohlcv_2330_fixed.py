@@ -15,9 +15,10 @@ def fetch_daily_ohlcv(sdk, symbol="2330", days=10):
     result = reststock.historical.candles(
         symbol=symbol,
         from_=start.strftime("%Y-%m-%d"),
-        to=end.strftime("%Y-%m-%d")
-    )
-    print(result)  # 可以註解掉
+        to=end.strftime("%Y-%m-%d"),
+        timeframe="D"
+    ) # 週k(W) 月k(M) 日k(D)
+    print(start.strftime("%Y-%m-%d"))  # 輸出起始日期
 
     data = result.get("data", [])
     if not data:
@@ -32,8 +33,8 @@ def fetch_daily_ohlcv(sdk, symbol="2330", days=10):
 def main():
     sdk = get_logged_in_sdk()
     df = fetch_daily_ohlcv(sdk, symbol="2330", days=10)
-    if df is not None:
-        print(df.tail())
+    # if df is not None:
+    #     print(df.tail())
 
 if __name__ == "__main__":
     main()
