@@ -1,9 +1,10 @@
 import time
 import sqlite3
+import sys
 from datetime import datetime
 from pathlib import Path
 from FinMind.data import DataLoader
-from finmind_db_fetcher import fetch_with_finmind_recent, get_existing_dates, fetch_with_finmind_data_full_wash
+from finmind_db_fetcher import fetch_with_finmind_recent, get_existing_dates
 from fetch_wearn_price_all_stocks_52weeks_threaded_safe import get_all_stock_ids
 from dotenv import load_dotenv
 import os
@@ -84,6 +85,12 @@ def filter_already_updated(all_ids: list[str], latest_date: str) -> list[str]:
 
 def main():
     global log_fp
+
+    # ✅ 僅在排程執行（非互動模式）且星期天時跳過
+    # if not sys.stdin.isatty() and datetime.today().weekday() == 6:
+    #     print("📅 今天是星期天，排程執行中，略過更新")
+    #     return
+
     load_dotenv()
     dl = DataLoader()
     success = dl.login(user_id=os.getenv("FINMIND_USER"), password=os.getenv("FINMIND_PASSWORD"))
