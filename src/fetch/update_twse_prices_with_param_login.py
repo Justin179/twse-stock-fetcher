@@ -1,5 +1,6 @@
 import time
 import sqlite3
+import sys
 from datetime import datetime
 from pathlib import Path
 from FinMind.data import DataLoader
@@ -7,14 +8,23 @@ from finmind_db_fetcher import fetch_with_finmind_recent, get_existing_dates
 from fetch_wearn_price_all_stocks_52weeks_threaded_safe import get_all_stock_ids
 from dotenv import load_dotenv
 import os
+import logging
+
+logging.getLogger("FinMind").setLevel(logging.WARNING)
 
 DB_PATH = "data/institution.db"
 WAIT_SECONDS = 600  # 每次等待 10 分鐘
 MIN_AVAILABLE = 510  # ✅ 修正：只有當可用 request ≥ 510 才放行
 MAX_USE_PER_ROUND = 480  # ✅ 修正：每輪最多只使用 480 request
 
+log_fp = None  # ✅ 用於 log 紀錄
+
 def safe_print(msg):
-    print(f"{datetime.now().strftime('%H:%M:%S')} | {msg}")
+    timestamp = datetime.now().strftime('%H:%M:%S')
+    formatted = f"{timestamp} | {msg}"
+    print(formatted)
+    if log_fp:
+        log_fp.write(formatted + "\n")
 
 def refresh_quota(dl: DataLoader):
     try:
@@ -52,8 +62,6 @@ def get_latest_trading_date(dl: DataLoader) -> str:
         safe_print(f"❌ 抓取最新交易日失敗：{e}")
         return None
 
-
-
 # ✅ 新增：過濾掉 twse_prices 資料庫中已經是最新交易日的個股
 def filter_already_updated(all_ids: list[str], latest_date: str) -> list[str]:
     conn = sqlite3.connect(DB_PATH)
@@ -76,6 +84,43 @@ def filter_already_updated(all_ids: list[str], latest_date: str) -> list[str]:
     return filtered
 
 def main():
+    # ✅ 讀取帳號索引參數，預設為 1
+    if len(sys.argv) < 2:
+        print("⚠️ 未提供帳號索引參數，預設使用帳號 1")
+        account_index = 1
+    else:
+        try:
+            account_index = int(sys.argv[1])
+        except:
+            print("❌ 傳入的帳號索引參數無效，請使用 1, 2, 3 ...")
+            return
+
+    env_key = lambda key: os.getenv(f"{key}_{account_index}")
+    user = env_key("FINMIND_USER")
+    password = env_key("FINMIND_PASSWORD")
+    token = env_key("FINMIND_TOKEN")
+
+    if not user or not password:
+        print(f"❌ 找不到第 {account_index} 組帳號的 .env 設定")
+        return
+
+    dl = DataLoader()
+    success = dl.login(user_id=user, password=password)
+    if not success:
+        print("❌ 登入失敗")
+        return
+    if token:
+        dl.token = token
+
+    safe_print(f"🔑 使用帳號 {account_index}: {user}")
+
+    global log_fp
+
+    # ✅ 僅在排程執行（非互動模式）且星期天時跳過
+    # if not sys.stdin.isatty() and datetime.today().weekday() == 6:
+    #     print("📅 今天是星期天，排程執行中，略過更新")
+    #     return
+
     load_dotenv()
     dl = DataLoader()
     success = dl.login(user_id=os.getenv("FINMIND_USER"), password=os.getenv("FINMIND_PASSWORD"))
@@ -84,6 +129,9 @@ def main():
         return
 
     Path("logs").mkdir(exist_ok=True)
+    log_filename = Path("logs") / f"twse_prices_update_{datetime.today().strftime('%Y%m%d_%H%M%S')}.log"
+    log_fp = open(log_filename, "w", encoding="utf-8")
+
     all_ids = get_all_stock_ids()
 
     # ✅ 加入：取得最新交易日，並過濾已更新個股
@@ -110,15 +158,29 @@ def main():
         pending = pending[use_now:] # 更新 pending 清單，移除已處理的股票代碼。
 
         done, skipped = 0, 0
+        skipped_ids = []  # ✅ 新增：記錄被 skip 的個股代碼
+
         for stock_id in current_batch:
-            result = fetch_with_finmind_recent(stock_id, dl, months=13)
-            if result is None:
-                done += 1
-            else:
-                skipped += 1
+            for attempt in range(1, 3):  # ✅ 最多嘗試兩次
+                result = fetch_with_finmind_recent(stock_id, dl, months=13) # 52週(insert or ignore)
+                # result = fetch_with_finmind_data_full_wash(stock_id, dl, months=69) # 整個洗一次(update)
+
+                if result is None:
+                    done += 1
+                    break  # 成功就跳出 retry 迴圈
+                elif attempt == 2:
+                    skipped += 1
+                    skipped_ids.append(stock_id)
+
         safe_print(f"✅ 本輪完成 {done} 檔，略過 {skipped} 檔，剩餘 {len(pending)} 檔")
 
+        if skipped_ids:
+            safe_print(f"⚠️ 被跳過的股票代碼（共 {len(skipped_ids)} 檔）: {', '.join(skipped_ids)}")
+
     safe_print("🎉 全部更新完成")
+    if log_fp:
+        log_fp.write("🎉 全部更新完成\n")
+        log_fp.close()
 
 if __name__ == "__main__":
     main()
