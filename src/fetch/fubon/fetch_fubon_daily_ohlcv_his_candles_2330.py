@@ -8,6 +8,8 @@ import pandas as pd
 # Candles
 # https://www.fbs.com.tw/TradeAPI/docs/market-data/http-api/historical/candles
 # 歷史行情 : 60 / min (如果您 API 請求超過了限制，將收到帶有狀態碼 429 的回應。需再等候1分鐘。)
+# 日k(D): 回傳近五日資料 (1分鐘內最多可請求60次)
+# 1901檔的話，1分鐘請求50次，1次1檔個股，1901/50 = 38.02分鐘
 
 def fetch_daily_ohlcv(sdk, symbol="2330", days=10):
     end = datetime.today()
