@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from FinMind.data import DataLoader
-from finmind_db_fetcher import fetch_with_finmind_recent, get_existing_dates
+from finmind_db_fetcher import fetch_with_finmind_recent
 from fetch_wearn_price_all_stocks_52weeks_threaded_safe import get_all_stock_ids
 from dotenv import load_dotenv
 import os
@@ -120,13 +120,6 @@ def main():
     # if not sys.stdin.isatty() and datetime.today().weekday() == 6:
     #     print("📅 今天是星期天，排程執行中，略過更新")
     #     return
-
-    load_dotenv()
-    dl = DataLoader()
-    success = dl.login(user_id=os.getenv("FINMIND_USER"), password=os.getenv("FINMIND_PASSWORD"))
-    if not success:
-        print("❌ 登入失敗")
-        return
 
     Path("logs").mkdir(exist_ok=True)
     log_filename = Path("logs") / f"twse_prices_update_{datetime.today().strftime('%Y%m%d_%H%M%S')}.log"
