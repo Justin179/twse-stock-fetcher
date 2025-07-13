@@ -12,6 +12,19 @@ import logging
 
 # 支援 透過傳入數字 切帳號 (1, 2, 3 ...)
 # 例如：python update_twse_prices_with_param_login.py 1
+'''
+用台積電（2330）的歷史資料取得最新一筆交易日期。
+查資料庫 twse_prices，比對是否已有最新交易日的資料。已經有最新的ohlcv資料，就不發出請求(省著用)
+到finmind抓過去13個月的資料，insert or ignore到 twse_prices 資料庫。
+
+特殊邏輯: 1輪抓480檔個股，只有在回血到request ≥ 510 為綠燈放行 (變綠燈前，每10分鐘查看一次變綠燈了沒有)
+
+主要用途: (手動)補資料
+帳號1 + justin_uob: 480筆
+帳號2 + 手機: 480筆
+帳號3 + 手機(開關飛航，利用浮動ip): 480筆
+理論上1次可以更到 1440筆資料 (反正先這樣用用看，不行再調整)
+'''
 
 logging.getLogger("FinMind").setLevel(logging.WARNING)
 
