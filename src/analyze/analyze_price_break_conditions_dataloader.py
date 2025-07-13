@@ -4,7 +4,7 @@ from datetime import datetime
 import sys, os
 from common.login_helper import get_logged_in_sdk
 from FinMind.data import DataLoader
-from src.fetch.finmind_db_fetcher import fetch_with_finmind_recent
+from fetch.finmind.finmind_db_fetcher import fetch_with_finmind_recent
 DB_PATH = "data/institution.db" 
 def get_recent_prices(stock_id, today_date):
     conn = sqlite3.connect(DB_PATH)

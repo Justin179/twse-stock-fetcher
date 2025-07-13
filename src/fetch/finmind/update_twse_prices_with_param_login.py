@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 import os
 import logging
 
+# 支援 透過傳入數字 切帳號 (1, 2, 3 ...)
+# 例如：python update_twse_prices_with_param_login.py 1
+
 logging.getLogger("FinMind").setLevel(logging.WARNING)
 
 DB_PATH = "data/institution.db"
