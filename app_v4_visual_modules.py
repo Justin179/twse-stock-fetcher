@@ -3,13 +3,13 @@ import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-from src.ui.plot_price_interactive_final import plot_price_interactive
-from src.ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
-from src.ui.plot_main_force_plotly_final import plot_main_force_charts
-from src.ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
-from src.ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
-from src.ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
-from src.analyze.analyze_price_break_conditions_dataloader import (
+from ui.plot_price_interactive_final import plot_price_interactive
+from ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
+from ui.plot_main_force_plotly_final import plot_main_force_charts
+from ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
+from ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
+from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
+from analyze.analyze_price_break_conditions_dataloader import (
     analyze_stock, get_today_prices, get_recent_prices,
     get_yesterday_hl, get_week_month_high_low
 )
