@@ -102,7 +102,7 @@ def analyze_stock(stock_id):
     from dotenv import load_dotenv
     import os
     load_dotenv()
-    dl.login(user_id=os.getenv("FINMIND_USER"), password=os.getenv("FINMIND_PASSWORD"))
+    dl.login(user_id=os.getenv("FINMIND_USER_1"), password=os.getenv("FINMIND_PASSWORD_1"))
     fetch_with_finmind_recent(stock_id, dl, months=2) # 
     
     today = get_today_prices(stock_id)
