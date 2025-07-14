@@ -3,12 +3,11 @@ import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 import pandas as pd
-import sys
 
 # sys.path.append(str(Path(__file__).resolve().parent.parent))  # 指到 src/fetch
-sys.path.append(str(Path(__file__).resolve().parents[3]))  # 指到 MyStockTools 根目錄
+# sys.path.append(str(Path(__file__).resolve().parents[3]))  # 指到 MyStockTools 根目錄
 from common.login_helper import get_logged_in_sdk
-from src.fetch.finmind.fetch_wearn_price_all_stocks_52weeks_threaded_safe import get_all_stock_ids
+from fetch.finmind.fetch_wearn_price_all_stocks_52weeks_threaded_safe import get_all_stock_ids
 
 DB_PATH = "data/institution.db"
 LOG_DIR = Path("logs")
@@ -67,7 +66,6 @@ def insert_ohlcv_to_db(stock_id, df):
     print(df)
     if df is None or df.empty:
         return 0
-    print("ooxx")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     count = 0
