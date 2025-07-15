@@ -1,7 +1,7 @@
 import time
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from FinMind.data import DataLoader
 from finmind_db_fetcher import fetch_with_finmind_recent
@@ -63,7 +63,7 @@ def get_latest_trading_date(dl: DataLoader) -> str:
     try:
         df = dl.taiwan_stock_daily(
             stock_id="2330",
-            start_date="2024-01-01",  # 任意合理時間即可
+            start_date=(datetime.today() - timedelta(days=31)).strftime("%Y-%m-%d"), 
             end_date=datetime.today().strftime("%Y-%m-%d")
         )
 
