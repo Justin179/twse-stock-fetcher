@@ -4,8 +4,8 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from FinMind.data import DataLoader
-from finmind_db_fetcher import fetch_with_finmind_recent
-from fetch_wearn_price_all_stocks_52weeks_threaded_safe import get_all_stock_ids
+from .finmind_db_fetcher import fetch_with_finmind_recent
+from .fetch_wearn_price_all_stocks_52weeks_threaded_safe import get_all_stock_ids
 from dotenv import load_dotenv
 import os
 import logging
