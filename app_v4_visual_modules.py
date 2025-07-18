@@ -104,7 +104,7 @@ with col2:
                 st.markdown(f"- **今日收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
                 st.markdown(f"- **昨日高點**：{h}")
                 st.markdown(f"- **昨日低點**：{l}")
-                st.markdown(f"- **昨日成交量**：{v1}")
+                st.markdown(f"- **昨日成交量**：{v1 / 1000:,.0f} 張" if v1 is not None else "- **昨日成交量**：無資料")
                 st.markdown(f"- **上週高點**：{w1}")
                 st.markdown(f"- **上週低點**：{w2}")
                 st.markdown(f"- **上月高點**：{m1}")
