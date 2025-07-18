@@ -99,9 +99,9 @@ with col2:
             col_left, col_right = st.columns(2)
 
             with col_left:
-                st.markdown(f"- **今日開盤價**：{o}")
-                st.markdown(f"- **今日收盤價**：{c1}")
                 st.markdown(f"- **昨日收盤價**：{c2}")
+                st.markdown(f"- **今日開盤價**：{o}")
+                st.markdown(f"- **今日收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
                 st.markdown(f"- **昨日高點**：{h}")
                 st.markdown(f"- **昨日低點**：{l}")
                 st.markdown(f"- **昨日成交量**：{v1}")
@@ -122,8 +122,14 @@ with col2:
                         icon = "➖"
                     else:
                         icon = "ℹ️"
-                    st.markdown(f"{icon} {tip}", unsafe_allow_html=True)
 
+                    # 額外條件：若 tip 以「今收盤(現價)」開頭，則文字上色為藍色
+                    if tip.startswith("今收盤(現價)"):
+                        tip_html = f'<span style="color:blue">{tip}</span>'
+                    else:
+                        tip_html = tip
+
+                    st.markdown(f"{icon} {tip_html}", unsafe_allow_html=True)
 
         except Exception as e:
             st.warning(f"⚠️ 無法取得關鍵價位分析資料：{e}")
