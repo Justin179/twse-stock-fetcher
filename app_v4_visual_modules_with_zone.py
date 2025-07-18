@@ -2,6 +2,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
+from ui.plot_price_position_zone import plot_price_position_zone
 import plotly.graph_objects as go
 from ui.plot_price_interactive_final import plot_price_interactive
 from ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
@@ -99,40 +100,10 @@ with col2:
             col_left, col_right = st.columns(2)
 
             with col_left:
-                # 昨日成交量（固定最上方）
                 st.markdown(f"- **昨日成交量**：{v1 / 1000:,.0f} 張" if v1 is not None else "- **昨日成交量**：無資料")
-
-                # 其他項目打包進 list 並排序（數值大的在上）
-                value_items = [
-                    ("昨日收盤價", c2),
-                    ("今日開盤價", o),
-                    ("今日收盤價(現價)", c1),
-                    ("昨日高點", h),
-                    ("昨日低點", l),
-                    ("上週高點", w1),
-                    ("上週低點", w2),
-                    ("上月高點", m1),
-                    ("上月低點", m2)
-                ]
-
-                # 過濾掉 None 值，並排序（由大到小）
-                sorted_items = sorted(
-                    [(label, val) for label, val in value_items if val is not None],
-                    key=lambda x: x[1],
-                    reverse=True
-                )
-
-                # 顯示
-                for label, val in sorted_items:
-                    if label == "今日收盤價(現價)":
-                        st.markdown(f"- **{label}**：<span style='color:blue; font-weight:bold; font-size:18px'>{val}</span>", unsafe_allow_html=True)
-                    elif label in ["今日開盤價", "昨日收盤價"]:
-                        st.markdown(f"- **{label}**：<span style='color:blue'>{val}</span>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"- **{label}**：{val}")
-
-
-            
+                st.markdown(f"- **昨日收盤價**：{c2}")
+                st.markdown(f"- **今日開盤價**：{o}")
+                st.markdown(f"- **今日收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
             with col_right:
                 st.markdown("**提示訊息：**")
                 for tip in tips:
@@ -157,6 +128,10 @@ with col2:
             st.warning(f"⚠️ 無法取得關鍵價位分析資料：{e}")
 
 
+
+        st.subheader("📌 現價與區間關係視覺化")
+        fig_zone = plot_price_position_zone(c1, o, c2, h, l, w1, w2, m1, m2)
+        st.plotly_chart(fig_zone, use_container_width=True)
 
         st.subheader("📉 收盤價 (日)")
         fig_price = plot_price_interactive(selected)
