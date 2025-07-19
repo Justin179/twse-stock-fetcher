@@ -84,16 +84,45 @@ def get_week_month_high_low(stock_id):
     return w1, w2, m1, m2
 
 def get_today_prices(stock_id):
-    sdk = get_logged_in_sdk()
-    sdk.init_realtime()
-    quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=stock_id)
-    sdk.logout()
-    return {
-        "date": quote.get("date"),
-        "c1": quote.get("closePrice"),
-        "o": quote.get("openPrice"),
-        "c2": quote.get("previousClose")
-    }
+    try:
+        sdk = get_logged_in_sdk()
+        sdk.init_realtime()
+        quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=stock_id)
+        sdk.logout()
+        return {
+            "date": quote.get("date"),
+            "c1": quote.get("closePrice"),
+            "o": quote.get("openPrice"),
+            "c2": quote.get("previousClose")
+        }
+    except Exception as e:
+        print(f"⚠️ 富邦 API 失敗，改用資料庫 fallback：{e}")
+
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql_query(
+            """
+            SELECT date, open, close
+            FROM twse_prices
+            WHERE stock_id = ?
+            ORDER BY date DESC LIMIT 2
+            """,
+            conn, params=(stock_id,)
+        )
+        conn.close()
+
+        if len(df) < 2:
+            raise ValueError("資料庫中無足夠的資料供替代使用")
+
+        today_row = df.iloc[0]
+        prev_row = df.iloc[1]
+
+        return {
+            "date": today_row["date"],
+            "c1": today_row["close"],
+            "o": today_row["open"],
+            "c2": prev_row["close"]  # 第二新資料的收盤價為 c2
+        }
+
 
 def analyze_stock(stock_id):
     
