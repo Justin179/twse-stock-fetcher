@@ -83,45 +83,72 @@ def get_week_month_high_low(stock_id):
 
     return w1, w2, m1, m2
 
+def is_fubon_api_maintenance_time(now=None):
+    """
+    判斷當前是否為富邦 API 的例行維護時間：
+    從「週六早上 7:00」到「週日晚上 7:00」之間
+    """
+    from datetime import datetime, timedelta
+
+    if now is None:
+        now = datetime.now()
+    weekday = now.weekday()  # Monday = 0, Sunday = 6
+
+    # 週六早上 7:00
+    saturday_7am = now.replace(hour=7, minute=0, second=0, microsecond=0)
+    saturday_7am -= timedelta(days=(weekday - 5) % 7)
+
+    # 週日晚上 7:00
+    sunday_7pm = saturday_7am + timedelta(days=1, hours=12)
+
+    return saturday_7am <= now <= sunday_7pm
+
+
+def get_latest_price_from_db(stock_id):
+    conn = sqlite3.connect(DB_PATH)
+    df = pd.read_sql_query(
+        """
+        SELECT date, open, close
+        FROM twse_prices
+        WHERE stock_id = ?
+        ORDER BY date DESC LIMIT 2
+        """,
+        conn, params=(stock_id,)
+    )
+    conn.close()
+
+    if len(df) < 2:
+        raise ValueError("資料庫中無足夠的資料供替代使用")
+
+    today_row = df.iloc[0]
+    prev_row = df.iloc[1]
+
+    return {
+        "date": today_row["date"],
+        "c1": today_row["close"],
+        "o": today_row["open"],
+        "c2": prev_row["close"]  # 第二新資料的收盤價為 c2
+    }
+
 def get_today_prices(stock_id):
-    try:
-        sdk = get_logged_in_sdk()
-        sdk.init_realtime()
-        quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=stock_id)
-        sdk.logout()
-        return {
-            "date": quote.get("date"),
-            "c1": quote.get("closePrice"),
-            "o": quote.get("openPrice"),
-            "c2": quote.get("previousClose")
-        }
-    except Exception as e:
-        print(f"⚠️ 富邦 API 失敗，改用資料庫 fallback：{e}")
-
-        conn = sqlite3.connect(DB_PATH)
-        df = pd.read_sql_query(
-            """
-            SELECT date, open, close
-            FROM twse_prices
-            WHERE stock_id = ?
-            ORDER BY date DESC LIMIT 2
-            """,
-            conn, params=(stock_id,)
-        )
-        conn.close()
-
-        if len(df) < 2:
-            raise ValueError("資料庫中無足夠的資料供替代使用")
-
-        today_row = df.iloc[0]
-        prev_row = df.iloc[1]
-
-        return {
-            "date": today_row["date"],
-            "c1": today_row["close"],
-            "o": today_row["open"],
-            "c2": prev_row["close"]  # 第二新資料的收盤價為 c2
-        }
+    if is_fubon_api_maintenance_time():
+        print("目前為富邦 API 維護時間，改用資料庫")
+    else:
+        print("富邦 API 可使用時段")
+        try:
+            sdk = get_logged_in_sdk()
+            sdk.init_realtime()
+            quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=stock_id)
+            sdk.logout()
+            return {
+                "date": quote.get("date"),
+                "c1": quote.get("closePrice"),
+                "o": quote.get("openPrice"),
+                "c2": quote.get("previousClose")
+            }
+        except Exception as e:
+            print(f"⚠️ 富邦 API 失敗，改用資料庫 fallback：{e}")
+    return get_latest_price_from_db(stock_id)
 
 
 def analyze_stock(stock_id):
