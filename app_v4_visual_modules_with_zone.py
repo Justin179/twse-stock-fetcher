@@ -2,6 +2,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
+from ui.price_break_display_module import display_price_break_analysis
 from ui.plot_price_position_zone import plot_price_position_zone
 import plotly.graph_objects as go
 from ui.plot_price_interactive_final import plot_price_interactive
@@ -10,10 +11,6 @@ from ui.plot_main_force_plotly_final import plot_main_force_charts
 from ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
 from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
-from analyze.analyze_price_break_conditions_dataloader import (
-    analyze_stock, get_today_prices, get_recent_prices,
-    get_yesterday_hl, get_week_month_high_low
-)
 
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
@@ -87,45 +84,9 @@ with col2:
 
         
         st.subheader("📌 關鍵價位分析")
-        try:
-            today = get_today_prices(selected)
-            today_date = today["date"]
-            db_data = get_recent_prices(selected, today_date)
-            w1, w2, m1, m2 = get_week_month_high_low(selected)
-            h, l = get_yesterday_hl(selected, today_date)
-            c1, o, c2 = today["c1"], today["o"], today["c2"]
-            v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
-            tips = analyze_stock(selected)
-
-            col_left, col_right = st.columns(2)
-
-            with col_left:
-                st.markdown(f"- **昨日成交量**：{v1 / 1000:,.0f} 張" if v1 is not None else "- **昨日成交量**：無資料")
-                st.markdown(f"- **昨日收盤價**：{c2}")
-                st.markdown(f"- **今日開盤價**：{o}")
-                st.markdown(f"- **今日收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
-            with col_right:
-                st.markdown("**提示訊息：**")
-                for tip in tips:
-                    if ("過" in tip and "高" in tip) or ("開高" in tip):
-                        icon = "✅"
-                    elif ("破" in tip and "低" in tip) or ("開低" in tip):
-                        icon = "❌"
-                    elif "開平" in tip:
-                        icon = "➖"
-                    else:
-                        icon = "ℹ️"
-
-                    # 額外條件：若 tip 以「今收盤(現價)」開頭，則文字上色為藍色
-                    if tip.startswith("今收盤(現價)"):
-                        tip_html = f'<span style="color:blue">{tip}</span>'
-                    else:
-                        tip_html = tip
-
-                    st.markdown(f"{icon} {tip_html}", unsafe_allow_html=True)
-
-        except Exception as e:
-            st.warning(f"⚠️ 無法取得關鍵價位分析資料：{e}")
+        result = display_price_break_analysis(selected)
+        if result:
+            c1, o, c2, h, l, w1, w2, m1, m2 = result
 
 
 
