@@ -86,12 +86,10 @@ with col2:
         st.subheader("📌 關鍵價位分析")
         result = display_price_break_analysis(selected)
         if result:
-            c1, o, c2, h, l, w1, w2, m1, m2 = result
-
-
+            today_date, c1, o, c2, h, l, w1, w2, m1, m2 = result
 
         st.subheader("📌 現價與區間關係視覺化")
-        fig_zone = plot_price_position_zone(c1, o, c2, h, l, w1, w2, m1, m2)
+        fig_zone = plot_price_position_zone(today_date, c1, o, c2, h, l, w1, w2, m1, m2)
         st.plotly_chart(fig_zone, use_container_width=True)
 
         st.subheader("📉 收盤價 (日)")

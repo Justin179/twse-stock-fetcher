@@ -20,8 +20,8 @@ def display_price_break_analysis(stock_id: str):
         with col_left:
             st.markdown(f"- **昨日成交量**：{v1 / 1000:,.0f} 張" if v1 is not None else "- **昨日成交量**：無資料")
             st.markdown(f"- **昨日收盤價**：{c2}")
-            st.markdown(f"- **今日開盤價**：{o}")
-            st.markdown(f"- **今日收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
+            st.markdown(f"- **今日({today_date[5:]})開盤價**：{o}")
+            st.markdown(f"- **今日({today_date[5:]})收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
 
         with col_right:
             st.markdown("**提示訊息：**")
@@ -38,7 +38,7 @@ def display_price_break_analysis(stock_id: str):
                 tip_html = f'<span style="color:blue">{tip}</span>' if tip.startswith("今收盤(現價)") else tip
                 st.markdown(f"{icon} {tip_html}", unsafe_allow_html=True)
 
-        return c1, o, c2, h, l, w1, w2, m1, m2
+        return today_date, c1, o, c2, h, l, w1, w2, m1, m2
 
     except Exception as e:
         st.warning(f"⚠️ 無法取得關鍵價位分析資料：{e}")
