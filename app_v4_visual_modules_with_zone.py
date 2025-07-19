@@ -2,8 +2,10 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
+from common.stock_loader import load_stock_list_with_names
 from ui.price_break_display_module import display_price_break_analysis
 from ui.plot_price_position_zone import plot_price_position_zone
+from ui.rs_rsi_display_module import display_rs_rsi_info
 import plotly.graph_objects as go
 from ui.plot_price_interactive_final import plot_price_interactive
 from ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
@@ -16,33 +18,7 @@ from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_cl
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
 
-# 讀取持股清單與公司名稱
-def load_stock_list_with_names(file_path="my_stock_holdings.txt", db_path="data/institution.db"):
-    with open(file_path, "r", encoding="utf-8") as f:
-        stocks = sorted(line.strip() for line in f if line.strip())
 
-    conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query("SELECT stock_id, name FROM stock_meta", conn)
-    conn.close()
-    id_name_map = dict(zip(df["stock_id"].astype(str), df["name"]))
-
-    display_options = [
-        f"{stock_id} {id_name_map[stock_id]}" if stock_id in id_name_map else stock_id
-        for stock_id in stocks
-    ]
-    return stocks, display_options
-
-# 讀取個股 RS / RSI 評分資訊
-def fetch_rs_rsi_info(stock_id: str, db_path="data/institution.db"):
-    conn = sqlite3.connect(db_path)
-    query = f"""
-        SELECT return_1y, rs_score_1y, return_ytd, rs_score_ytd, rsi14, updated_at
-        FROM stock_rs_rsi
-        WHERE stock_id = ?
-    """
-    df = pd.read_sql_query(query, conn, params=(stock_id,))
-    conn.close()
-    return df.iloc[0] if not df.empty else None
 
 # --- Streamlit ---
 st.set_page_config(layout="wide")
@@ -70,18 +46,7 @@ with col1:
 with col2:
     if selected:
         # 顯示 RS / RSI 數值
-        rs_info = fetch_rs_rsi_info(selected)
-        if rs_info is not None:
-            st.markdown("### 📌 RSI / RS 概況")
-            st.markdown(f"""
-            - **RS分數 (1Y)**：{rs_info['rs_score_1y']} {'🔥 強勢股' if rs_info['rs_score_1y'] >= 90 else ''}
-            - **RS分數 (YTD)**：{rs_info['rs_score_ytd']} {'🔥 強勢股' if rs_info['rs_score_ytd'] >= 90 else ''}
-            - **RSI(14)**：{rs_info['rsi14']} {'⚠️ 超買' if rs_info['rsi14'] > 70 else ('🔻 超賣' if rs_info['rsi14'] < 30 else '')}
-            - **更新日期**：{rs_info['updated_at']}
-            """)
-        else:
-            st.warning("⚠️ 找不到該股票的 RSI / RS 評分資料。")
-
+        display_rs_rsi_info(selected)
         
         st.subheader("📌 關鍵價位分析")
         result = display_price_break_analysis(selected)
