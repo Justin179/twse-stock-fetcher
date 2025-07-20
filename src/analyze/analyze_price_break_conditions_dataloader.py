@@ -117,7 +117,7 @@ def get_today_prices(stock_id, sdk=None):
     if is_fubon_api_maintenance_time(): 
         pass  # 目前為富邦 API 維護時間，改用資料庫
     else:
-        print("富邦 API 可使用時段")
+        # print("富邦 API 可使用時段")
         try:
             if sdk is None:
                 sdk = get_logged_in_sdk()
@@ -135,7 +135,7 @@ def get_today_prices(stock_id, sdk=None):
     return get_latest_price_from_db(stock_id)
 
 
-def analyze_stock(stock_id, dl=None):
+def analyze_stock(stock_id, dl=None, sdk=None):
 
     if dl is None:
         dl = get_logged_in_dl()
@@ -147,7 +147,7 @@ def analyze_stock(stock_id, dl=None):
     
     fetch_with_finmind_recent(stock_id, dl, months=2) # 
     
-    today = get_today_prices(stock_id)
+    today = get_today_prices(stock_id, sdk=sdk)
     today_date = today["date"]  # 這是今天的日期字串
 
     db_data = get_recent_prices(stock_id, today_date)

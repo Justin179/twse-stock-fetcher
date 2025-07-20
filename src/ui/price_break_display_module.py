@@ -13,7 +13,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         h, l = get_yesterday_hl(stock_id, today_date)
         c1, o, c2 = today["c1"], today["o"], today["c2"]
         v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
-        tips = analyze_stock(stock_id, dl=dl)
+        tips = analyze_stock(stock_id, dl=dl, sdk=sdk)
 
         col_left, col_right = st.columns(2)
 
