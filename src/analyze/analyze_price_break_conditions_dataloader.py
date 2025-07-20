@@ -2,9 +2,11 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 import sys, os
-from common.login_helper import get_logged_in_sdk
+from common.login_helper import get_logged_in_dl, get_logged_in_sdk
 from FinMind.data import DataLoader
 from fetch.finmind.finmind_db_fetcher import fetch_with_finmind_recent
+
+
 DB_PATH = "data/institution.db" 
 def get_recent_prices(stock_id, today_date):
     conn = sqlite3.connect(DB_PATH)
@@ -131,8 +133,8 @@ def get_latest_price_from_db(stock_id):
     }
 
 def get_today_prices(stock_id, sdk=None):
-    if is_fubon_api_maintenance_time():
-        print("目前為富邦 API 維護時間，改用資料庫")
+    if is_fubon_api_maintenance_time(): 
+        pass  # 目前為富邦 API 維護時間，改用資料庫
     else:
         print("富邦 API 可使用時段")
         try:
@@ -152,14 +154,16 @@ def get_today_prices(stock_id, sdk=None):
     return get_latest_price_from_db(stock_id)
 
 
-def analyze_stock(stock_id):
+def analyze_stock(stock_id, dl=None):
+
+    if dl is None:
+        dl = get_logged_in_dl()
+        # dl = DataLoader()
+        # from dotenv import load_dotenv
+        # import os
+        # load_dotenv()
+        # dl.login(user_id=os.getenv("FINMIND_USER_1"), password=os.getenv("FINMIND_PASSWORD_1"))
     
-    # ✅ 使用 DataLoader 批次補資料（取代逐日慢速 fetch）
-    dl = DataLoader()
-    from dotenv import load_dotenv
-    import os
-    load_dotenv()
-    dl.login(user_id=os.getenv("FINMIND_USER_1"), password=os.getenv("FINMIND_PASSWORD_1"))
     fetch_with_finmind_recent(stock_id, dl, months=2) # 
     
     today = get_today_prices(stock_id)

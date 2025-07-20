@@ -4,16 +4,16 @@ from analyze.analyze_price_break_conditions_dataloader import (
     get_yesterday_hl, get_week_month_high_low
 )
 
-def display_price_break_analysis(stock_id: str):
+def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
-        today = get_today_prices(stock_id)
+        today = get_today_prices(stock_id, sdk)
         today_date = today["date"]
         db_data = get_recent_prices(stock_id, today_date)
         w1, w2, m1, m2 = get_week_month_high_low(stock_id)
         h, l = get_yesterday_hl(stock_id, today_date)
         c1, o, c2 = today["c1"], today["o"], today["c2"]
         v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
-        tips = analyze_stock(stock_id)
+        tips = analyze_stock(stock_id, dl=dl)
 
         col_left, col_right = st.columns(2)
 

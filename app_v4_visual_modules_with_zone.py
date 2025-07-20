@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from common.stock_loader import load_stock_list_with_names
 from ui.price_break_display_module import display_price_break_analysis
+from analyze.analyze_price_break_conditions_dataloader import is_fubon_api_maintenance_time
 from ui.plot_price_position_zone import plot_price_position_zone
 from ui.rs_rsi_display_module import display_rs_rsi_info
 import plotly.graph_objects as go
@@ -13,12 +14,11 @@ from ui.plot_main_force_plotly_final import plot_main_force_charts
 from ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
 from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
+from common.login_helper import get_logged_in_dl, get_logged_in_sdk
 
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
-
-
 
 # --- Streamlit ---
 st.set_page_config(layout="wide")
@@ -37,6 +37,14 @@ with st.expander("📘 說明：這是什麼？"):
         - 三率（毛利率、營業利益率、稅後淨利率）與季收盤價 (季)        
     """)
 
+if is_fubon_api_maintenance_time():
+    sdk = None
+else:
+    sdk = get_logged_in_sdk()
+
+dl = get_logged_in_dl()
+
+
 col1, col2 = st.columns([1, 6])
 with col1:
     stock_ids, stock_display = load_stock_list_with_names()
@@ -49,7 +57,7 @@ with col2:
         display_rs_rsi_info(selected)
         
         st.subheader("📌 關鍵價位分析")
-        result = display_price_break_analysis(selected)
+        result = display_price_break_analysis(selected, dl=dl, sdk=sdk)
         if result:
             today_date, c1, o, c2, h, l, w1, w2, m1, m2 = result
 

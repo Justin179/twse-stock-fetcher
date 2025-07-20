@@ -3,6 +3,8 @@
 from fubon_neo.sdk import FubonSDK
 import os
 from dotenv import load_dotenv
+from FinMind.data import DataLoader
+
 
 # 強制載入 .env 設定
 load_dotenv(override=True)
@@ -38,3 +40,9 @@ def get_logged_in_sdk():
 
     print("✅ 登入成功")
     return sdk
+
+def get_logged_in_dl():
+    load_dotenv()
+    dl = DataLoader()
+    dl.login(user_id=os.getenv("FINMIND_USER_1"), password=os.getenv("FINMIND_PASSWORD_1"))
+    return dl
