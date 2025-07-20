@@ -130,16 +130,17 @@ def get_latest_price_from_db(stock_id):
         "c2": prev_row["close"]  # 第二新資料的收盤價為 c2
     }
 
-def get_today_prices(stock_id):
+def get_today_prices(stock_id, sdk=None):
     if is_fubon_api_maintenance_time():
         print("目前為富邦 API 維護時間，改用資料庫")
     else:
         print("富邦 API 可使用時段")
         try:
-            sdk = get_logged_in_sdk()
+            if sdk is None:
+                sdk = get_logged_in_sdk()
             sdk.init_realtime()
             quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=stock_id)
-            sdk.logout()
+            
             return {
                 "date": quote.get("date"),
                 "c1": quote.get("closePrice"),
