@@ -5,6 +5,7 @@ import sys, os
 from common.login_helper import get_logged_in_dl, get_logged_in_sdk
 from FinMind.data import DataLoader
 from fetch.finmind.finmind_db_fetcher import fetch_with_finmind_recent
+from common.time_utils import is_fubon_api_maintenance_time
 
 
 DB_PATH = "data/institution.db" 
@@ -84,26 +85,6 @@ def get_week_month_high_low(stock_id):
         m1 = m2 = None
 
     return w1, w2, m1, m2
-
-def is_fubon_api_maintenance_time(now=None):
-    """
-    判斷當前是否為富邦 API 的例行維護時間：
-    從「週六早上 7:00」到「週日晚上 7:00」之間
-    """
-    from datetime import datetime, timedelta
-
-    if now is None:
-        now = datetime.now()
-    weekday = now.weekday()  # Monday = 0, Sunday = 6
-
-    # 週六早上 7:00
-    saturday_7am = now.replace(hour=7, minute=0, second=0, microsecond=0)
-    saturday_7am -= timedelta(days=(weekday - 5) % 7)
-
-    # 週日晚上 7:00
-    sunday_7pm = saturday_7am + timedelta(days=1, hours=12)
-
-    return saturday_7am <= now <= sunday_7pm
 
 
 def get_latest_price_from_db(stock_id):

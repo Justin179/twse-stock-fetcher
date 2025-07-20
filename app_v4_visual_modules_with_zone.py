@@ -4,7 +4,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from common.stock_loader import load_stock_list_with_names
 from ui.price_break_display_module import display_price_break_analysis
-from analyze.analyze_price_break_conditions_dataloader import is_fubon_api_maintenance_time
 from ui.plot_price_position_zone import plot_price_position_zone
 from ui.rs_rsi_display_module import display_rs_rsi_info
 import plotly.graph_objects as go
@@ -14,8 +13,7 @@ from ui.plot_main_force_plotly_final import plot_main_force_charts
 from ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
 from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
-from common.login_helper import get_logged_in_dl, get_logged_in_sdk
-
+from common.login_helper import init_session_login_objects
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -37,12 +35,8 @@ with st.expander("📘 說明：這是什麼？"):
         - 三率（毛利率、營業利益率、稅後淨利率）與季收盤價 (季)        
     """)
 
-if is_fubon_api_maintenance_time():
-    sdk = None
-else:
-    sdk = get_logged_in_sdk()
 
-dl = get_logged_in_dl()
+sdk, dl = init_session_login_objects()
 
 
 col1, col2 = st.columns([1, 6])
@@ -55,41 +49,41 @@ with col2:
     if selected:
         # 顯示 RS / RSI 數值
         display_rs_rsi_info(selected)
-        
+        print("a")
         st.subheader("📌 關鍵價位分析")
         result = display_price_break_analysis(selected, dl=dl, sdk=sdk)
         if result:
             today_date, c1, o, c2, h, l, w1, w2, m1, m2 = result
-
+        print("b")
         st.subheader("📌 現價與區間關係視覺化")
         fig_zone = plot_price_position_zone(today_date, c1, o, c2, h, l, w1, w2, m1, m2)
         st.plotly_chart(fig_zone, use_container_width=True)
-
+        print("c")
         st.subheader("📉 收盤價 (日)")
         fig_price = plot_price_interactive(selected)
         st.plotly_chart(fig_price, use_container_width=True)
-
+        print("d")
         st.subheader("📊 法人買賣超 & 持股比率 (日)")
         fig1, fig2 = plot_institution_combo_plotly(selected)
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
-
+        print("e")
         st.subheader("📈 主力買賣超 & 買賣家數差 (日)")
         fig_main1, fig_main2 = plot_main_force_charts(selected)
         st.plotly_chart(fig_main1, use_container_width=True)
         st.plotly_chart(fig_main2, use_container_width=True)
-
+        print("f")
         st.subheader("📈 籌碼集中度 & 千張大戶持股比率 (週)")
         fig3, fig4 = plot_holder_concentration_plotly(selected)
         st.plotly_chart(fig3, use_container_width=True)
         st.plotly_chart(fig4, use_container_width=True)
-
+        print("g")
         st.subheader("📈 營收年增率 & 月營收 & 營收月增率")
         fig5, fig6, fig7 = plot_monthly_revenue_plotly(selected)
         st.plotly_chart(fig5, use_container_width=True)
         st.plotly_chart(fig6, use_container_width=True)
         st.plotly_chart(fig7, use_container_width=True)
-
+        print("h")
         st.subheader("📊 三率 & 季收盤價 (20季)")
         try:
             fig8 = plot_profitability_ratios_with_close_price(selected)
