@@ -2,6 +2,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+# 手動更新全部股票的 Fubon OHLCV 資料，部分缺的FinMind補上 (每天排程已經有更新了，這支理論上用不到)
+
 # 設定 virtualenv Python 路徑
 python_path = Path("venv/Scripts/python.exe")
 
