@@ -9,7 +9,8 @@ def detect_signals(file_path="my_stock_holdings.txt"):
     attack_list = []
     weaken_list = []
 
-    stocks, _ = load_stock_list_with_names(file_path)
+    stocks, display_options = load_stock_list_with_names(file_path)
+    id_name_map = {s.split()[0]: s.split()[1] for s in display_options if " " in s}
 
     for stock_id in stocks:
         try:
@@ -28,17 +29,20 @@ def detect_signals(file_path="my_stock_holdings.txt"):
         except Exception as e:
             print(f"⚠️ {stock_id} 發生錯誤：{e}")
 
-    return attack_list, weaken_list
+    return attack_list, weaken_list, id_name_map
 
 
 if __name__ == "__main__":
     file_path = sys.argv[1] if len(sys.argv) > 1 else "my_stock_holdings.txt"
-    attack, weaken = detect_signals(file_path)
+    attack, weaken, id_name_map = detect_signals(file_path)
 
-    print("\n📢 有進攻訊號的個股（c1 > w1 且 c1 > m1）：")
-    for stock_id, tags in attack:
-        print(f"✅ {stock_id} {'、'.join(tags)}")
+    print("\n📢 過上週高 且 過上月高（c1 > w1 且 c1 > m1）：")
+    for stock_id, _ in attack:
+        name = id_name_map.get(stock_id, "")
+        print(f"✅ {stock_id} {name}")
 
-    print("\n📉 有轉弱訊號的個股（c1 < w2 且 c1 < m2）：")
-    for stock_id, tags in weaken:
-        print(f"❌ {stock_id} {'、'.join(tags)}")
+    print("\n📉 破上週低 且 破上月低（c1 < w2 且 c1 < m2）：")
+    for stock_id, _ in weaken:
+        name = id_name_map.get(stock_id, "")
+        print(f"❌ {stock_id} {name}")
+
