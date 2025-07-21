@@ -7,6 +7,7 @@ from analyze.analyze_price_break_conditions_dataloader import (
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
         today = get_today_prices(stock_id, sdk)
+        # print(f"🔍 取得今日價格資料：{today}")
         today_date = today["date"]
         db_data = get_recent_prices(stock_id, today_date)
         w1, w2, m1, m2 = get_week_month_high_low(stock_id)
