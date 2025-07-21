@@ -84,7 +84,7 @@ def plot_strong_days(df, strong_dates, stock_id="2330"):
 
 
 def main():
-    stock_id = "2301"
+    stock_id = "2330"
     conn = sqlite3.connect("data/institution.db")
     query = """
         SELECT date AS 日期, close AS 收盤價, volume AS 成交量
