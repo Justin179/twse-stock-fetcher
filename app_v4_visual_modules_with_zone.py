@@ -45,6 +45,8 @@ with col1:
     stock_ids, stock_display = load_stock_list_with_names()
     selected_display = st.selectbox("股票代碼", stock_display)
     selected = selected_display.split()[0]
+    parts = selected_display.split()
+    stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display
 
 with col2:
     if selected:
@@ -55,12 +57,8 @@ with col2:
         if result:
             today_date, c1, o, c2, h, l, w1, w2, m1, m2 = result
         
-        # st.subheader("📌 現價與區間關係視覺化")
-        st.markdown(f"""
-        <span style='font-size:22px'>📌 {selected_display} 現價與區間關係視覺化</span>
-        <span style='font-size:16px; color:gray'>　今日 = {today_date[5:]}</span>
-        """, unsafe_allow_html=True)
-        fig_zone = plot_price_position_zone(today_date, c1, o, c2, h, l, w1, w2, m1, m2)
+        st.subheader("📌 現價與區間關係視覺化")
+        fig_zone = plot_price_position_zone(stock_display_reversed, today_date, c1, o, c2, h, l, w1, w2, m1, m2)
         st.plotly_chart(fig_zone, use_container_width=True)
         
         st.markdown(f"""
@@ -70,7 +68,6 @@ with col2:
 
         fig_strength = analyze_10day_strength(selected)
         st.plotly_chart(fig_strength, use_container_width=True, config={"displayModeBar": False})
-
 
         st.subheader("📉 收盤價 (日)")
         fig_price = plot_price_interactive(selected)
