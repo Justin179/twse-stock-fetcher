@@ -6,6 +6,7 @@ from common.stock_loader import load_stock_list_with_names
 from ui.price_break_display_module import display_price_break_analysis
 from ui.plot_price_position_zone import plot_price_position_zone
 from ui.rs_rsi_display_module import display_rs_rsi_info
+from ui.plot_strength_table import analyze_10day_strength
 import plotly.graph_objects as go
 from ui.plot_price_interactive_final import plot_price_interactive
 from ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
@@ -58,6 +59,11 @@ with col2:
         fig_zone = plot_price_position_zone(today_date, c1, o, c2, h, l, w1, w2, m1, m2)
         st.plotly_chart(fig_zone, use_container_width=True)
         
+        # 🔵 加入分析模組
+        st.subheader("📋 短線條件分析表格 (10日)")
+        fig_strength = analyze_10day_strength(selected)
+        st.plotly_chart(fig_strength, use_container_width=True)
+
         st.subheader("📉 收盤價 (日)")
         fig_price = plot_price_interactive(selected)
         st.plotly_chart(fig_price, use_container_width=True)
