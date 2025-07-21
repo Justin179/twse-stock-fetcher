@@ -58,7 +58,6 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
         check = lambda b: "✅" if b else "❌"
         date = row["Date"].strftime("%m-%d")
 
-
         c1 = (row["Close"] > row["Close_Yesterday"] and row["Volume"] > row["Volume_Yesterday"]) or \
              (row["Close"] < row["Close_Yesterday"] and row["Volume"] < row["Volume_Yesterday"])
         c2 = row["Close"] > row["MA5"]
@@ -88,6 +87,12 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
     # 建立表格
     rotated = pd.DataFrame(results).set_index("日期").T
     rotated["條件名稱"] = rotated.index
+
+    # 補全空白讓 row 高度一致(無效)
+    max_len = max(rotated["條件名稱"].apply(len))
+    rotated["條件名稱"] = rotated["條件名稱"].apply(lambda x: x.ljust(max_len, '　'))  # 全形空格補齊
+
+
     rotated = rotated.reset_index(drop=True)
     columns = [col for col in rotated.columns if col != "條件名稱"]
 
@@ -98,18 +103,16 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
                 values=["條件名稱"] + columns,
                 fill_color='paleturquoise',
                 align='left',
-                font=dict(size=14)  # 標頭字體大小
+                font=dict(size=14)
             ),
             cells=dict(
                 values=[rotated["條件名稱"]] + [rotated[col] for col in columns],
                 fill_color='lavender',
                 align='left',
-                font=dict(size=14)  # 表格內文字字體大小
+                font=dict(size=14)
             )
         )
     ])
-
-
 
     fig.update_layout(title=f"{stock_id} - 過去10日條件分析")
     return fig
