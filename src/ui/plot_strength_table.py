@@ -114,7 +114,11 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
         )
     ])
 
-    fig.update_layout(title=f"{stock_id} - 近10日條件分析")
+    fig.update_layout(
+        margin=dict(t=0, b=0, l=0, r=0),
+        height=280 # 調整表格高度以適應內容，增加條件時這裡就要調整
+    )
+
     return fig
 
 

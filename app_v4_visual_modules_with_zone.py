@@ -59,10 +59,11 @@ with col2:
         fig_zone = plot_price_position_zone(today_date, c1, o, c2, h, l, w1, w2, m1, m2)
         st.plotly_chart(fig_zone, use_container_width=True)
         
-        # 🔵 加入分析模組
+        # 🔵 加入分析模組 (更緊湊)
         st.subheader("📋 短線條件分析表格 (10日)")
         fig_strength = analyze_10day_strength(selected)
-        st.plotly_chart(fig_strength, use_container_width=True)
+        st.plotly_chart(fig_strength, use_container_width=True, config={"displayModeBar": False})
+
 
         st.subheader("📉 收盤價 (日)")
         fig_price = plot_price_interactive(selected)
