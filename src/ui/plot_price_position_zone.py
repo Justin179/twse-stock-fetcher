@@ -62,10 +62,10 @@ def plot_price_position_zone(today_date, c1, o, c2, h, l, w1, w2, m1, m2):
         ))
 
     fig.update_layout(
-        title=f"              今日: {today_date[5:]}",
+        # title=f"              今日: {today_date[5:]}",
         yaxis_title="股價",
         height=500,
-        margin=dict(t=30, b=30),
+        margin=dict(t=10, b=30),
         template="simple_white"
     )
 

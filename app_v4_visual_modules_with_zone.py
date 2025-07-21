@@ -55,7 +55,11 @@ with col2:
         if result:
             today_date, c1, o, c2, h, l, w1, w2, m1, m2 = result
         
-        st.subheader("📌 現價與區間關係視覺化")
+        # st.subheader("📌 現價與區間關係視覺化")
+        st.markdown(f"""
+        <span style='font-size:22px'>📌 {selected_display} 現價與區間關係視覺化</span>
+        <span style='font-size:16px; color:gray'>　今日 = {today_date[5:]}</span>
+        """, unsafe_allow_html=True)
         fig_zone = plot_price_position_zone(today_date, c1, o, c2, h, l, w1, w2, m1, m2)
         st.plotly_chart(fig_zone, use_container_width=True)
         
