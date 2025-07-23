@@ -28,7 +28,8 @@ if not input_txt:
 
 def read_stock_list(file_path: str) -> list:
     with open(file_path, "r", encoding="utf-8") as f:
-        return [line.strip() for line in f if line.strip()]
+        return [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+
 
 def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
     query = '''
@@ -50,8 +51,6 @@ if input_name == "shareholding_concentration_list":
     xq_filename = "匯入XQ_籌碼集中度.csv"
 elif input_name == "high_relative_strength_stocks":
     xq_filename = "匯入XQ_rs90強勢股.csv"
-elif input_name == "hermit_watchlist":
-    xq_filename = "匯入XQ_隱者App選股.csv"
 else:
     xq_filename = f"{input_name}_output.csv"
 
