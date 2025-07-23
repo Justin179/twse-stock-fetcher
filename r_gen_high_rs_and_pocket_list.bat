@@ -5,4 +5,4 @@ python src\analyze\filter_strong_stocks_by_rs_rsi.py
 
 @echo off
 python src\gen_filtered_report_db.py high_relative_strength_stocks.txt
-:: 針對RS>90的強勢股進行篩選，生成XQ匯入檔
+:: 針對RS>90的強勢股進行篩選(隱者清單已經融入)，生成XQ匯入檔

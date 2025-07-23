@@ -12,6 +12,7 @@ def detect_signals(file_path="my_stock_holdings.txt", sdk=None):
     stocks, display_options = load_stock_list_with_names(file_path)
     id_name_map = {s.split()[0]: s.split()[1] for s in display_options if " " in s}
 
+
     for stock_id in stocks:
         try:
             today = get_today_prices(stock_id, sdk)
