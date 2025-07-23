@@ -18,16 +18,26 @@ def filter_strong_stocks():
 
     # 綜合篩選條件
     filtered_df = df[rs_mask & rsi_mask]
-
-    # 取得股票代碼
     stock_ids = filtered_df["stock_id"].dropna().astype(str).tolist()
 
-    # 寫入 temp_list.txt（先清空）
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        for sid in stock_ids:
-            f.write(sid + "\n")
+    # 讀取原本的 high_relative_strength_stocks.txt
+    with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
+        lines = f.readlines()
 
-    print(f"✅ 符合條件的股票共 {len(stock_ids)} 檔，已寫入 {OUTPUT_FILE}")
+    # 找出 "# 找出RS>90的強勢股" 這一行的 index
+    try:
+        insert_idx = next(i for i, line in enumerate(lines) if "# 找出RS>90的強勢股" in line) + 1
+    except StopIteration:
+        print("❌ 找不到 '# 找出RS>90的強勢股' 標記")
+        return
+
+    # 重組內容：保留前面內容 + 插入新股票清單
+    new_lines = lines[:insert_idx] + [sid + "\n" for sid in stock_ids]
+
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+    print(f"✅ 符合條件的股票共 {len(stock_ids)} 檔，已寫入 {OUTPUT_FILE} 中的強勢股區段")
 
 if __name__ == "__main__":
     filter_strong_stocks()
