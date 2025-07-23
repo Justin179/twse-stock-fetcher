@@ -48,10 +48,10 @@ def fetch_monthly_revenue(stock_id):
                 if len(cols) >= 4:
                     year_month = cols[0].text.strip()
                     monthly_revenue = cols[1].text.strip().replace(",", "")
-                    mom_rate = cols[2].text.strip().replace("%", "")
+                    mom_rate = cols[2].text.strip().replace(",", "").replace("%", "")
                     if mom_rate == "--":
                         mom_rate = "0"
-                    yoy_rate = cols[3].text.strip().replace("%", "")
+                    yoy_rate = cols[3].text.strip().replace(",", "").replace("%", "")
 
                     if year_month.isdigit() and len(year_month) == 6:
                         try:
@@ -59,7 +59,8 @@ def fetch_monthly_revenue(stock_id):
                             mom_val = float(mom_rate)
                             yoy_val = float(yoy_rate)
                             data.append((stock_id, year_month, revenue_val, mom_val, yoy_val))
-                        except ValueError:
+                        except ValueError as e:
+                            print(f"❌ 無法轉換數值: year_month={year_month}, revenue='{monthly_revenue}', mom='{mom_rate}', yoy='{yoy_rate}', 錯誤: {e}")
                             continue
 
             driver.quit()
@@ -127,6 +128,7 @@ if __name__ == "__main__":
     for stock_id in stock_list:
         print(f"📥 抓取 {stock_id} 月營收資料...")
         records = fetch_monthly_revenue(stock_id)
+        # print(records)
         if records:
             print(f"📊 解析到 {len(records)} 筆資料")
             success = save_to_db(records)
