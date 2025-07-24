@@ -21,6 +21,7 @@ def get_user_selected_conditions(use_gui=True):
         "10 24多頭排列 均線上彎 開口小": True,
         "24日均乖離<15%": True,
         "量價同步": True,
+        "收盤價站上5週均": True,
         "站上上彎72日均": False
     }
 
@@ -45,7 +46,7 @@ def get_user_selected_conditions(use_gui=True):
         exit()
 
     # 🎯 建立 GUI 視窗並配置到右下角
-    width, height = 350, 300
+    width, height = 350, 330
     x, y = get_window_position(width=400, height=250, offset_x=200, offset_y=200)
 
 

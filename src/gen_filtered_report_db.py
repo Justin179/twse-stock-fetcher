@@ -9,8 +9,20 @@ from src.ui.condition_selector import get_user_selected_conditions
 
 # 價量同步+短多有撐開口小
 
-use_gui = True  # 或 False for CLI/排程
-conditions = get_user_selected_conditions(use_gui=use_gui)
+def calculate_weekly_ma(df: pd.DataFrame, weeks=5) -> pd.Series:
+    """
+    根據每週最後一個交易日的收盤價計算週均線。
+    傳回一個 Series，index 是每週的最後一個交易日，值是週均線。
+    """
+    df = df.copy()
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index()
+    df["year_week"] = df.index.to_series().apply(lambda d: f"{d.isocalendar().year}-{d.isocalendar().week:02d}")
+    last_per_week = df.groupby("year_week").tail(1).copy()
+    last_per_week[f"WMA{weeks}"] = last_per_week["Close"].rolling(window=weeks).mean()
+    return last_per_week[[f"WMA{weeks}"]].set_index(last_per_week.index)
+
+conditions = {}
 
 # ✅ 處理傳入參數（txt 檔案與 bias 閾值）
 bias_threshold = 1.5
@@ -24,12 +36,11 @@ for arg in sys.argv[1:]:
         except ValueError:
             pass
 if not input_txt:
-    input_txt = "shareholding_concentration_list.txt" # 預設，因為一開始就是為過濾 籌碼集中度選股 而寫的
+    input_txt = "shareholding_concentration_list.txt"
 
 def read_stock_list(file_path: str) -> list:
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
-
 
 def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
     query = '''
@@ -45,7 +56,6 @@ def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
     df.set_index("date", inplace=True)
     return df
 
-# ✅ 根據 input txt 檔案名稱決定輸出檔名 hermit_watchlist.txt
 input_name = Path(input_txt).stem.lower()
 if input_name == "shareholding_concentration_list":
     xq_filename = "匯入XQ_籌碼集中度.csv"
@@ -55,6 +65,9 @@ else:
     xq_filename = f"{input_name}_output.csv"
 
 if __name__ == "__main__":
+    use_gui = True
+    conditions = get_user_selected_conditions(use_gui=use_gui)
+
     db_path = str(Path(__file__).resolve().parent.parent / "data" / "institution.db")
     stock_list = read_stock_list(input_txt)
     all_report_rows = []
@@ -77,6 +90,10 @@ if __name__ == "__main__":
                 df["MA24"] = df["Close"].rolling(window=24).mean()
                 df["MA72"] = df["Close"].rolling(window=72).mean()
                 df["MA200"] = df["Close"].rolling(window=200).mean()
+
+                weekly_ma5 = calculate_weekly_ma(df, weeks=5)
+                df["WMA5"] = df.index.map(weekly_ma5["WMA5"])
+
                 df[["MA5", "MA10", "MA24", "MA72", "MA200"]] = df[["MA5", "MA10", "MA24", "MA72", "MA200"]].round(2)
                 df["Volume"] = (df["Volume"] / 1000).round().astype(int)
 

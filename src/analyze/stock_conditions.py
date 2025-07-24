@@ -1,12 +1,12 @@
 def apply_conditions(df, bias_threshold=1.5):
     
     # 計算 5 日前的收盤價（避免 apply 中做 shift）
-    df["Close_5days_ago"] = df["Close"].shift(5)
+    df["Close_5days_ago"] = df["Close"].shift(5) # 基準價
     df["收盤價站上 上彎5日均 且乖離小"] = df.apply(
         lambda row: (
             round((row["Close"] - row["MA5"]) / row["MA5"] * 100, 1) < bias_threshold
-            and row["Close"] > row["MA5"]
-            and row["Close"] > row["Close_5days_ago"]
+            and row["Close"] > row["MA5"] # 收盤價站上5日均線
+            and row["Close"] > row["Close_5days_ago"] # 5日均線上彎
         ),
         axis=1
     )
@@ -30,6 +30,8 @@ def apply_conditions(df, bias_threshold=1.5):
         ((df["Volume"] > df["Volume"].shift(1)) & (df["Close"] > df["Close"].shift(1))) |
         ((df["Volume"] < df["Volume"].shift(1)) & (df["Close"] < df["Close"].shift(1)))
     )
+
+    df["收盤價站上5週均"] = df.iloc[-1]["Close"] > df.iloc[-1]["WMA5"]
 
     df["站上上彎72日均"] = (
         (df["Close"] > df["Close"].shift(72)) &
