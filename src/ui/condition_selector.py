@@ -21,7 +21,7 @@ def get_user_selected_conditions(use_gui=True):
         "10 24多頭排列 均線上彎 開口小": True,
         "24日均乖離<15%": True,
         "量價同步": True,
-        "收盤價站上5週均": True,
+        "收盤價站上上彎5週均": True,
         "站上上彎72日均": False
     }
 

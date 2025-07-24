@@ -94,6 +94,7 @@ if __name__ == "__main__":
                 weekly_ma5 = calculate_weekly_ma(df, weeks=5)
                 df["WMA5"] = df.index.map(weekly_ma5["WMA5"])
 
+
                 df[["MA5", "MA10", "MA24", "MA72", "MA200"]] = df[["MA5", "MA10", "MA24", "MA72", "MA200"]].round(2)
                 df["Volume"] = (df["Volume"] / 1000).round().astype(int)
 

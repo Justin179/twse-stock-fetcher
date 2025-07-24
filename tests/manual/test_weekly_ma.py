@@ -20,11 +20,20 @@ if __name__ == "__main__":
             weekly_ma5 = calculate_weekly_ma(df, weeks=5)
             df["WMA5"] = df.index.map(weekly_ma5["WMA5"])
 
-            print(df[["Close", "WMA5"]].tail(30))  # 印出最近30筆
+            # 從每週最後交易日的 WMA5 中取最近6筆
+            wma_series = df["WMA5"].dropna().drop_duplicates().tail(6)
+            is_upward = wma_series.iloc[-1] > wma_series.iloc[0]
+            print(wma_series.iloc[-1])
+            print(wma_series.iloc[0])
+            print(is_upward)
 
-            df["收盤價站上5週均"] = df.iloc[-1]["Close"] > df.iloc[-1]["WMA5"]
 
-            print(df.iloc[-1]["Close"])
-            print(df.iloc[-1]["WMA5"])
-            print("收盤價站上5週均1:", df.iloc[-1]["收盤價站上5週均"])
+            # print(df[["Close", "WMA5"]].tail(30))  # 印出最近30筆
+
+            # df["收盤價站上5週均"] = df.iloc[-1]["Close"] > df.iloc[-1]["WMA5"]
+
+            # print(df.iloc[-1]["Close"])
+            # print(df.iloc[-1]["WMA5"])
+            # print(df.iloc[-6]["Close"])
+            # print("收盤價站上5週均1:", df.iloc[-1]["收盤價站上5週均"])
             # print("收盤價站上5週均2:", df["收盤價站上5週均"])

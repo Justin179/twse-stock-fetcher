@@ -1,3 +1,23 @@
+import pandas as pd
+def check_upward_wma5(df: pd.DataFrame) -> bool:
+    df = df.copy()
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index()
+
+    df["year_week"] = df.index.to_series().apply(lambda d: f"{d.isocalendar().year}-{d.isocalendar().week:02d}")
+    last_per_week = df.groupby("year_week").tail(1).copy()
+    last_closes = last_per_week["Close"].tail(6)
+
+    is_upward = False
+    if len(last_closes) >= 6:
+        current = last_closes.iloc[-1]
+        # print("📈 本週收盤:", current)
+        five_weeks_ago = last_closes.iloc[-6]
+        # print("📈 前5週收盤:", five_weeks_ago)
+        is_upward = current > five_weeks_ago
+
+    return is_upward
+
 def apply_conditions(df, bias_threshold=1.5):
     
     # 計算 5 日前的收盤價（避免 apply 中做 shift）
@@ -31,7 +51,7 @@ def apply_conditions(df, bias_threshold=1.5):
         ((df["Volume"] < df["Volume"].shift(1)) & (df["Close"] < df["Close"].shift(1)))
     )
 
-    df["收盤價站上5週均"] = df.iloc[-1]["Close"] > df.iloc[-1]["WMA5"]
+    df["收盤價站上上彎5週均"] = (df.iloc[-1]["Close"] > df.iloc[-1]["WMA5"]) & check_upward_wma5(df)
 
     df["站上上彎72日均"] = (
         (df["Close"] > df["Close"].shift(72)) &

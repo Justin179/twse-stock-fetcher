@@ -15,7 +15,7 @@ def get_weekly_last_close_prices(df: pd.DataFrame, num_weeks: int = 6):
     return last_closes
 
 if __name__ == "__main__":
-    stock_code = "2317"
+    stock_code = "2891"
     db_path = Path(__file__).resolve().parents[2] / "data" / "institution.db"
 
     with sqlite3.connect(db_path) as conn:
