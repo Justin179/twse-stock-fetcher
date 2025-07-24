@@ -20,4 +20,11 @@ if __name__ == "__main__":
             weekly_ma5 = calculate_weekly_ma(df, weeks=5)
             df["WMA5"] = df.index.map(weekly_ma5["WMA5"])
 
-            print(df[["Close", "WMA5"]].tail(30))  # 印出最近30筆
+            # print(df[["Close", "WMA5"]].tail(20))  # 印出最近20筆
+
+            df["收盤價站上5週均"] = df.iloc[-1]["Close"] > df.iloc[-1]["WMA5"]
+
+            print(df.iloc[-1]["Close"])
+            print(df.iloc[-1]["WMA5"])
+            print("收盤價站上5週均1:", df.iloc[-1]["收盤價站上5週均"])
+            # print("收盤價站上5週均2:", df["收盤價站上5週均"])
