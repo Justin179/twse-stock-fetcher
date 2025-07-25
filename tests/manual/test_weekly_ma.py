@@ -32,6 +32,11 @@ if __name__ == "__main__":
 
             # df["收盤價站上5週均"] = df.iloc[-1]["Close"] > df.iloc[-1]["WMA5"]
 
+            
+            週收盤價 = df.iloc[-1]["Close"]
+            五週均線 = df.iloc[-1]["WMA5"]
+            
+
             # print(df.iloc[-1]["Close"])
             # print(df.iloc[-1]["WMA5"])
             # print(df.iloc[-6]["Close"])

@@ -24,6 +24,7 @@ if __name__ == "__main__":
         if df.empty:
             print(f"❌ 無資料: {stock_code}")
         else:
+            
             closes = get_weekly_last_close_prices(df, num_weeks=6)
             print("📘 最近 6 週每週最後一日收盤價（最舊 → 最新）:")
             print(closes)
