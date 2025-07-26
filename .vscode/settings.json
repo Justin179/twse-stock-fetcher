@@ -1,0 +1,17 @@
+{
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "black",
+  "editor.defaultFormatter": "ms-python.python",
+  "python.analysis.extraPaths": [
+    "./src/analyze",
+    "./src/ui",
+    "./src/common",
+    "./src/fetch",
+    "./src/tools"
+  ],
+  "python.pythonPath": "venv\\Scripts\\python.exe",
+  "terminal.integrated.env.windows": {
+    "VIRTUAL_ENV": "${workspaceFolder}\\venv",
+    "PATH": "${workspaceFolder}\\venv\\Scripts;${env:PATH}"
+  }
+}

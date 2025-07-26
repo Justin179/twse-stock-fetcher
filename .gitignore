@@ -19,6 +19,10 @@ env/
 .vscode/
 .idea/
 
+# 加進 .gitignore 的例外清單 (讓settings.json被版控)
+!.vscode/settings.json
+
+
 # Jupyter notebooks checkpoints (if有)
 .ipynb_checkpoints/
 
