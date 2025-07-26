@@ -1,7 +1,7 @@
 import sqlite3
 import pandas as pd
 from pathlib import Path
-from gen_filtered_report_db import fetch_stock_history_from_db
+from common.db_helpers import fetch_stock_history_from_db
 
 def get_weekly_last_close_prices(df: pd.DataFrame, num_weeks: int = 6):
     df = df.copy()

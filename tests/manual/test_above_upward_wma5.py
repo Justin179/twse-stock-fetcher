@@ -1,7 +1,7 @@
 import sqlite3
 import pandas as pd
 from pathlib import Path
-from gen_filtered_report_db import fetch_stock_history_from_db
+from common.db_helpers import fetch_stock_history_from_db
 from analyze.calculate_weekly_ma import calculate_weekly_ma
 
 

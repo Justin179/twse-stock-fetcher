@@ -7,6 +7,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from src.analyze.stock_conditions import apply_conditions
 from src.ui.condition_selector import get_user_selected_conditions
 from src.analyze.calculate_weekly_ma import calculate_weekly_ma
+from src.common.db_helpers import fetch_stock_history_from_db
+
 
 # 價量同步+短多有撐開口小
 
@@ -30,19 +32,6 @@ def read_stock_list(file_path: str) -> list:
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
 
-def fetch_stock_history_from_db(conn, stock_code: str) -> pd.DataFrame:
-    query = '''
-        SELECT date, close AS Close, volume AS Volume
-        FROM twse_prices
-        WHERE stock_id = ?
-        ORDER BY date
-    '''
-    df = pd.read_sql_query(query, conn, params=(stock_code,))
-    if df.empty:
-        return df
-    df["date"] = pd.to_datetime(df["date"])
-    df.set_index("date", inplace=True)
-    return df
 
 input_name = Path(input_txt).stem.lower()
 if input_name == "shareholding_concentration_list":
