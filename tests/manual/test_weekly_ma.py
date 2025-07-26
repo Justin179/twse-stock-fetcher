@@ -3,7 +3,8 @@ import pandas as pd
 from pathlib import Path
 
 # 匯入原始方法
-from gen_filtered_report_db import fetch_stock_history_from_db, calculate_weekly_ma
+from gen_filtered_report_db import fetch_stock_history_from_db
+from analyze.calculate_weekly_ma import calculate_weekly_ma
 
 if __name__ == "__main__":
     # 設定參數

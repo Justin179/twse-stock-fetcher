@@ -11,9 +11,9 @@ def check_upward_wma5(df: pd.DataFrame) -> bool:
     is_upward = False
     if len(last_closes) >= 6:
         current = last_closes.iloc[-1]
-        # print("📈 本週收盤:", current)
+        print("📈 本週收盤:", current)
         five_weeks_ago = last_closes.iloc[-6]
-        # print("📈 前5週收盤:", five_weeks_ago)
+        print("📈 前5週收盤:", five_weeks_ago)
         is_upward = current > five_weeks_ago
 
     return is_upward
@@ -52,6 +52,7 @@ def apply_conditions(df, bias_threshold=1.5):
     )
 
     df["收盤價站上上彎5週均"] = (df.iloc[-1]["Close"] > df.iloc[-1]["WMA5"]) & check_upward_wma5(df)
+    print("📈 5週均:", df.iloc[-1]["WMA5"])
 
     df["站上上彎72日均"] = (
         (df["Close"] > df["Close"].shift(72)) &

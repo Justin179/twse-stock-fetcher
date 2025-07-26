@@ -1,14 +1,16 @@
 import sqlite3
 import pandas as pd
 from pathlib import Path
-from gen_filtered_report_db import fetch_stock_history_from_db, calculate_weekly_ma
+from gen_filtered_report_db import fetch_stock_history_from_db
+from analyze.calculate_weekly_ma import calculate_weekly_ma
+
 
 # 檢查收盤價是否站上上彎5週均線, 經測試ok
 
 def check_above_upward_wma5(df: pd.DataFrame) -> bool:
     try:
         df["WMA5"] = df.index.map(calculate_weekly_ma(df, weeks=5)["WMA5"])
-        print(df[["Close", "WMA5"]].tail(5))  # 印出最近5筆
+        # print(df[["Close", "WMA5"]].tail(10))  # 印出最近10筆
         週收盤價 = df.iloc[-1]["Close"]
         五週均線 = df.iloc[-1]["WMA5"]
         print(f"📈 本週收盤: {週收盤價:.2f}")
@@ -22,6 +24,7 @@ def check_above_upward_wma5(df: pd.DataFrame) -> bool:
         df_temp["year_week"] = df_temp.index.to_series().apply(lambda d: f"{d.isocalendar().year}-{d.isocalendar().week:02d}")
         last_per_week = df_temp.groupby("year_week").tail(1).copy()
         last_closes = last_per_week["Close"].tail(6)
+        print("📈 最近6週收盤價:", last_closes.tolist())
 
         is_upward = False
         if len(last_closes) >= 6:
