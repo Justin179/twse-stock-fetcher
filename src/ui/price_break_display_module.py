@@ -77,9 +77,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             st.markdown(f"- **今日({today_date[5:]})開盤價**：{o}")
             st.markdown(f"- **今日({today_date[5:]})收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
             if above_upward_wma5:
-                st.markdown("- ✅ **現價站上上彎5週均線！**", unsafe_allow_html=True)
+                st.markdown("- ✅ **現價站上 上彎5週均線！**", unsafe_allow_html=True)
             else:
-                st.markdown("- ❌ **現價未站上上彎5週均線**", unsafe_allow_html=True)
+                st.markdown("- ❌ **現價未站上 上彎5週均線**", unsafe_allow_html=True)
 
         with col_right:
             st.markdown("**提示訊息：**")
