@@ -3,6 +3,7 @@ from analyze.analyze_price_break_conditions_dataloader import (
     analyze_stock, get_today_prices, get_recent_prices,
     get_yesterday_hl, get_week_month_high_low
 )
+from common.db_helpers import fetch_close_history_from_db
 
 import sqlite3
 import pandas as pd
@@ -15,12 +16,8 @@ def is_price_above_upward_wma5(stock_id: str, today_date: str, today_close: floa
     條件1：今日收盤價 > 本週 WMA5
     條件2：本週 WMA5 > 前5週收盤價（代表上彎）
     """
-    conn = sqlite3.connect("data/institution.db")
-    df = pd.read_sql_query(
-        "SELECT date, close FROM twse_prices WHERE stock_id = ? ORDER BY date",
-        conn, params=(stock_id,)
-    )
-    conn.close()
+
+    df = fetch_close_history_from_db(stock_id)
 
     if df.empty:
         return False
@@ -65,7 +62,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         h, l = get_yesterday_hl(stock_id, today_date)
         c1, o, c2 = today["c1"], today["o"], today["c2"]
         v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
+        
+        
         above_upward_wma5 = is_price_above_upward_wma5(stock_id, today_date, c1)
+
+
 
         tips = analyze_stock(stock_id, dl=dl, sdk=sdk)
 
