@@ -218,14 +218,6 @@ def analyze_stock(stock_id, dl=None, sdk=None):
             signals.append("今開盤 過昨高")
         if l and o < l:
             signals.append("今開盤 破昨低")
-        if w1 and o > w1:
-            signals.append("今開盤 過上週高點")
-        if m1 and o > m1:
-            signals.append("今開盤 過上月高點")
-        if w2 and o < w2:
-            signals.append("今開盤 破上週低點")
-        if m2 and o < m2:
-            signals.append("今開盤 破上月低點")
 
     # 今天盤中
     if c1:
