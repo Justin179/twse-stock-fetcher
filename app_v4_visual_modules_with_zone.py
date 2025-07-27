@@ -51,7 +51,7 @@ with col1:
     parts = selected_display.split()
     stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display
 
-    if st.button("➕ 將 temp_list.txt 的股票加入持股清單"):
+    if st.button("➕ 將 temp_list 的股票加入持股清單"):
         msg = append_unique_stocks()
         st.success(msg)
         st.rerun()  # 🔁 直接重新跑整頁
