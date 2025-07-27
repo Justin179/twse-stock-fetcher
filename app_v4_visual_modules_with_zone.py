@@ -66,7 +66,6 @@ with col2:
         <span style='font-size:22px'>📋 短線條件分析表格 (近10日)</span>
         <span style='font-size:16px; color:gray'>　{selected_display}</span>
         """, unsafe_allow_html=True)
-
         fig_strength = analyze_10day_strength(selected)
         st.plotly_chart(fig_strength, use_container_width=True, config={"displayModeBar": False})
 

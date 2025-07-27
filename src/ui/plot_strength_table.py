@@ -29,7 +29,8 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
     df["Close_5days_ago"] = df["Close"].shift(5)
     df["Close_10days_ago"] = df["Close"].shift(10)
     df["Close_24days_ago"] = df["Close"].shift(24)
-    df["High10"] = df["Close"].rolling(window=10).max()
+    df["High10_prev"] = df["Close"].shift(1).rolling(window=10).max()
+
 
     # KD
     low9 = df["Close"].rolling(window=9).min()
@@ -63,7 +64,7 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
         c2 = row["Close"] > row["MA5"]
         c3 = row["Close"] > row["Close_5days_ago"]
         c10 = row["Close"] > row["Close_4days_ago"]
-        c4 = row["Close"] > row["High10"]
+        c4 = row["Close"] > row["High10_prev"]
         c5 = row["MA5"] > row["MA10"] > row["MA24"]
         c6 = row["Close"] > row["Close_5days_ago"] and row["Close"] > row["Close_10days_ago"] and row["Close"] > row["Close_24days_ago"]
         c7 = row["Close_4days_ago"] > row["Close_5days_ago"] and row["Close"] > row["Close_Yesterday"] and row["Volume"] > row["Volume_Yesterday"]
