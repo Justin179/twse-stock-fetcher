@@ -16,6 +16,7 @@ from ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenu
 from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
 from common.login_helper import init_session_login_objects
 from common.adding_new_stocks_helper import append_unique_stocks
+import subprocess
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -52,6 +53,8 @@ with col1:
     stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display
 
     if st.button("➕ 將 temp_list 的股票加入持股清單"):
+        # 先執行批次檔，等待執行完成
+        subprocess.run(["r_new_stocks_manual_setup.bat"], shell=True)
         msg = append_unique_stocks()
         st.success(msg)
         st.rerun()  # 🔁 直接重新跑整頁

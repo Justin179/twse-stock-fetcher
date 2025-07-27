@@ -51,4 +51,5 @@ python src\fetch\update_season_close_price_from_local_db.py temp_list.txt >> %LO
 echo. >> %LOG_FILE%
 echo ✅ 所有任務完成，請查看 %LOG_FILE% >> %LOG_FILE%
 echo ✅ 所有任務完成，請查看 %LOG_FILE%
-pause
+
+@REM pause 這行註解掉，程序才會繼續往下跑，不然程序就一直停在這裡，要手動按任意鍵繼續
