@@ -15,6 +15,7 @@ from ui.plot_holder_concentration_plotly_final import plot_holder_concentration_
 from ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
 from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
 from common.login_helper import init_session_login_objects
+from common.adding_new_stocks_helper import append_unique_stocks
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -48,6 +49,11 @@ with col1:
     selected = selected_display.split()[0]
     parts = selected_display.split()
     stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display
+
+    if st.button("➕ 將 temp_list.txt 中的新股票加入持股清單"):
+        msg = append_unique_stocks()
+        st.success(msg)
+
 
 with col2:
     if selected:
