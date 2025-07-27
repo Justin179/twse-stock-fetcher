@@ -52,9 +52,9 @@ with col1:
     parts = selected_display.split()
     stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display
 
-    if st.button("➕ 將 temp_list 的股票加入持股清單"):
-        # 先執行批次檔，等待執行完成
-        subprocess.run(["r_new_stocks_manual_setup.bat"], shell=True)
+    if st.button("➕ 更新 temp_list 的股票 & 加進持股清單"):
+        # 非同步執行批次檔，不阻塞畫面
+        subprocess.Popen("start r_new_stocks_manual_setup.bat", shell=True)
         msg = append_unique_stocks()
         st.success(msg)
         st.rerun()  # 🔁 直接重新跑整頁

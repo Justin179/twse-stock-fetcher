@@ -1,6 +1,9 @@
 :: 當手上的持股庫存有新增的股票時，要先手動新增到 temp_list.txt，然後執行此腳本(建立初始資料)
 :: 此腳本的用途是手動+指定更新特定股票，補上排程因時間差的缺失資料，裡面的py也可以單獨執行，缺啥補啥
 @echo off
+
+echo r_new_stocks_manual_setup 批次任務開始...
+
 chcp 65001 > nul
 cd /d %~dp0
 
@@ -53,3 +56,9 @@ echo ✅ 所有任務完成，請查看 %LOG_FILE% >> %LOG_FILE%
 echo ✅ 所有任務完成，請查看 %LOG_FILE%
 
 @REM pause 這行註解掉，程序才會繼續往下跑，不然程序就一直停在這裡，要手動按任意鍵繼續
+
+REM --- 通知用戶這批次任務已完成 (先不用，因為還要自己點掉麻煩)---
+@REM msg %username% ✅ r_new_stocks_manual_setup.bat 執行完畢！
+
+REM --- 播放提示音（Windows Logon.wav） ---
+powershell -Command "(New-Object Media.SoundPlayer 'C:\Windows\Media\Windows Logon.wav').PlaySync()"
