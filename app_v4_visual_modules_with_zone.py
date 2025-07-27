@@ -44,15 +44,17 @@ sdk, dl = init_session_login_objects()
 
 col1, col2 = st.columns([1, 6])
 with col1:
-    stock_ids, stock_display = load_stock_list_with_names()
+    # 下拉選單區
+    stock_ids, stock_display = load_stock_list_with_names(refresh=True)
     selected_display = st.selectbox("股票代碼", stock_display)
     selected = selected_display.split()[0]
     parts = selected_display.split()
     stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display
 
-    if st.button("➕ 將 temp_list.txt 中的新股票加入持股清單"):
+    if st.button("➕ 將 temp_list.txt 的股票加入持股清單"):
         msg = append_unique_stocks()
         st.success(msg)
+        st.rerun()  # 🔁 直接重新跑整頁
 
 
 with col2:
