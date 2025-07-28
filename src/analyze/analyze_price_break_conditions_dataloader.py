@@ -208,16 +208,23 @@ def analyze_stock(stock_id, dl=None, sdk=None):
 
     # 今天開盤
     if o and c2:
-        if o > c2:
-            signals.append("今開盤 開高")
-        elif o == c2:
-            signals.append("今開盤 開平盤")
-        elif o < c2:
-            signals.append("今開盤 開低")
-        if h and o > h:
+        is_break_yesterday_high = h and o > h
+        is_break_yesterday_low = l and o < l
+
+        # 優先判斷過昨高/破昨低
+        if is_break_yesterday_high:
             signals.append("今開盤 過昨高")
-        if l and o < l:
+        elif is_break_yesterday_low:
             signals.append("今開盤 破昨低")
+        else:
+            # 若沒過昨高也沒破昨低，才檢查開高/平/低
+            if o > c2:
+                signals.append("今開盤 開高")
+            elif o == c2:
+                signals.append("今開盤 開平盤")
+            elif o < c2:
+                signals.append("今開盤 開低")
+
 
     # 今天盤中
     if c1:
