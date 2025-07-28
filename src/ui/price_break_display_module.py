@@ -74,10 +74,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         c1, o, c2 = today["c1"], today["o"], today["c2"]
         v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
         
-        print(f"🔍 今日價格：{today_date} - 開盤價: {o}, 收盤價: {c1}, 昨收盤: {c2}, 最高價: {h}, 最低價: {l}, 昨成交量: {v1}")
         above_upward_wma5 = is_price_above_upward_wma5(stock_id, today_date, c1)
-        
-
 
         tips = analyze_stock(stock_id, dl=dl, sdk=sdk)
 
