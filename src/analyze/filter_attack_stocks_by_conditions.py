@@ -6,8 +6,9 @@ from src.analyze.stock_conditions import apply_conditions
 from src.common.db_helpers import fetch_stock_history_from_db
 from src.ui.condition_selector import get_user_selected_conditions
 
+# 程式中多加一層條件篩選器，回傳符合條件的個股清單
 
-def filter_attack_stocks(attack: list[str], bias_threshold: float = 1.5) -> list[str]:
+def filter_attack_stocks(attack: list[str], bias_threshold: float = 3.0) -> list[str]:
     """
     對 attack 清單內的個股代碼執行條件篩選，回傳篩選後的個股清單（不加.TW 後綴）
     """
@@ -18,8 +19,17 @@ def filter_attack_stocks(attack: list[str], bias_threshold: float = 1.5) -> list
     if isinstance(attack[0], tuple):
         attack = [item[0] for item in attack]
 
+    custom_conditions = {
+        "收盤價站上 上彎5日均 且乖離小": True,
+        "5 10多頭排列 均線上彎 開口小": True,
+        "10 24多頭排列 均線上彎 開口小": False,
+        "24日均乖離<15%": True,
+        "量價同步": False,
+        "收盤價站上上彎5週均": True,
+        "站上上彎72日均": False
+    }
     use_gui = True
-    conditions = get_user_selected_conditions(use_gui=use_gui)
+    conditions = get_user_selected_conditions(use_gui=use_gui, default_conditions=custom_conditions)
 
     db_path = str(Path.cwd() / "data" / "institution.db")
     filtered_stocks = []

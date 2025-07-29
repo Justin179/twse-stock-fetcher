@@ -53,7 +53,7 @@ if __name__ == "__main__":
     attack, weaken, id_name_map = detect_signals(file_path, sdk=sdk)
 
     # 多加一層條件篩選 (待測試，看看before/after 效果)
-    attack = filter_attack_stocks(attack, bias_threshold=4.0)
+    attack = filter_attack_stocks(attack)
 
 
 

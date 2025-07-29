@@ -14,16 +14,17 @@ def get_window_position(width, height, offset_x=400, offset_y=100):
 
 
 # ✅ 主函式：取得使用者選擇的條件
-def get_user_selected_conditions(use_gui=True):
-    default_conditions = {
-        "收盤價站上 上彎5日均 且乖離小": True,
-        "5 10多頭排列 均線上彎 開口小": True,
-        "10 24多頭排列 均線上彎 開口小": True,
-        "24日均乖離<15%": True,
-        "量價同步": True,
-        "收盤價站上上彎5週均": True,
-        "站上上彎72日均": False
-    }
+def get_user_selected_conditions(use_gui=True, default_conditions=None):
+    if default_conditions is None:
+        default_conditions = {
+            "收盤價站上 上彎5日均 且乖離小": True,
+            "5 10多頭排列 均線上彎 開口小": True,
+            "10 24多頭排列 均線上彎 開口小": True,
+            "24日均乖離<15%": True,
+            "量價同步": True,
+            "收盤價站上上彎5週均": True,
+            "站上上彎72日均": False
+        }
 
     if not use_gui:
         return default_conditions
