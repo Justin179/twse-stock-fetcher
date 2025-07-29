@@ -21,7 +21,7 @@ def filter_attack_stocks(attack: list[str], bias_threshold: float = 3.0) -> list
 
     custom_conditions = {
         "收盤價站上 上彎5日均 且乖離小": True,
-        "5 10多頭排列 均線上彎 開口小": True,
+        "5 10多頭排列 均線上彎 開口小": False,
         "10 24多頭排列 均線上彎 開口小": False,
         "24日均乖離<15%": True,
         "量價同步": False,
@@ -33,6 +33,7 @@ def filter_attack_stocks(attack: list[str], bias_threshold: float = 3.0) -> list
 
     db_path = str(Path.cwd() / "data" / "institution.db")
     filtered_stocks = []
+    rejected_stocks = []
 
     with sqlite3.connect(db_path) as conn:
         for stock_code in attack:
@@ -63,9 +64,13 @@ def filter_attack_stocks(attack: list[str], bias_threshold: float = 3.0) -> list
                 if all(last_row[col].iloc[0] == True for col, expected in conditions.items() if expected is True):
                     filtered_stocks.append(stock_code)
                 else:
-                    print(f"🚫 未通過條件: {stock_code}")
+                    rejected_stocks.append(stock_code)
 
             except Exception as e:
                 print(f"❌ {stock_code} 處理失敗: {e}")
+
+    if rejected_stocks:
+        print("\n🚫 以下個股未通過篩選條件：")
+        print("、".join(rejected_stocks))
 
     return filtered_stocks
