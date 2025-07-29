@@ -4,6 +4,8 @@ from analyze.analyze_price_break_conditions_dataloader import (
 from common.stock_loader import load_stock_list_with_names
 import sys
 from common.login_helper import get_logged_in_sdk
+from analyze.filter_attack_stocks_by_conditions import filter_attack_stocks
+
 
 def detect_signals(file_path="my_stock_holdings.txt", sdk=None):
     attack_list = []
@@ -50,12 +52,17 @@ if __name__ == "__main__":
     
     attack, weaken, id_name_map = detect_signals(file_path, sdk=sdk)
 
-    print("\n📢 過上週高 且 過上月高（c1 > w1 且 c1 > m1）：")
-    for stock_id, _ in attack:
+    # 多加一層條件篩選 (待測試，看看before/after 效果)
+    attack = filter_attack_stocks(attack, bias_threshold=4.0)
+
+
+
+    print("\n📢 現價 過上週高 且 過上月高（c1 > w1 且 c1 > m1）：")
+    for stock_id in attack:
         name = id_name_map.get(stock_id, "")
         print(f"✅ {stock_id} {name}")
 
-    print("\n📉 破上週低 且 破上月低（c1 < w2 且 c1 < m2）：")
+    print("\n📉 現價 破上週低 且 破上月低（c1 < w2 且 c1 < m2）：")
     for stock_id, _ in weaken:
         name = id_name_map.get(stock_id, "")
         print(f"❌ {stock_id} {name}")
