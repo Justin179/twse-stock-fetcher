@@ -78,7 +78,7 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
             "站上5日均線(> MA5)": check(c2),
             "站上基準價(上彎5日均線)": check(c3),
             "站上扣抵值(>)": check(c10),
-            "創10日新高(>)": check(c4),
+            "創10日收盤新高(>)": check(c4),
             "短中均線(5 10 24)多頭排列": check(c5),
             "短中均線(5 10 24)皆上彎": check(c6),
             "KD 金叉（低檔）": check(c8),
