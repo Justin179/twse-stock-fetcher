@@ -124,6 +124,15 @@ def get_today_prices(stock_id, sdk=None):
             sdk.init_realtime()
             quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=stock_id)
             
+            # 🔍 檢查完整性，否則 fallback
+            if not all([
+                quote.get("date"),
+                quote.get("closePrice") is not None,
+                quote.get("openPrice") is not None,
+                quote.get("previousClose") is not None
+            ]):
+                raise ValueError("資料不完整，使用 fallback")
+
             return {
                 "date": quote.get("date"),
                 "c1": quote.get("closePrice"),

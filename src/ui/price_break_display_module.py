@@ -83,8 +83,8 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         with col_left:
             st.markdown(f"- **昨日成交量**：{v1 / 1000:,.0f} 張" if v1 is not None else "- **昨日成交量**：無資料")
             st.markdown(f'- <span style="color:orange">昨日收盤價：{c2}</span>', unsafe_allow_html=True)
-            st.markdown(f"- **今日({today_date[5:]})開盤價**：{o}")
-            st.markdown(f"- **今日({today_date[5:]})收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
+            st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)開盤價**：{o}", unsafe_allow_html=True)
+            st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
             if above_upward_wma5:
                 st.markdown("- ✅ **現價站上 上彎5週均線！**", unsafe_allow_html=True)
             else:
