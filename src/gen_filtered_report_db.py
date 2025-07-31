@@ -43,7 +43,22 @@ else:
 
 if __name__ == "__main__":
     use_gui = True
-    conditions = get_user_selected_conditions(use_gui=use_gui)
+
+    # 🎯 判斷是否為 high_relative_strength_stocks，套用自定義條件
+    if input_name == "high_relative_strength_stocks":
+        custom_conditions = {
+            "收盤價站上 上彎5日均 且乖離小": True,
+            "5 10多頭排列 均線上彎 開口小": True,
+            "10 24多頭排列 均線上彎 開口小": True,
+            "24日均乖離<15%": True,
+            "量價同步": False,
+            "收盤價站上上彎5週均": True,
+            "站上上彎72日均": False
+        }
+    else:
+        custom_conditions = None
+
+    conditions = get_user_selected_conditions(use_gui=use_gui, default_conditions=custom_conditions)
 
     db_path = str(Path(__file__).resolve().parent.parent / "data" / "institution.db")
     stock_list = read_stock_list(input_txt)
