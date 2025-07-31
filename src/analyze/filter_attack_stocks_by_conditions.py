@@ -21,7 +21,7 @@ def filter_attack_stocks(attack: list[str], bias_threshold: float = 3.0) -> list
 
     custom_conditions = {
         "收盤價站上 上彎5日均 且乖離小": True,
-        "5 10多頭排列 均線上彎 開口小": False,
+        "5 10多頭排列 均線上彎 開口小": True,
         "10 24多頭排列 均線上彎 開口小": False,
         "24日均乖離<15%": True,
         "量價同步": False,
