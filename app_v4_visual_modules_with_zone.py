@@ -13,6 +13,7 @@ from ui.plot_institution_combo_plotly_final import plot_institution_combo_plotly
 from ui.plot_main_force_plotly_final import plot_main_force_charts
 from ui.plot_holder_concentration_plotly_final import plot_holder_concentration_plotly
 from ui.plot_monthly_revenue_with_close_on_left_final import plot_monthly_revenue_plotly
+from ui.plot_eps_with_close_price import plot_eps_with_close_price
 from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
 from common.login_helper import init_session_login_objects
 from common.adding_new_stocks_helper import append_unique_stocks
@@ -105,7 +106,13 @@ with col2:
         st.plotly_chart(fig6, use_container_width=True)
         st.plotly_chart(fig7, use_container_width=True)
         
-        st.subheader("📊 三率 & 季收盤價 (20季)")
+        st.subheader("📊 EPS & 三率 & 季收盤價 (20季)")
+        try:
+            fig_eps = plot_eps_with_close_price(selected)
+            st.plotly_chart(fig_eps, use_container_width=True)
+        except ValueError as e:
+            st.warning(str(e))
+
         try:
             fig8 = plot_profitability_ratios_with_close_price(selected)
             st.plotly_chart(fig8, use_container_width=True)

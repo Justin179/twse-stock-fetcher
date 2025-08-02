@@ -55,7 +55,7 @@ def plot_profitability_ratios_with_close_price(stock_id, db_path="data/instituti
     ))
 
     fig.update_layout(
-        title=f"{stock_name} ({stock_id})",
+        title=f"{stock_name} ({stock_id}) 三率",
         xaxis=dict(type="category", tickangle=-45, tickfont=dict(size=12)),
         yaxis=dict(
             title=dict(text="季收盤價", font=dict(color="orange")),
