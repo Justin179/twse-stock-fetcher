@@ -45,7 +45,7 @@ def plot_main_force_charts(stock_id, db_path="data/institution.db"):
         hovertemplate="主力買賣超：%{y}<extra></extra>"
     ))
     fig1.update_layout(
-        title=f"{stock_name} ({stock_id}) 主力買賣超 vs 收盤價",
+        title=f"{stock_name} ({stock_id}) 主力買賣超",
         xaxis=dict(type="category", title="日期", tickangle=-45),
         yaxis=dict(title=dict(text="收盤價", font=dict(color="orange")), tickfont=dict(color="orange")),
         yaxis2=dict(title="主力買賣超(張)", overlaying="y", side="right"),
@@ -76,7 +76,7 @@ def plot_main_force_charts(stock_id, db_path="data/institution.db"):
         hovertemplate="家數差：%{y}<extra></extra>"
     ))
     fig2.update_layout(
-        title=f"{stock_name} ({stock_id}) 買賣家數差 vs 收盤價",
+        title=f"{stock_name} ({stock_id}) 買賣家數差",
         xaxis=dict(type="category", title="日期", tickangle=-45),
         yaxis=dict(title=dict(text="收盤價", font=dict(color="orange")), tickfont=dict(color="orange")),
         yaxis2=dict(title="買賣家數差(家)", overlaying="y", side="right"),
