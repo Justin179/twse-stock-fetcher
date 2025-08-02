@@ -67,7 +67,9 @@ def plot_eps_with_close_price(stock_id, db_path="data/institution.db"):
     # 標題加上去年 EPS
     title_text = f"{stock_name} ({stock_id}) EPS"
     if total_eps_last_year is not None:
-        title_text += f"（{last_year} EPS: {total_eps_last_year:.2f} 元）"
+        title_text += (
+            f"（<span style='color:red'> {last_year}</span>EPS <span style='color:red'>{total_eps_last_year:.2f} </span>元）"
+        )
 
     fig.update_layout(
         title=title_text,
