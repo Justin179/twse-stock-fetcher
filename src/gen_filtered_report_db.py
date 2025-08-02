@@ -58,7 +58,8 @@ if __name__ == "__main__":
     else:
         custom_conditions = None
 
-    conditions = get_user_selected_conditions(use_gui=use_gui, default_conditions=custom_conditions)
+    conditions = get_user_selected_conditions(
+        use_gui=use_gui, default_conditions=custom_conditions, bias_threshold=bias_threshold)
 
     db_path = str(Path(__file__).resolve().parent.parent / "data" / "institution.db")
     stock_list = read_stock_list(input_txt)

@@ -14,7 +14,7 @@ def get_window_position(width, height, offset_x=400, offset_y=100):
 
 
 # ✅ 主函式：取得使用者選擇的條件
-def get_user_selected_conditions(use_gui=True, default_conditions=None):
+def get_user_selected_conditions(use_gui=True, default_conditions=None, bias_threshold=None):
     if default_conditions is None:
         default_conditions = {
             "收盤價站上 上彎5日均 且乖離小": True,
@@ -47,9 +47,8 @@ def get_user_selected_conditions(use_gui=True, default_conditions=None):
         exit()
 
     # 🎯 建立 GUI 視窗並配置到右下角
-    width, height = 350, 330
+    width, height = 350, 370  # 調整高度以容納 bias_threshold 顯示
     x, y = get_window_position(width=400, height=250, offset_x=200, offset_y=200)
-
 
     root = tk.Tk()
     root.title("請選擇要套用的條件")
@@ -57,6 +56,11 @@ def get_user_selected_conditions(use_gui=True, default_conditions=None):
     root.option_add("*Font", ("Microsoft JhengHei", 13))  # 全域預設字型
     root.protocol("WM_DELETE_WINDOW", on_close)
 
+    # 🔹 顯示 bias_threshold
+    if bias_threshold is not None:
+        tk.Label(root, text=f"目前乖離閾值: {bias_threshold}%", fg="blue").pack(anchor="w", padx=10, pady=5)
+
+    # ✅ 動態建立條件勾選框
     checkbox_vars = {}
     for label, default in default_conditions.items():
         var = tk.BooleanVar(value=default)

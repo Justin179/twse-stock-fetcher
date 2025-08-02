@@ -29,7 +29,8 @@ def filter_attack_stocks(attack: list[str], bias_threshold: float = 3.0) -> list
         "站上上彎72日均": False
     }
     use_gui = True
-    conditions = get_user_selected_conditions(use_gui=use_gui, default_conditions=custom_conditions)
+    conditions = get_user_selected_conditions(
+        use_gui=use_gui, default_conditions=custom_conditions, bias_threshold=bias_threshold)
 
     db_path = str(Path.cwd() / "data" / "institution.db")
     filtered_stocks = []
