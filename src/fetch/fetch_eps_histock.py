@@ -1,4 +1,3 @@
-# fetch_eps_histock_test.py
 import sys
 import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -16,7 +15,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 MAX_RETRIES = 3
 DB_PATH = "data/institution.db"
-TEST_STOCK_ID = "2330"  # 測試用股票代碼
 
 # --------------------------------------------------------
 # 抓取 HiStock EPS
@@ -39,28 +37,30 @@ def fetch_eps_from_histock(stock_id):
             table = driver.find_element(By.XPATH, "//table[contains(@class, 'tbBasic')]")
             print(f"✅ {stock_id} EPS 表格載入成功")
 
-            # 印出整個表格 HTML
-            print("=== 抓到的表格 HTML ===")
-            print(table.get_attribute("outerHTML"))
-            print("=======================")
-
             rows = table.find_elements(By.TAG_NAME, "tr")
 
-            # 第一列是年份
+            # 第一列是年份（從第 2 欄開始取）
             header_cells = rows[0].find_elements(By.TAG_NAME, "th")
             years = [cell.text.strip() for cell in header_cells[1:]]  # 跳過第一欄「季別/年度」
 
             data = []
             for row in rows[1:]:
-                cols = row.find_elements(By.TAG_NAME, "td")
-                if not cols:
+                # 每列第一欄可能是 <th> (季別)，其餘是 <td>
+                cells = row.find_elements(By.TAG_NAME, "th") + row.find_elements(By.TAG_NAME, "td")
+                if not cells:
                     continue
-                quarter = cols[0].text.strip()
+
+                quarter = cells[0].text.strip()
                 if quarter.upper() not in ["Q1", "Q2", "Q3", "Q4"]:
                     continue  # 跳過總計
+
+                # 從第 2 欄開始對應年份
                 for i, year in enumerate(years):
+                    val = cells[i+1].text.strip()
+                    if val in ["", "-"]:
+                        continue
                     try:
-                        eps_value = float(cols[i+1].text.strip())
+                        eps_value = float(val)
                         season_label = f"{year}{quarter}"
                         data.append((stock_id, season_label, eps_value))
                     except ValueError:
@@ -82,9 +82,9 @@ def fetch_eps_from_histock(stock_id):
             return []
 
 # --------------------------------------------------------
-# 寫入 SQLite
+# 只更新已存在的 row
 # --------------------------------------------------------
-def save_eps_to_db(data, db_path="data/institution.db"):
+def save_eps_to_db(data, db_path=DB_PATH):
     os.makedirs("data", exist_ok=True)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -116,17 +116,17 @@ def save_eps_to_db(data, db_path="data/institution.db"):
     conn.close()
     return success_count
 
-
 # --------------------------------------------------------
-# 主程式
+# 主程式（測試用）
 # --------------------------------------------------------
 if __name__ == "__main__":
+    TEST_STOCK_ID = "2330"
     print(f"📥 抓取 {TEST_STOCK_ID} EPS（HiStock 測試版）...")
     eps_records = fetch_eps_from_histock(TEST_STOCK_ID)
     if eps_records:
         print(f"📊 解析到 {len(eps_records)} 筆 EPS 資料")
         success = save_eps_to_db(eps_records)
-        print(f"✅ 寫入 {success} 筆（包含更新）")
+        print(f"✅ 更新 {success} 筆 EPS 資料")
     else:
         print(f"⏭️  {TEST_STOCK_ID} 無 EPS 資料或失敗")
 
