@@ -2,8 +2,10 @@ import sqlite3
 import pandas as pd
 import plotly.graph_objects as go
 import re
+from datetime import datetime
 
 def plot_eps_with_close_price(stock_id, db_path="data/institution.db"):
+    # 讀取 EPS 與季收盤價
     conn = sqlite3.connect(db_path)
     df = pd.read_sql_query(
         "SELECT season, eps, season_close_price FROM profitability_ratios WHERE stock_id = ?",
@@ -21,19 +23,23 @@ def plot_eps_with_close_price(stock_id, db_path="data/institution.db"):
     if df.empty:
         raise ValueError("查無資料，請確認資料庫中是否有該股票的 EPS 資料。")
 
-    # season 排序
+    # 解析 season，例如 2024Q1
     def parse_season(s):
         match = re.match(r"(\d{4})Q(\d)", s)
         return (int(match.group(1)), int(match.group(2))) if match else (0, 0)
 
     df[["year", "quarter"]] = df["season"].apply(lambda x: pd.Series(parse_season(x)))
     df = df.sort_values(by=["year", "quarter"]).tail(20).copy()
-    df["label"] = df["season"].apply(lambda s: s[-4:])  # 21Q4 這種格式
+    df["label"] = df["season"].apply(lambda s: s[-4:])  # 例如 24Q1
 
-    # 柱狀圖顏色：正數淡紅、負數淡綠
-    # colors_eps = ["lightcoral" if val >= 0 else "lightgreen" for val in df["eps"]]
+    # 計算去年全年 EPS
+    current_year = datetime.now().year
+    last_year = current_year - 1
+    eps_last_year_df = df[(df["year"] == last_year) & (df["quarter"].isin([1, 2, 3, 4]))]
+    total_eps_last_year = eps_last_year_df["eps"].sum() if not eps_last_year_df.empty else None
+
+    # 設定 Bar 顏色（正數淡紅、負數淡綠）
     colors_eps = ["rgba(255, 0, 0, 0.6)" if val >= 0 else "rgba(56, 200, 35, 0.8)" for val in df["eps"]]
-
 
     fig = go.Figure()
 
@@ -58,8 +64,13 @@ def plot_eps_with_close_price(stock_id, db_path="data/institution.db"):
         hovertemplate="季收盤價：%{y:.2f}<extra></extra>"
     ))
 
+    # 標題加上去年 EPS
+    title_text = f"{stock_name} ({stock_id}) EPS"
+    if total_eps_last_year is not None:
+        title_text += f"（{last_year} EPS: {total_eps_last_year:.2f} 元）"
+
     fig.update_layout(
-        title=f"{stock_name} ({stock_id}) EPS",
+        title=title_text,
         xaxis=dict(type="category", tickangle=-45, tickfont=dict(size=12)),
         yaxis=dict(
             title=dict(text="季收盤價", font=dict(color="orange")),
@@ -74,7 +85,7 @@ def plot_eps_with_close_price(stock_id, db_path="data/institution.db"):
         height=450,
         margin=dict(t=40, b=40),
         hovermode="x unified",
-        barmode="relative"  # 讓 bar 在後面
+        barmode="relative"
     )
 
     return fig
