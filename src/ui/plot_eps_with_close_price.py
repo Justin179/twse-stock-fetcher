@@ -30,8 +30,10 @@ def plot_eps_with_close_price(stock_id, db_path="data/institution.db"):
     df = df.sort_values(by=["year", "quarter"]).tail(20).copy()
     df["label"] = df["season"].apply(lambda s: s[-4:])  # 21Q4 這種格式
 
-    # 柱狀圖顏色：正數紅色、負數綠色
-    colors_eps = ["red" if val >= 0 else "green" for val in df["eps"]]
+    # 柱狀圖顏色：正數淡紅、負數淡綠
+    # colors_eps = ["lightcoral" if val >= 0 else "lightgreen" for val in df["eps"]]
+    colors_eps = ["rgba(255, 0, 0, 0.6)" if val >= 0 else "rgba(56, 200, 35, 0.8)" for val in df["eps"]]
+
 
     fig = go.Figure()
 
