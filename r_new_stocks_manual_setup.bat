@@ -53,6 +53,10 @@ echo ===== [10:33] 季收盤價 ===== >> %LOG_FILE%
 python src\fetch\update_season_close_price_from_local_db.py temp_list.txt >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
+echo ===== [10:36] 更新歷年EPS(季) ===== >> %LOG_FILE%
+python src\fetch\fetch_eps_histock.py temp_list.txt >> %LOG_FILE% 2>&1
+
+echo. >> %LOG_FILE%
 echo ✅ 所有任務完成，請查看 %LOG_FILE% >> %LOG_FILE%
 echo ✅ 所有任務完成，請查看 %LOG_FILE%
 

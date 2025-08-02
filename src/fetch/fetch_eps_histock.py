@@ -41,20 +41,18 @@ def fetch_eps_from_histock(stock_id):
 
             # 第一列是年份（從第 2 欄開始取）
             header_cells = rows[0].find_elements(By.TAG_NAME, "th")
-            years = [cell.text.strip() for cell in header_cells[1:]]  # 跳過第一欄「季別/年度」
+            years = [cell.text.strip() for cell in header_cells[1:]]
 
             data = []
             for row in rows[1:]:
-                # 每列第一欄可能是 <th> (季別)，其餘是 <td>
                 cells = row.find_elements(By.TAG_NAME, "th") + row.find_elements(By.TAG_NAME, "td")
                 if not cells:
                     continue
 
                 quarter = cells[0].text.strip()
                 if quarter.upper() not in ["Q1", "Q2", "Q3", "Q4"]:
-                    continue  # 跳過總計
+                    continue
 
-                # 從第 2 欄開始對應年份
                 for i, year in enumerate(years):
                     val = cells[i+1].text.strip()
                     if val in ["", "-"]:
@@ -98,12 +96,11 @@ def save_eps_to_db(data, db_path=DB_PATH):
 
     success_count = 0
     for stock_id, season, eps_value in data:
-        # 先檢查該複合主鍵是否存在
         cursor.execute("""
             SELECT 1 FROM profitability_ratios
             WHERE stock_id = ? AND season = ?
         """, (stock_id, season))
-        if cursor.fetchone():  # 存在才更新
+        if cursor.fetchone():
             cursor.execute("""
                 UPDATE profitability_ratios
                 SET eps = ?
@@ -117,17 +114,28 @@ def save_eps_to_db(data, db_path=DB_PATH):
     return success_count
 
 # --------------------------------------------------------
-# 主程式（測試用）
+# 主程式 - 多檔股票
 # --------------------------------------------------------
 if __name__ == "__main__":
-    TEST_STOCK_ID = "2330"
-    print(f"📥 抓取 {TEST_STOCK_ID} EPS（HiStock 測試版）...")
-    eps_records = fetch_eps_from_histock(TEST_STOCK_ID)
-    if eps_records:
-        print(f"📊 解析到 {len(eps_records)} 筆 EPS 資料")
-        success = save_eps_to_db(eps_records)
-        print(f"✅ 更新 {success} 筆 EPS 資料")
-    else:
-        print(f"⏭️  {TEST_STOCK_ID} 無 EPS 資料或失敗")
+    # 預設股票清單檔
+    stock_file = "my_stock_holdings.txt"
+    for arg in sys.argv:
+        if arg.endswith(".txt") and os.path.exists(arg):
+            stock_file = arg
+            break
 
-    print("🎉 測試完成")
+    print(f"📄 使用的股票清單: {stock_file}")
+    with open(stock_file, "r", encoding="utf-8") as f:
+        stock_list = [line.strip() for line in f if line.strip()]
+
+    for stock_id in stock_list:
+        print(f"📥 抓取 {stock_id} EPS（HiStock）...")
+        eps_records = fetch_eps_from_histock(stock_id)
+        if eps_records:
+            print(f"📊 解析到 {len(eps_records)} 筆 EPS 資料")
+            success = save_eps_to_db(eps_records)
+            print(f"✅ 更新 {success} 筆 EPS 資料")
+        else:
+            print(f"⏭️  {stock_id} 無 EPS 資料或失敗")
+
+    print("🎉 所有股票處理完畢")
