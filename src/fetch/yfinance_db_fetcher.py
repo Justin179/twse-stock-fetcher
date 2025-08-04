@@ -81,7 +81,7 @@ def read_stock_list(file_path="shareholding_concentration_list.txt") -> list:
 
 if __name__ == "__main__":
     init_db()
-    stock_list = read_stock_list("shareholding_concentration_list.txt")
+    stock_list = read_stock_list("temp_list.txt") # shareholding_concentration_list.txt
     skip_count = 0
     success_count = 0
     failed_summary = []
