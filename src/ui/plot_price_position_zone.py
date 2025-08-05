@@ -62,7 +62,7 @@ def plot_price_position_zone(stock_display_reversed, today_date, c1, o, c2, h, l
         ))
 
     fig.update_layout(
-        title=f"　　{stock_display_reversed}　今日 = {today_date[5:]}",
+        title=f"　　{stock_display_reversed}　今日 = <span style='color:red'>{today_date[5:]}</span>",
         yaxis_title="股價",
         height=500,
         margin=dict(t=30, b=30),
