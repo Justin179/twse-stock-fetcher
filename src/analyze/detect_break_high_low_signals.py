@@ -37,8 +37,8 @@ def detect_signals(file_path="my_stock_holdings.txt", sdk=None):
 
 if __name__ == "__main__":
     file_path = sys.argv[1] if len(sys.argv) > 1 else "my_stock_holdings.txt"
+    bias_threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 2.0  # 新增乖離率參數
 
-    
     if is_fubon_api_maintenance_time():
         print("🔧 現在是 API 維護時間，將使用資料庫資料")
         sdk = None
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     attack, weaken, id_name_map = detect_signals(file_path, sdk=sdk)
 
     # 多加一層條件篩選
-    attack = filter_attack_stocks(attack)
+    attack = filter_attack_stocks(attack, bias_threshold=bias_threshold)
 
 
 
