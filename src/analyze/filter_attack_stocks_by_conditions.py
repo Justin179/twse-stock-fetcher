@@ -8,7 +8,7 @@ from src.ui.condition_selector import get_user_selected_conditions
 
 # 程式中多加一層條件篩選器，回傳符合條件的個股清單
 
-def filter_attack_stocks(attack: list[str], bias_threshold: float = 3.0) -> list[str]:
+def filter_attack_stocks(attack: list[str], bias_threshold: float = 2.0) -> list[str]:
     """
     對 attack 清單內的個股代碼執行條件篩選，回傳篩選後的個股清單（不加.TW 後綴）
     """
