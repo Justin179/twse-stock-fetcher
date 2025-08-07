@@ -9,6 +9,7 @@ python src\tools\append_my_stock_holdings.py
 
 
 @echo off
-python src\gen_filtered_report_db.py high_relative_strength_stocks.txt
+REM %~1 代表外部傳進來的乖離率
+python src\gen_filtered_report_db.py high_relative_strength_stocks.txt %~1
 :: 針對RS>90的強勢股進行篩選(隱者清單 & 持股清單已經融入)，生成XQ匯入檔
 
