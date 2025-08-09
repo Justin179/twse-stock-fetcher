@@ -29,10 +29,11 @@ echo ===== [10:00] 更新近5日法人資料 ===== >> %LOG_FILE%
 python src\fetch\cmoney_institutional_multi_wz_schedule.py temp_list.txt >> %LOG_FILE% 2>&1
 
 echo. >> %LOG_FILE%
-echo ===== [10:07] 主力買賣超 & 買賣家數差 ===== >> %LOG_FILE%
+echo ===== [10:07] 主力買賣超與買賣家數差 ===== >> %LOG_FILE%
 python src\fetch\fetch_main_force_multi.py temp_list.txt >> %LOG_FILE% 2>&1
+
 echo. >> %LOG_FILE%
-echo ===== [10:15] 主力買賣超 & 買賣家數差(玩股) ===== >> %LOG_FILE%
+echo ===== [10:15] 主力買賣超與買賣家數差(玩股) ===== >> %LOG_FILE%
 python src\fetch\fetch_wantgoo_main_trend.py temp_list.txt >> %LOG_FILE% 2>&1
 
 
