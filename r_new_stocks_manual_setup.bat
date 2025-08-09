@@ -31,6 +31,10 @@ python src\fetch\cmoney_institutional_multi_wz_schedule.py temp_list.txt >> %LOG
 echo. >> %LOG_FILE%
 echo ===== [10:07] 主力買賣超 & 買賣家數差 ===== >> %LOG_FILE%
 python src\fetch\fetch_main_force_multi.py temp_list.txt >> %LOG_FILE% 2>&1
+echo. >> %LOG_FILE%
+echo ===== [10:15] 主力買賣超 & 買賣家數差(玩股) ===== >> %LOG_FILE%
+python src\fetch\fetch_wantgoo_main_trend.py temp_list.txt >> %LOG_FILE% 2>&1
+
 
 echo. >> %LOG_FILE%
 echo ===== [8:00 & 22:14] 更新籌碼集中度與千張大戶比率 ===== >> %LOG_FILE%
