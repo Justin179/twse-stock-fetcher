@@ -28,9 +28,14 @@ echo. >> %LOG_FILE%
 echo ===== [10:00] 更新近5日法人資料 ===== >> %LOG_FILE%
 python src\fetch\cmoney_institutional_multi_wz_schedule.py temp_list.txt >> %LOG_FILE% 2>&1
 
+
 echo. >> %LOG_FILE%
-echo ===== [10:07] 主力買賣超與買賣家數差 ===== >> %LOG_FILE%
-python src\fetch\fetch_main_force_multi.py temp_list.txt >> %LOG_FILE% 2>&1
+echo ==== [10:07] 主力買賣超與買賣家數差 ===== >> %LOG_FILE%
+:: 50 秒沒完成就殺掉並繼續往下
+powershell -NoProfile -ExecutionPolicy Bypass -File src\tools\run_with_timeout.ps1 50 ^
+ "python src\fetch\fetch_main_force_multi.py temp_list.txt" >> "%LOG_FILE%" 2>&1
+if errorlevel 124 echo [WARN] 逾時 50 秒，已中止該步驟並繼續後續任務。>> "%LOG_FILE%"
+
 
 echo. >> %LOG_FILE%
 echo ===== [10:15] 主力買賣超與買賣家數差(玩股) ===== >> %LOG_FILE%
