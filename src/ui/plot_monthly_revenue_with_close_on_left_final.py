@@ -25,6 +25,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
     full_title = f"{stock_name} ({stock_id})"
 
     colors_yoy = ["red" if val >= 0 else "green" for val in df["yoy_rate"]]
+    colors_revenue = ["red" if val >= 0 else "green" for val in df["revenue"]]
     colors_mom = ["red" if val >= 0 else "green" for val in df["mom_rate"]]
 
     # 第一張圖：YoY + 月收盤價
@@ -53,7 +54,7 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
     # 第二張圖：月營收 + 月收盤價
     fig2 = go.Figure(data=[
         go.Bar(
-            x=df["label"], y=df["revenue"], marker_color="brown",
+            x=df["label"], y=df["revenue"], marker_color=colors_revenue,
             text=df["revenue"].round(0).astype(int).astype(str), textposition="outside",
             name="月營收", yaxis="y2",
             hovertemplate="營收: %{y:.0f}<extra></extra>"
