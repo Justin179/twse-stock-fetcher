@@ -3,6 +3,7 @@ import streamlit as st
 from pathlib import Path
 import pandas as pd
 from typing import List, Dict
+import time  # 置中提示要用到短暫延遲
 
 def _read_codes_csv(path: Path) -> pd.Series:
     s = pd.read_csv(path, header=None, encoding="utf-8-sig")[0].astype(str)
@@ -68,8 +69,38 @@ def _collect_and_write_with_single_blank_line(
         "written_codes": unique_codes,
     }
 
+def show_center_toast(msg: str, seconds: float = 2.0):
+    """在畫面中央顯示短暫提示，seconds 秒後自動消失。"""
+    ph = st.empty()
+    ph.markdown(
+        f"""
+        <div class="mst-center-toast">{msg}</div>
+        <style>
+        .mst-center-toast {{
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(50, 50, 50, 0.95);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(0,0,0,.25);
+            z-index: 10000;
+            font-size: 15px;
+            line-height: 1.3;
+            white-space: nowrap;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    time.sleep(seconds)  # 這會暫停 seconds 秒
+    ph.empty()
+
+
 def render_collect_stock_button(
-    label: str = "🧺 匯集個股清單",
+    label: str = "🧺 匯集個股到temp_list",
     output_dir: str = "output",
     source_files: List[str] | None = None,
     temp_txt: str = "temp_list.txt",
@@ -81,12 +112,12 @@ def render_collect_stock_button(
         missing = result["missing"]
 
         if appended > 0:
-            st.success(f"✅ 已匯集 {appended} 檔個股並寫入 {temp_txt}（在原最後一行後**僅**留一行空白行再追加）。")
+            show_center_toast(f"✅ 已匯集 {appended} 檔個股並寫入 {temp_txt}", seconds=2)
         else:
-            warn_msg = "未追加任何個股。"
+            warn_msg = "未追加任何個股"
             if missing:
                 warn_msg += "（來源檔缺少：" + "、".join(missing) + "）"
-            st.warning(warn_msg)
+            show_center_toast("⚠️ " + warn_msg, seconds=2)
 
         if duplicates:
             with st.expander("🔁 發現重複的個股代碼（點開查看）"):
