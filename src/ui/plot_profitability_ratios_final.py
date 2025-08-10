@@ -71,6 +71,28 @@ def plot_profitability_ratios_with_close_price(stock_id, db_path="data/instituti
         hovermode="x unified"
     )
 
+    # 在右側 y 軸 40% 的位置畫紅色橫線
+    fig.add_shape(
+        type="line",
+        x0=-0.5, x1=len(df["label"]) - 0.5,  # 覆蓋整個 x 範圍
+        y0=40, y1=40,
+        xref="x", yref="y2",
+        line=dict(color="red", width=1, dash="dot")
+    )
+
+    # 在右側標上 40% 紅色文字
+    fig.add_annotation(
+        x=len(df["label"]) - 0.2,  # 靠右
+        y=40,
+        xref="x", yref="y2",
+        text="毛利40%",
+        showarrow=False,
+        font=dict(color="red", size=12),
+        xanchor="left",
+        yanchor="middle"
+    )
+
+
     return fig
 
 if __name__ == "__main__":
