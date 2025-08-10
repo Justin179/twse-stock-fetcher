@@ -18,6 +18,8 @@ from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_cl
 from common.login_helper import init_session_login_objects
 from common.adding_new_stocks_helper import append_unique_stocks
 import subprocess
+from ui.collect_stock_button import render_collect_stock_button
+
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -52,6 +54,12 @@ with col1:
     selected = selected_display.split()[0]
     parts = selected_display.split()
     stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display
+
+    # 🔹 這一行就把整個功能帶進來（顯示在上方）
+    render_collect_stock_button(
+        source_files=["匯入XQ_rs90強勢股.csv","匯入XQ_籌碼集中度.csv","過上週上月高個股.csv"],
+        temp_txt="temp_list.txt",
+    )
 
     if st.button("➕ 更新 temp_list 的股票 & 加進持股清單"):
         # 非同步執行批次檔，不阻塞畫面
