@@ -68,8 +68,12 @@ with col1:
         st.success(msg)
         st.rerun()  # 🔁 直接重新跑整頁
 
-    # 按鈕下面呼叫
-    render_temp_list_expander(temp_txt="temp_list.txt", title="📄 show temp_list")
+    # …按鈕下面加一行：
+    render_temp_list_expander(
+        temp_txt="temp_list.txt",
+        db_path="data/institution.db",
+        title="📄 show temp_list"
+    )
 
 with col2:
     if selected:
