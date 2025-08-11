@@ -19,7 +19,7 @@ from common.login_helper import init_session_login_objects
 from common.adding_new_stocks_helper import append_unique_stocks
 import subprocess
 from ui.collect_stock_button import render_collect_stock_button
-
+from ui.show_temp_list_expander import render_temp_list_expander
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -68,6 +68,8 @@ with col1:
         st.success(msg)
         st.rerun()  # 🔁 直接重新跑整頁
 
+    # 按鈕下面呼叫
+    render_temp_list_expander(temp_txt="temp_list.txt", title="📄 show temp_list")
 
 with col2:
     if selected:
