@@ -47,19 +47,22 @@ def _collect_and_write_with_single_blank_line(
     # 去重（保持原出現順序）
     unique_codes = all_codes.drop_duplicates().tolist()
 
-    # 讀取既有內容並規整尾端換行：確保「只留一行空白行」再接新清單
+    
     temp_path = Path(temp_txt)
-    existing = temp_path.read_text(encoding="utf-8") if temp_path.exists() else ""
-    new_block = ("\n".join(unique_codes) + "\n") if unique_codes else ""
 
-    if existing == "":
-        new_content = new_block
-    else:
-        # 移除所有結尾換行，然後補上剛好兩個 \n（=一個空白行）再接新區塊
-        existing = existing.rstrip("\n")
-        new_content = existing + "\n\n" + new_block
+    # 直接清空並覆寫（不保留原內容）
+    new_content = "\n".join(unique_codes) + "\n" if unique_codes else ""
 
-    # 以覆寫方式寫回，保證尾端僅一行空白行隔開
+    # 讀取既有內容並規整尾端換行：確保「只留一行空白行」再接新清單（保留原內容）
+    # existing = temp_path.read_text(encoding="utf-8") if temp_path.exists() else ""
+    # new_block = ("\n".join(unique_codes) + "\n") if unique_codes else ""
+    # if existing == "":
+    #     new_content = new_block
+    # else:
+    #     existing = existing.rstrip("\n")
+    #     new_content = existing + "\n\n" + new_block
+
+
     temp_path.write_text(new_content, encoding="utf-8")
 
     return {
@@ -95,7 +98,7 @@ def show_center_toast(msg: str, seconds: float = 2.0):
         """,
         unsafe_allow_html=True,
     )
-    time.sleep(seconds)  # 這會暫停 seconds 秒
+    time.sleep(seconds) 
     ph.empty()
 
 
