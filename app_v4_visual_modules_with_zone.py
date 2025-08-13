@@ -83,7 +83,7 @@ with col2:
         with col_left:
             display_rs_rsi_info(selected)
         with col_right:
-            render_bias_calculator()
+            render_bias_calculator(key_suffix=selected)
 
 
         st.subheader("📌 關鍵價位分析")
