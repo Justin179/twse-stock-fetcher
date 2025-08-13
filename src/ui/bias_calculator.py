@@ -17,17 +17,17 @@ def render_bias_calculator():
         <div style="font-family: ui-sans-serif, system-ui; line-height:1.4;">
           <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
             <div style="display:flex; flex-direction:column;">
-              <label style="font-size:12px; color:#6b7280; margin-bottom:4px;">A 點 (起始價)</label>
+              <label style="font-size:14px; color:#6b7280; margin-bottom:4px;">起點價</label>
               <input id="bias-a" type="text" inputmode="decimal" placeholder="A 點"
                      style="padding:8px 10px; width:160px; border:1px solid #d1d5db; border-radius:8px; outline:none;">
             </div>
             <div style="display:flex; flex-direction:column;">
-              <label style="font-size:12px; color:#6b7280; margin-bottom:4px;">B 點 (最終價)</label>
+              <label style="font-size:14px; color:#6b7280; margin-bottom:4px;">終點價</label>
               <input id="bias-b" type="text" inputmode="decimal" placeholder="B 點"
                      style="padding:8px 10px; width:160px; border:1px solid #d1d5db; border-radius:8px; outline:none;">
             </div>
             <div style="display:flex; flex-direction:column;">
-              <label style="font-size:12px; color:#6b7280; margin-bottom:4px;">乖離率</label>
+              <label style="font-size:14px; color:#6b7280; margin-bottom:4px;">乖離率</label>
               <div id="bias-result"
                    style="min-width:120px; padding:8px 10px; border:1px solid #f3f4f6; border-radius:8px; background:#f9fafb; font-weight:600;">
                 -
