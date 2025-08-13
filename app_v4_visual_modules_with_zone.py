@@ -26,7 +26,7 @@ plt.rcParams['axes.unicode_minus'] = False
 
 # --- Streamlit ---
 st.set_page_config(layout="wide")
-st.title("📈 技術線型 找已吃貨且還沒噴的 & 籌碼(守與拉的動機)")
+st.title("📈 技術線型(找已吃貨且還沒噴的) & 籌碼(守與拉的動機)")
 with st.expander("📘 說明：這是什麼？"):
     st.markdown("""
     - 股票代碼清單來自 `my_stock_holdings.txt`
