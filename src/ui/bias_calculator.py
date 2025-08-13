@@ -3,12 +3,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 def render_bias_calculator(key_suffix: str = ""):
-    """
-    乖離率快算 (A→B) — 純前端版
-    - B 欄按 Enter 才計算
-    - 計算後清空並把焦點帶回 A
-    - key_suffix: 傳入當前股票代碼，切換股票時會產生新的 DOM 元件，自動清空舊結果
-    """
     st.caption("✏️ 乖離率快算 (A→B)")
 
     suffix = f"-{key_suffix}" if key_suffix else ""
@@ -53,7 +47,6 @@ def render_bias_calculator(key_suffix: str = ""):
           function compute() {{
             const a = toNum(aEl.value);
             const b = toNum(bEl.value);
-
             if (!isFinite(a) || !isFinite(b)) return;
             if (a === 0) {{
               res.textContent = "A 不能為 0";
@@ -63,10 +56,8 @@ def render_bias_calculator(key_suffix: str = ""):
               return;
             }}
             const bias = ((b - a) / a) * 100;
-            const text = bias.toFixed(2) + "%";
-            res.textContent = text;
+            res.textContent = bias.toFixed(2) + "%";
             res.style.color = bias >= 0 ? "#16a34a" : "#ef4444";
-
             aEl.value = "";
             bEl.value = "";
             setTimeout(() => aEl.focus(), 0);
@@ -79,15 +70,14 @@ def render_bias_calculator(key_suffix: str = ""):
             }}
           }});
 
-          // 只有在 B 按 Enter 時才計算
+          // B 點：Enter 或 Tab 都計算
           bEl.addEventListener("keydown", (e) => {{
-            if (e.key === "Enter") {{
+            if (e.key === "Enter" || e.key === "Tab") {{
               e.preventDefault();
               compute();
             }}
           }});
 
-          // 初始聚焦 A
           setTimeout(() => aEl.focus(), 0);
         }})();
         </script>
