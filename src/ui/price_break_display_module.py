@@ -61,11 +61,32 @@ def is_price_above_upward_wma5(stock_id: str, today_date: str, today_close: floa
 
     return cond1 and cond2
 
+def get_baseline_and_deduction(stock_id: str, today_date: str):
+    """
+    基準價：今天往前第 5 個交易日的收盤價 => iloc[-6]
+    扣抵值：今天往前第 4 個交易日的收盤價 => iloc[-5]
+    """
+    df = fetch_close_history_from_db(stock_id)  # 需有欄位 date, close
+    if df.empty:
+        return None, None
+
+    df["date"] = pd.to_datetime(df["date"])
+    cutoff = pd.to_datetime(today_date)
+    df = df[df["date"] <= cutoff].sort_values("date")
+
+    # 需要「今天(或<=today的最近一筆) + 往前至少5天」=> 至少 6 筆
+    if len(df) < 6:
+        return None, None
+
+    baseline = df.iloc[-6]["close"]   # 前5交易日
+    deduction = df.iloc[-5]["close"]  # 前4交易日
+    return float(baseline), float(deduction)
 
 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
         today = get_today_prices(stock_id, sdk)
+
         
         today_date = today["date"]
         db_data = get_recent_prices(stock_id, today_date)
@@ -78,6 +99,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
         tips = analyze_stock(stock_id, dl=dl, sdk=sdk)
 
+        # 取得基準價、扣抵值
+        baseline, deduction = get_baseline_and_deduction(stock_id, today_date)
+
         col_left, col_right = st.columns(2)
 
         with col_left:
@@ -89,6 +113,13 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 st.markdown("- ✅ **現價站上 上彎5週均線！**", unsafe_allow_html=True)
             else:
                 st.markdown("- ❌ **現價未站上 上彎5週均線**", unsafe_allow_html=True)
+
+            # 👉 在這裡顯示基準價與扣抵值
+            if baseline is not None and deduction is not None:
+                st.markdown(f"- **基準價（前5交易日收盤）**：{baseline:.2f}")
+                st.markdown(f"- **扣抵值（前4交易日收盤）**：{deduction:.2f}")
+            else:
+                st.markdown("- **基準價 / 扣抵值**：資料不足")
 
         with col_right:
             st.markdown("**提示訊息：**")
