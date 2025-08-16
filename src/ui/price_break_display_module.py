@@ -3,7 +3,7 @@ from analyze.analyze_price_break_conditions_dataloader import (
     analyze_stock, get_today_prices, get_recent_prices,
     get_yesterday_hl, get_week_month_high_low
 )
-from common.db_helpers import fetch_close_history_from_db
+from common.db_helpers import fetch_close_history_from_db, fetch_close_history_trading_only_from_db
 
 import sqlite3
 import pandas as pd
@@ -63,18 +63,20 @@ def is_price_above_upward_wma5(stock_id: str, today_date: str, today_close: floa
 
 def get_baseline_and_deduction(stock_id: str, today_date: str):
     """
-    基準價：今天往前第 5 個交易日的收盤價 => iloc[-6]
-    扣抵值：今天往前第 4 個交易日的收盤價 => iloc[-5]
+    基準價：今天往前第 5 個『交易日』的收盤價 => iloc[-6]
+    扣抵值：今天往前第 4 個『交易日』的收盤價 => iloc[-5]
+    ※『交易日』已排除 close=0 / 無收盤價的日期。
     """
-    df = fetch_close_history_from_db(stock_id)  # 需有欄位 date, close
+    df = fetch_close_history_trading_only_from_db(stock_id)  # 只取有收盤價的日子
     if df.empty:
         return None, None
 
     df["date"] = pd.to_datetime(df["date"])
     cutoff = pd.to_datetime(today_date)
+    # 僅使用 today_date（含）之前的資料；若 today 尚未入庫，則用 <= today 的最近一筆當「第0天」
     df = df[df["date"] <= cutoff].sort_values("date")
 
-    # 需要「今天(或<=today的最近一筆) + 往前至少5天」=> 至少 6 筆
+    # 需要「第0天 + 往前至少5天」=> 至少 6 筆
     if len(df) < 6:
         return None, None
 

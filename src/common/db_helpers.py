@@ -32,3 +32,25 @@ def fetch_close_history_from_db(stock_id: str, db_path: str = "data/institution.
     finally:
         conn.close()
     return df
+
+def fetch_close_history_trading_only_from_db(stock_id: str, db_path: str = "data/institution.db") -> pd.DataFrame:
+    """
+    僅回傳「有收盤價(>0)」的交易日序列，用於排除停牌或無收盤價的日期。
+    欄位：date, close；依日期由小到大排序。
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        df = pd.read_sql_query(
+            """
+            SELECT date, close
+            FROM twse_prices
+            WHERE stock_id = ?
+              AND close IS NOT NULL
+              AND close > 0
+            ORDER BY date
+            """,
+            conn, params=(stock_id,)
+        )
+    finally:
+        conn.close()
+    return df
