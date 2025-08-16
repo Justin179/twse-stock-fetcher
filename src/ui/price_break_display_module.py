@@ -90,6 +90,30 @@ def get_baseline_and_deduction(stock_id: str, today_date: str):
     deduction = df.iloc[-5]["close"]  # 前4交易日
     return float(baseline), float(deduction)
 
+def compute_ma_with_today(stock_id: str, today_date: str, today_close: float, n: int):
+    """
+    回傳含今日現價 c1 的 N 日均：
+    (today_close + 前 N-1 個『交易日』收盤) / N
+    若資料不足則回傳 None
+    """
+    df = fetch_close_history_trading_only_from_db(stock_id)
+    if df.empty:
+        return None
+
+    df["date"] = pd.to_datetime(df["date"])
+    cutoff = pd.to_datetime(today_date)
+    # 僅取「今天之前」的交易日（不含今天，因為今天盤中尚未入庫）
+    df = df[df["date"] < cutoff].sort_values("date")
+
+    need = n - 1
+    if len(df) < need:
+        return None
+
+    # 取最後 (n-1) 筆收盤價，加上 today_close 後平均
+    tail = df["close"].iloc[-need:].astype(float)
+    ma = (today_close + float(tail.sum())) / n
+    return ma
+
 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
@@ -150,9 +174,15 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     tip_html = tip
                 st.markdown(f"{icon} {tip_html}", unsafe_allow_html=True)
 
-            with col_right:
-                st.markdown("**乖離率：**")
-                
+        with col_right:
+            st.markdown("**乖離率：**")
+            ma5  = compute_ma_with_today(stock_id, today_date, c1, 5)
+            ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
+            ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
+
+            st.markdown(f"- **5日均**：{ma5:.2f}"  if ma5  is not None else "- **5日均**：資料不足")
+            st.markdown(f"- **10日均**：{ma10:.2f}" if ma10 is not None else "- **10日均**：資料不足")
+            st.markdown(f"- **24日均**：{ma24:.2f}" if ma24 is not None else "- **24日均**：資料不足")    
 
         return today_date, c1, o, c2, h, l, w1, w2, m1, m2
 
