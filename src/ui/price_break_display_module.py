@@ -137,10 +137,10 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
 
         with col_left:
-            st.markdown(f"- **昨日成交量**：{v1 / 1000:,.0f} 張" if v1 is not None else "- **昨日成交量**：無資料")
-            st.markdown(f'- <span style="color:orange">昨日收盤價：<b>{c2}</b></span>', unsafe_allow_html=True)
-            st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)開盤價**：{o}", unsafe_allow_html=True)
+            st.markdown(f"- 昨日成交量：{v1 / 1000:,.0f} 張" if v1 is not None else "- 昨日成交量：無資料")
+            st.markdown(f"- <span style='color:orange'>昨收：<b>{c2}</b></span> -> 今開(<span style='color:red'>{today_date[5:]}</span>)：<b>{o}</b>", unsafe_allow_html=True)
             st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
+
             if above_upward_wma5:
                 st.markdown("- ✅ **現價站上 上彎5週均線！**", unsafe_allow_html=True)
             else:
@@ -156,8 +156,12 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         with col_mid:
             st.markdown("**提示訊息：**")
             for tip in tips:
-                if ("過" in tip and "高" in tip) or ("開高" in tip):
+                if (tip.startswith("今收盤(現價) 過昨高")
+                    or tip.startswith("今收盤(現價) 過上週高點")
+                    or tip.startswith("今收盤(現價) 過上月高點")):
                     icon = "✅"
+                elif ("過" in tip and "高" in tip) or ("開高" in tip):
+                    icon = "✔️"
                 elif ("破" in tip and "低" in tip) or ("開低" in tip):
                     icon = "❌"
                 elif "開平" in tip:

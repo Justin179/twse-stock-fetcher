@@ -148,11 +148,6 @@ def analyze_stock(stock_id, dl=None, sdk=None):
 
     if dl is None:
         dl = get_logged_in_dl()
-        # dl = DataLoader()
-        # from dotenv import load_dotenv
-        # import os
-        # load_dotenv()
-        # dl.login(user_id=os.getenv("FINMIND_USER_1"), password=os.getenv("FINMIND_PASSWORD_1"))
     
     fetch_with_finmind_recent(stock_id, dl, months=2) # 
     
@@ -167,53 +162,7 @@ def analyze_stock(stock_id, dl=None, sdk=None):
     v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
     v2 = db_data.iloc[1]["volume"] if len(db_data) > 1 else None
 
-    # print("🔍 變數內容檢查：")
-    # print(f"  ▸ 今日收盤價 (c1)：{c1}")
-    # print(f"  ▸ 今日開盤價 (o)：{o}")
-    # print(f"  ▸ 昨日收盤價 (c2)：{c2}")
-    # print(f"  ▸ 昨日高點 (h)：{h}")
-    # print(f"  ▸ 昨日低點 (l)：{l}")
-    # print(f"  ▸ 昨成交量 (v1)：{v1}")
-    # print(f"  ▸ 前天成交量 (v2)：{v2}")
-    # print(f"  ▸ 上週高點 (w1)：{w1}")
-    # print(f"  ▸ 上週低點 (w2)：{w2}")
-    # print(f"  ▸ 上月高點 (m1)：{m1}")
-    # print(f"  ▸ 上月低點 (m2)：{m2}")
-    # print("-" * 40)
-
-
     signals = []
-
-    
-    # 昨天收盤
-    if c2:
-        # 上週高點
-        if w1 and c2 > w1:
-            if v1 and v2 and v1 > v2:
-                signals.append("昨收盤 帶量過上週高點")
-            else:
-                signals.append("昨收盤 過上週高點")
-
-        # 上月高點
-        if m1 and c2 > m1:
-            if v1 and v2 and v1 > v2:
-                signals.append("昨收盤 帶量過上月高點")
-            else:
-                signals.append("昨收盤 過上月高點")
-
-        # 上週低點
-        if w2 and c2 < w2:
-            if v1 and v2 and v1 > v2:
-                signals.append("昨收盤 帶量破上週低點")
-            else:
-                signals.append("昨收盤 破上週低點")
-
-        # 上月低點
-        if m2 and c2 < m2:
-            if v1 and v2 and v1 > v2:
-                signals.append("昨收盤 帶量破上月低點")
-            else:
-                signals.append("昨收盤 破上月低點")
 
     # 今天開盤
     if o and c2:
@@ -249,6 +198,38 @@ def analyze_stock(stock_id, dl=None, sdk=None):
             signals.append("今收盤(現價) 過上月高點")
         if m2 and c1 < m2:
             signals.append("今收盤(現價) 破上月低點")
+
+
+    # 昨天收盤
+    if c2:
+        # 上週高點
+        if w1 and c2 > w1:
+            if v1 and v2 and v1 > v2:
+                signals.append("昨收盤 帶量過上週高點")
+            else:
+                signals.append("昨收盤 過上週高點")
+
+        # 上月高點
+        if m1 and c2 > m1:
+            if v1 and v2 and v1 > v2:
+                signals.append("昨收盤 帶量過上月高點")
+            else:
+                signals.append("昨收盤 過上月高點")
+
+        # 上週低點
+        if w2 and c2 < w2:
+            if v1 and v2 and v1 > v2:
+                signals.append("昨收盤 帶量破上週低點")
+            else:
+                signals.append("昨收盤 破上週低點")
+
+        # 上月低點
+        if m2 and c2 < m2:
+            if v1 and v2 and v1 > v2:
+                signals.append("昨收盤 帶量破上月低點")
+            else:
+                signals.append("昨收盤 破上月低點")
+
 
     return signals
 
