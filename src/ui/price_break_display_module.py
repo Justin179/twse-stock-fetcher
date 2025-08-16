@@ -133,9 +133,14 @@ def render_bias_line(title: str, a, b):
         st.markdown(f"- **{title}**：資料不足")
         return
     color = "#ef4444" if val >= 0 else "#16a34a"
+
+    # ⚠️ 警示條件：
+    # 1) title == "24日均線乖離" 且 val > 15
+    # 2) title 內含 "均線開口" 且 val > 10
+    prefix = "⚠️ " if ((title == "24日均線乖離" and val > 15) or ("均線開口" in title and val > 10)) else ""
+
     st.markdown(
-        f"**{title}**：<span style='color:{color}; font-weight:700'>{val:+.2f}%</span> "
-        f"<span style='color:#6b7280'>({a:.2f} → {b:.2f})</span>",
+        f"{prefix}{title}：<span style='color:{color}; font-weight:700'>{val:+.2f}%</span> ",
         unsafe_allow_html=True,
     )
 
