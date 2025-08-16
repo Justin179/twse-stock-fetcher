@@ -134,10 +134,19 @@ def render_bias_line(title: str, a, b):
         return
     color = "#ef4444" if val >= 0 else "#16a34a"
 
-    # ⚠️ 警示條件：
-    # 1) title == "24日均線乖離" 且 val > 15
-    # 2) title 內含 "均線開口" 且 val > 10
-    prefix = "⚠️ " if ((title == "24日均線乖離" and val > 15) or ("均線開口" in title and val > 10)) else ""
+    # 前綴規則（由高到低優先權）
+    prefix = ""
+    if (title == "24日均線乖離" and val > 15) or \
+       ("均線開口" in title and val > 10) or \
+       (title == "5日均線乖離" and val > 10):
+        prefix = "⚠️ "
+    elif title == "5日均線乖離":
+        if 0 < val < 0.5:
+            prefix = "✅ "
+        elif 0.5 <= val < 1:
+            prefix = "✔️ "
+    elif "均線開口" in title and 0 < val < 0.5:
+        prefix = "✔️ "
 
     st.markdown(
         f"{prefix}{title}：<span style='color:{color}; font-weight:700'>{val:+.2f}%</span> ",
