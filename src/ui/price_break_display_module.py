@@ -4,6 +4,8 @@ from analyze.analyze_price_break_conditions_dataloader import (
     get_yesterday_hl, get_week_month_high_low
 )
 from common.db_helpers import fetch_close_history_from_db, fetch_close_history_trading_only_from_db
+from analyze.price_baseline_checker import check_price_vs_baseline_and_deduction
+
 
 import sqlite3
 import pandas as pd
@@ -88,7 +90,6 @@ def get_baseline_and_deduction(stock_id: str, today_date: str):
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
         today = get_today_prices(stock_id, sdk)
-
         
         today_date = today["date"]
         db_data = get_recent_prices(stock_id, today_date)
@@ -116,12 +117,12 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             else:
                 st.markdown("- ❌ **現價未站上 上彎5週均線**", unsafe_allow_html=True)
 
-            # 👉 在這裡顯示基準價與扣抵值
             if baseline is not None and deduction is not None:
-                st.markdown(f"- **基準價（前5交易日收盤）**：{baseline:.2f}")
-                st.markdown(f"- **扣抵值（前4交易日收盤）**：{deduction:.2f}")
+                msg = check_price_vs_baseline_and_deduction(c1, baseline, deduction)
+                st.markdown(msg, unsafe_allow_html=True)
             else:
                 st.markdown("- **基準價 / 扣抵值**：資料不足")
+
 
         with col_right:
             st.markdown("**提示訊息：**")
