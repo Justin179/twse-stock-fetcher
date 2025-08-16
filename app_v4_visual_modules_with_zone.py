@@ -85,7 +85,6 @@ with col2:
         with col_right:
             render_bias_calculator(key_suffix=selected)
 
-
         st.subheader("📌 關鍵價位分析")
         result = display_price_break_analysis(selected, dl=dl, sdk=sdk)
         if result:

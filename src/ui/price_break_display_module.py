@@ -11,6 +11,10 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 
+from ui.bias_calculator import render_bias_calculator
+
+
+
 def is_price_above_upward_wma5(stock_id: str, today_date: str, today_close: float) -> bool:
     """
     判斷本週收盤價是否站上上彎的5週均線。
@@ -105,7 +109,8 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         # 取得基準價、扣抵值
         baseline, deduction = get_baseline_and_deduction(stock_id, today_date)
 
-        col_left, col_right = st.columns(2)
+        col_left, col_mid, col_right = st.columns([4, 3, 2])
+
 
         with col_left:
             st.markdown(f"- **昨日成交量**：{v1 / 1000:,.0f} 張" if v1 is not None else "- **昨日成交量**：無資料")
@@ -124,7 +129,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 st.markdown("- **基準價 / 扣抵值**：資料不足")
 
 
-        with col_right:
+        with col_mid:
             st.markdown("**提示訊息：**")
             for tip in tips:
                 if ("過" in tip and "高" in tip) or ("開高" in tip):
@@ -144,6 +149,10 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 else:
                     tip_html = tip
                 st.markdown(f"{icon} {tip_html}", unsafe_allow_html=True)
+
+            with col_right:
+                st.markdown("**乖離率：**")
+                
 
         return today_date, c1, o, c2, h, l, w1, w2, m1, m2
 
