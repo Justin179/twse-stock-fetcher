@@ -114,6 +114,31 @@ def compute_ma_with_today(stock_id: str, today_date: str, today_close: float, n:
     ma = (today_close + float(tail.sum())) / n
     return ma
 
+def calc_bias(a, b):
+    """依 A→B 計算乖離率 ((B-A)/A*100)。資料不足或 A=0 時回傳 None。"""
+    try:
+        if a is None or b is None:
+            return None
+        a = float(a); b = float(b)
+        if a == 0:
+            return None
+        return (b - a) / a * 100.0
+    except Exception:
+        return None
+
+def render_bias_line(title: str, a, b):
+    """在畫面印出一行乖離率；正值紅、負值綠，並附上 (A→B) 數字。"""
+    val = calc_bias(a, b)
+    if val is None:
+        st.markdown(f"- **{title}**：資料不足")
+        return
+    color = "#ef4444" if val >= 0 else "#16a34a"
+    st.markdown(
+        f"**{title}**：<span style='color:{color}; font-weight:700'>{val:+.2f}%</span> "
+        f"<span style='color:#6b7280'>({a:.2f} → {b:.2f})</span>",
+        unsafe_allow_html=True,
+    )
+
 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
@@ -133,7 +158,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         # 取得基準價、扣抵值
         baseline, deduction = get_baseline_and_deduction(stock_id, today_date)
 
-        col_left, col_mid, col_right = st.columns([4, 3, 2])
+        col_left, col_mid, col_right = st.columns([3, 2, 2])
 
 
         with col_left:
@@ -183,10 +208,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             ma5  = compute_ma_with_today(stock_id, today_date, c1, 5)
             ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
             ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
-
-            st.markdown(f"- **5日均**：{ma5:.2f}"  if ma5  is not None else "- **5日均**：資料不足")
-            st.markdown(f"- **10日均**：{ma10:.2f}" if ma10 is not None else "- **10日均**：資料不足")
-            st.markdown(f"- **24日均**：{ma24:.2f}" if ma24 is not None else "- **24日均**：資料不足")    
+            render_bias_line("5日均線乖離", ma5, c1)         # (A=MA5,  B=c1)
+            render_bias_line("10日均線乖離", ma10, c1)       # (A=MA10, B=c1)
+            render_bias_line("24日均線乖離", ma24, c1)       # (A=MA24, B=c1)
+            render_bias_line("10 → 5 均線開口", ma10, ma5)   # (A=MA10, B=MA5)
+            render_bias_line("24 → 10 均線開口", ma24, ma10) # (A=MA24, B=MA10)
 
         return today_date, c1, o, c2, h, l, w1, w2, m1, m2
 
