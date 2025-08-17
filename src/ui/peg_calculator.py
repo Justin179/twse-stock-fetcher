@@ -161,12 +161,18 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
             setTimeout(() => thisEl.focus(), 0);
           }}
 
-          // A 格：Enter -> 跳 B 格
+          /*  今年 EPS 的輸入行為：
+             - Enter：直接計算（視為沒有明年EPS）
+             - Tab：不攔截，讓瀏覽器預設行為跳到 B 格
+          */
           thisEl.addEventListener("keydown", (e) => {{
             if (e.key === "Enter") {{
               e.preventDefault();
-              nextEl.focus();
+              // 明年EPS留白，避免沿用舊值
+              nextEl.value = "";
+              compute();  // 只用 去年→今年 的成長率 + 今年EPS的 Forward PE
             }}
+            // Tab 不處理，維持預設跳到下一欄
           }});
 
           // B 格：Enter 或 Tab -> 計算
