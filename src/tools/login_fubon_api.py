@@ -50,6 +50,10 @@ def main():
         print("message:", accounts.message)
         print("data:", accounts.data)
 
+    sdk.init_realtime()
+    quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol="2330")
+    print("📈 即時報價：", quote)
+
     sdk.logout()
 
 if __name__ == "__main__":
