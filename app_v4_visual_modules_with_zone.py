@@ -21,6 +21,8 @@ import subprocess
 from ui.collect_stock_button import render_collect_stock_button
 from ui.show_temp_list_expander import render_temp_list_expander
 from ui.bias_calculator import render_bias_calculator
+from ui.peg_calculator import render_peg_calculator
+
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
@@ -84,6 +86,7 @@ with col2:
             display_rs_rsi_info(selected)
         with col_right:
             render_bias_calculator(key_suffix=selected)
+            render_peg_calculator(selected, sdk=sdk, key_suffix=selected)
 
         st.subheader("📌 關鍵價位分析")
         result = display_price_break_analysis(selected, dl=dl, sdk=sdk)
