@@ -12,7 +12,8 @@ import pandas as pd
 from datetime import datetime
 
 from ui.bias_calculator import render_bias_calculator
-
+import re
+from math import isclose
 
 
 def is_price_above_upward_wma5(stock_id: str, today_date: str, today_close: float) -> bool:
@@ -67,11 +68,19 @@ def is_price_above_upward_wma5(stock_id: str, today_date: str, today_close: floa
 
     return cond1 and cond2
 
-def get_baseline_and_deduction(stock_id: str, today_date: str):
+def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     """
-    基準價：今天往前第 5 個『交易日』的收盤價 => iloc[-6]
-    扣抵值：今天往前第 4 個『交易日』的收盤價 => iloc[-5]
-    ※『交易日』已排除 close=0 / 無收盤價的日期。
+    針對 N 日均線，回傳兩個參考價位（以「交易日」為單位，已排除無收盤價的日子）：
+
+    基準價：今天往前第 N+1 個『交易日』的收盤價 => iloc[-(N+1)]
+    扣抵值：今天往前第 N   個『交易日』的收盤價 => iloc[-N]
+
+    例：
+      N=5  -> 基準=iloc[-6]、扣抵=iloc[-5]（原本行為）
+      N=10 -> 基準=iloc[-11]、扣抵=iloc[-10]
+      N=24 -> 基準=iloc[-25]、扣抵=iloc[-24]
+
+    若資料不足（需至少 N+1 筆 <= today 的交易日），回傳 (None, None)。
     """
     df = fetch_close_history_trading_only_from_db(stock_id)  # 只取有收盤價的日子
     if df.empty:
@@ -82,13 +91,14 @@ def get_baseline_and_deduction(stock_id: str, today_date: str):
     # 僅使用 today_date（含）之前的資料；若 today 尚未入庫，則用 <= today 的最近一筆當「第0天」
     df = df[df["date"] <= cutoff].sort_values("date")
 
-    # 需要「第0天 + 往前至少5天」=> 至少 6 筆
-    if len(df) < 6:
+    need = n + 1  # 需要「第0天 + 往前至少 N+1 天」=> 至少 N+1 筆
+    if len(df) < need:
         return None, None
 
-    baseline = df.iloc[-6]["close"]   # 前5交易日
-    deduction = df.iloc[-5]["close"]  # 前4交易日
+    baseline = df.iloc[-(n + 1)]["close"]  # 今天往前第 N+1 個交易日
+    deduction = df.iloc[-n]["close"]       # 今天往前第 N   個交易日
     return float(baseline), float(deduction)
+
 
 def compute_ma_with_today(stock_id: str, today_date: str, today_close: float, n: int):
     """
@@ -126,32 +136,53 @@ def calc_bias(a, b):
     except Exception:
         return None
 
-def render_bias_line(title: str, a, b):
-    """在畫面印出一行乖離率；正值紅、負值綠，並附上 (A→B) 數字。"""
+
+def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str = None):
+    """在畫面印出一行乖離率；正值紅、負值綠，並附上 (A→B) 數字。
+       若 title 為「N日均線乖離」，會自動判斷該 N 日均線的「上彎/持平/下彎」並加為前綴。"""
     val = calc_bias(a, b)
     if val is None:
         st.markdown(f"- **{title}**：資料不足")
         return
     color = "#ef4444" if val >= 0 else "#16a34a"
 
-    # 前綴規則（由高到低優先權）
-    prefix = ""
+    # ===== 新增：均線彎向前綴（只在 *日均線乖離 生效） =====
+    slope_prefix = ""
+    if stock_id and today_date:
+        m = re.search(r"(\d+)日均線乖離", title)
+        if m:
+            n = int(m.group(1))
+            baseline, _ = get_baseline_and_deduction(stock_id, today_date, n=n)
+            if baseline is not None:
+                if b > baseline + 1e-9:
+                    slope_prefix = "<span style='color:#ef4444'>上彎</span>"
+                elif isclose(float(b), float(baseline), rel_tol=0.0, abs_tol=1e-6):
+                    slope_prefix = "持平"
+                else:
+                    slope_prefix = "<span style='color:#16a34a'>下彎</span>"
+
+    # ===== 既有：圖示前綴（優先權維持不變） =====
+    icon_prefix = ""
     if (title == "24日均線乖離" and val > 15) or \
        ("均線開口" in title and val > 10) or \
        (title == "5日均線乖離" and val > 10):
-        prefix = "⚠️ "
+        icon_prefix = "⚠️ "
     elif title == "5日均線乖離":
         if 0 < val < 0.5:
-            prefix = "✅ "
+            icon_prefix = "✅ "
         elif 0.5 <= val < 1:
-            prefix = "✔️ "
+            icon_prefix = "✔️ "
     elif "均線開口" in title and 0 < val < 0.5:
-        prefix = "✔️ "
+        icon_prefix = "✔️ "
+
+    # ===== 組合顯示的 title（先彎向，再原 title） =====
+    display_title = f"{slope_prefix}{title}" if slope_prefix else title
 
     st.markdown(
-        f"{prefix}{title}：<span style='color:{color}; font-weight:700'>{val:+.2f}%</span> ",
+        f"{icon_prefix}{display_title}：<span style='color:{color}; font-weight:700'>{val:+.2f}%</span> ",
         unsafe_allow_html=True,
     )
+
 
 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
@@ -170,10 +201,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         tips = analyze_stock(stock_id, dl=dl, sdk=sdk)
 
         # 取得基準價、扣抵值
-        baseline, deduction = get_baseline_and_deduction(stock_id, today_date)
+        baseline5, deduction5 = get_baseline_and_deduction(stock_id, today_date)
 
         col_left, col_mid, col_right = st.columns([3, 2, 2])
-
 
         with col_left:
             st.markdown(f"- 昨日成交量：{v1 / 1000:,.0f} 張" if v1 is not None else "- 昨日成交量：無資料")
@@ -185,8 +215,8 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             else:
                 st.markdown("- ❌ **現價未站上 上彎5週均線**", unsafe_allow_html=True)
 
-            if baseline is not None and deduction is not None:
-                msg = check_price_vs_baseline_and_deduction(c1, baseline, deduction)
+            if baseline5 is not None and deduction5 is not None:
+                msg = check_price_vs_baseline_and_deduction(c1, baseline5, deduction5)
                 st.markdown(msg, unsafe_allow_html=True)
             else:
                 st.markdown("- **基準價 / 扣抵值**：資料不足")
@@ -222,11 +252,12 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             ma5  = compute_ma_with_today(stock_id, today_date, c1, 5)
             ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
             ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
-            render_bias_line("5日均線乖離", ma5, c1)         # (A=MA5,  B=c1)
-            render_bias_line("10日均線乖離", ma10, c1)       # (A=MA10, B=c1)
-            render_bias_line("24日均線乖離", ma24, c1)       # (A=MA24, B=c1)
-            render_bias_line("10 → 5 均線開口", ma10, ma5)   # (A=MA10, B=MA5)
-            render_bias_line("24 → 10 均線開口", ma24, ma10) # (A=MA24, B=MA10)
+            render_bias_line("5日均線乖離",  ma5,  c1, stock_id=stock_id, today_date=today_date)
+            render_bias_line("10日均線乖離", ma10, c1, stock_id=stock_id, today_date=today_date)
+            render_bias_line("24日均線乖離", ma24, c1, stock_id=stock_id, today_date=today_date)
+            render_bias_line("10 → 5 均線開口",  ma10, ma5)    # 開口不需判斷彎向
+            render_bias_line("24 → 10 均線開口", ma24, ma10)  # 開口不需判斷彎向
+
 
         return today_date, c1, o, c2, h, l, w1, w2, m1, m2
 
