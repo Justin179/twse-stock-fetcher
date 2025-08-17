@@ -92,7 +92,7 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
             </div>
           </div>
 
-          <div style="margin-top:6px; font-size:12px; color:#6b7280;">
+          <div style="margin-top:6px; font-size:14px; color:#6b7280;">
             使用基礎：去年EPS = <b>{'-' if last_eps is None else f'{last_eps:.2f}'}</b>，
             現價 = <b>{'-' if price is None else f'{price:.2f}'}</b>
           </div>
@@ -181,5 +181,5 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
         }})();
         </script>
         """,
-        height=150,
+        height=210,
     )

@@ -82,5 +82,5 @@ def render_bias_calculator(key_suffix: str = ""):
         }})();
         </script>
         """,
-        height=120,
+        height=160,
     )

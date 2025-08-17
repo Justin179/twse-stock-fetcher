@@ -80,12 +80,15 @@ with col1:
 
 with col2:
     if selected:
-        # 顯示 RS / RSI（左） + 乖離率快算（右）
-        col_left, col_right = st.columns([2, 3])
+        # 顯示 RS / RSI（左） + 乖離率快算（中） + PEG 快算（右）
+        col_left, col_mid, col_right = st.columns([2, 3, 3])
         with col_left:
             display_rs_rsi_info(selected)
-        with col_right:
+
+        with col_mid:
             render_bias_calculator(key_suffix=selected)
+
+        with col_right:
             render_peg_calculator(selected, sdk=sdk, key_suffix=selected)
 
         st.subheader("📌 關鍵價位分析")
