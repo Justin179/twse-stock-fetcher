@@ -121,6 +121,16 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
             return Number(s);
           }};
 
+          // 依 PEG 區間回傳前綴符號
+          function pegPrefix(peg) {{
+            if (!isFinite(peg)) return "";
+            if (peg >= 0 && peg <= 0.50) return "✅ ";
+            if (peg > 0.50 && peg <= 1.00) return "✔️ ";
+            if (peg > 1.00 && peg <= 1.20) return "⚠️ ";
+            if (peg > 1.20) return "❌ ";
+            return "";
+          }}
+
           function showTriplet(pe, growthPct, peg, ok=true) {{
             if (!ok) {{
               peEl.textContent = "-";
@@ -131,7 +141,8 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
             }}
             peEl.textContent  = (isFinite(pe) ? pe.toFixed(2) : "-");
             grEl.textContent  = (isFinite(growthPct) ? growthPct.toFixed(2) + "%" : "-%");
-            pegEl.textContent = (isFinite(peg) ? peg.toFixed(2) : "-");
+            const prefix = pegPrefix(peg);  // ← 新增：取對應前綴
+            pegEl.textContent = (isFinite(peg) ? prefix + peg.toFixed(2) : "-");
             wrapEl.style.color = (isFinite(peg) && peg <= 1) ? "#16a34a" : "#111827";
           }}
 
