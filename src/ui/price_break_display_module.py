@@ -206,7 +206,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
         with col_left:
-            st.markdown(f"- 昨日成交量：{v1 / 1000:,.0f} 張" if v1 is not None else "- 昨日成交量：無資料")
+            st.markdown(f"- 昨日成交量：{v1 / 1000:,.0f} 張 (富邦api)" if v1 is not None else "- 昨日成交量：無資料")
             st.markdown(f"- <span style='color:orange'>昨收：<b>{c2}</b></span> -> 今開(<span style='color:red'>{today_date[5:]}</span>)：<b>{o}</b>", unsafe_allow_html=True)
             st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
 
