@@ -72,32 +72,55 @@ def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     """
     針對 N 日均線，回傳兩個參考價位（以「交易日」為單位，已排除無收盤價的日子）：
 
-    基準價：今天往前第 N+1 個『交易日』的收盤價 => iloc[-(N+1)]
-    扣抵值：今天往前第 N   個『交易日』的收盤價 => iloc[-N]
+    基準價 / 扣抵值 的「天數定位」需依 today 是否已入庫來決定：
+    - 若 today 尚未入庫：以「目前 df 的最新一筆」為第 0 天 ⇒ 基準 = desc 第 N 筆、扣抵 = desc 第 N-1 筆
+    - 若 today 已入庫：以「today」為第 0 天           ⇒ 基準 = desc 第 N+1 筆、扣抵 = desc 第 N   筆
 
-    例：
-      N=5  -> 基準=iloc[-6]、扣抵=iloc[-5]（原本行為）
-      N=10 -> 基準=iloc[-11]、扣抵=iloc[-10]
-      N=24 -> 基準=iloc[-25]、扣抵=iloc[-24]
+    例（N=5）：
+      未入庫：基準 = iloc[-5]，扣抵 = iloc[-4]
+      已入庫：基準 = iloc[-6]，扣抵 = iloc[-5]
 
-    若資料不足（需至少 N+1 筆 <= today 的交易日），回傳 (None, None)。
+      再進一步簡化邏輯
+        today_date未入庫，基準價為df desc的第5筆
+        today_date已入庫，基準價為df desc的第6筆
     """
     df = fetch_close_history_trading_only_from_db(stock_id)  # 只取有收盤價的日子
     if df.empty:
         return None, None
 
+    import pandas as pd
     df["date"] = pd.to_datetime(df["date"])
     cutoff = pd.to_datetime(today_date)
-    # 僅使用 today_date（含）之前的資料；若 today 尚未入庫，則用 <= today 的最近一筆當「第0天」
-    df = df[df["date"] <= cutoff].sort_values("date")
 
-    need = n + 1  # 需要「第0天 + 往前至少 N+1 天」=> 至少 N+1 筆
-    if len(df) < need:
+    # 僅使用 today_date（含）之前的資料；若 today 尚未入庫，df 的最後一筆就是「第 0 天」
+    df = df[df["date"] <= cutoff].sort_values("date")
+    if df.empty:
         return None, None
 
-    baseline = df.iloc[-(n + 1)]["close"]  # 今天往前第 N+1 個交易日
-    deduction = df.iloc[-n]["close"]       # 今天往前第 N   個交易日
+    latest_in_df = df["date"].iloc[-1].normalize()
+    today_norm   = cutoff.normalize()
+
+    # 判斷 today 是否已入庫
+    today_in_db = (latest_in_df == today_norm)
+
+    if today_in_db:
+        # 需要至少 N+1 筆（含 today 在內）
+        need = n + 1
+        if len(df) < need:
+            return None, None
+        baseline = df.iloc[-(n + 1)]["close"]  # desc 第 N+1 筆
+        deduction = df.iloc[-n]["close"]       # desc 第 N   筆
+    else:
+        # 需要至少 N 筆（以 df 最新一筆為第 0 天）
+        need = n
+        if len(df) < need:
+            return None, None
+        baseline = df.iloc[-n]["close"]        # desc 第 N   筆
+        # N=1 時，desc 第 0 筆就是最後一筆
+        deduction = df.iloc[-1]["close"] if n == 1 else df.iloc[-(n - 1)]["close"]
+
     return float(baseline), float(deduction)
+
 
 
 def compute_ma_with_today(stock_id: str, today_date: str, today_close: float, n: int):
@@ -154,6 +177,7 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
             n = int(m.group(1))
             baseline, _ = get_baseline_and_deduction(stock_id, today_date, n=n)
             if baseline is not None:
+                # print(f"🔍 {stock_id} {title} 基準價：{baseline}, 當前值：{b}, today_date:{today_date}")
                 if b > baseline + 1e-9:
                     slope_prefix = "<span style='color:#ef4444'>上彎</span>"
                 elif isclose(float(b), float(baseline), rel_tol=0.0, abs_tol=1e-6):
