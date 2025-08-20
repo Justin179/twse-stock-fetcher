@@ -29,7 +29,7 @@ plt.rcParams['axes.unicode_minus'] = False
 
 # --- Streamlit ---
 st.set_page_config(layout="wide")
-st.title("📈 技術線型(找已吃貨且還沒噴的) & 籌碼(守與拉的動機)")
+st.title("📈 技術線型(找已吃貨且還沒噴的) & 籌碼(守與拉的動機) & PEG")
 with st.expander("📘 說明：這是什麼？"):
     st.markdown("""
     - **工作流程: 紅字加碼/鎖利-> 分析匯集精選股-> (三竹好股找機會 + 高分贏勢股)**
