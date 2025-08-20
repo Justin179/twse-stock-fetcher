@@ -156,7 +156,7 @@ def fetch_wantgoo_main_trend(stock_id: str) -> List[Tuple[str, str, float, int, 
                 return data
 
             except (TimeoutException, WebDriverException) as e:
-                print(f"⚠️  {stock_id} 第 {attempt}/{MAX_RETRY} 次抓取失敗（headless={headless}）：{e}")
+                print(f"[WARN] {stock_id} 第 {attempt}/{MAX_RETRY} 次抓取失敗 (headless={headless}): {e}")
                 try:
                     if driver:
                         driver.quit()
@@ -165,7 +165,7 @@ def fetch_wantgoo_main_trend(stock_id: str) -> List[Tuple[str, str, float, int, 
                 # 換另一個 headless 狀態再試；兩個都失敗才算一輪失敗
                 continue
             except Exception as e:
-                print(f"❌ {stock_id} 發生例外：{e}")
+                print(f"[ERROR] {stock_id} 發生例外: {e}")
                 try:
                     if driver:
                         driver.quit()
@@ -176,7 +176,7 @@ def fetch_wantgoo_main_trend(stock_id: str) -> List[Tuple[str, str, float, int, 
         # 兩種 headless 狀態都失敗，進入下一輪重試
         time.sleep(1.0)
 
-    print(f"❌ {stock_id} 重試失敗，跳過")
+    print(f"[ERROR] {stock_id} 重試失敗，跳過")
     return []
 
 def save_to_db(rows: List[Tuple[str, str, float, int, int]], db_path: str = DB_PATH) -> int:
@@ -216,22 +216,22 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if not args:
         stocks = _read_stock_list("my_stock_holdings.txt")
-        print(f"📄 使用股票清單：my_stock_holdings.txt（{len(stocks)} 檔）")
+        print(f"[LIST] 使用股票清單: my_stock_holdings.txt ({len(stocks)} 檔)")
     else:
         arg = args[0]
         if arg.endswith(".txt") and os.path.exists(arg):
             stocks = _read_stock_list(arg)
-            print(f"📄 使用股票清單：{arg}（{len(stocks)} 檔）")
+            print(f"[LIST] 使用股票清單: {arg} ({len(stocks)} 檔)")
         else:
             stocks = [arg]
-            print(f"📄 單檔執行：{arg}")
+            print(f"[SINGLE] 單檔執行: {arg}")
 
     for sid in stocks:
-        print(f"📥 抓取 {sid} WantGoo 主力進出動向...")
+        print(f"[FETCH] 抓取 {sid} WantGoo 主力進出動向...")
         recs = fetch_wantgoo_main_trend(sid)
         if not recs:
-            print(f"⏭️  {sid} 無可寫入資料")
+            print(f"[SKIP] {sid} 無可寫入資料")
             continue
         n = save_to_db(recs)
-        print(f"✅ {sid} 新增 {n} 筆（不含重複）")
-    print("🎉 完成")
+        print(f"[OK] {sid} 新增 {n} 筆 (不含重複)")
+    print("[DONE] 完成")
