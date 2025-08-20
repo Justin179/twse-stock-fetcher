@@ -65,6 +65,7 @@ with col1:
         temp_txt="temp_list.txt",
     )
 
+    # 更新 temp_list 的股票(r_new_stocks_manual_setup.bat) & 加進持股清單(my_stock_holdings.txt)
     if st.button("➕ 更新 temp_list 的股票 & 加進持股清單"):
         # 非同步執行批次檔，不阻塞畫面
         subprocess.Popen("start r_new_stocks_manual_setup.bat", shell=True)
