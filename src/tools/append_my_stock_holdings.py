@@ -10,47 +10,36 @@ ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
 
 # 組出完整路徑
 holdings_path = os.path.join(ROOT_DIR, "my_stock_holdings.txt")
+hermits_path = os.path.join(ROOT_DIR, "periodically_updated_stock_lists", "Hermits_stock_picks.txt")
+inst_revenue_path = os.path.join(ROOT_DIR, "periodically_updated_stock_lists", "institutional_revenue_forecast_this_year.txt")
 target_path = os.path.join(ROOT_DIR, "high_relative_strength_stocks.txt")
 
 
 def read_stock_codes(path):
+    if not os.path.exists(path):
+        return []
     with open(path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
-def append_holdings_to_target(holdings, target_file):
-    with open(target_file, "a", encoding="utf-8") as f:
-        f.write("\n# 持股清單\n")
-        for code in holdings:
-            f.write(f"{code}\n")
 
-def remove_duplicates_but_keep_order_and_comments(target_file):
-    seen = set()
-    lines = []
+def merge_and_deduplicate_and_sort(sources, target_file):
+    all_codes = set()
+    for src in sources:
+        all_codes.update(read_stock_codes(src))
 
-    with open(target_file, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-
-    new_lines = []
-    for line in reversed(lines):  # 從後面處理起
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            new_lines.append(line)
-        elif stripped not in seen:
-            seen.add(stripped)
-            new_lines.append(line)
-        # 重複的股票代碼就略過（不加入 new_lines）
-
-    # 因為是從後面開始，所以需要再反轉回來
-    new_lines.reverse()
+    # 排序 (從小到大)
+    sorted_codes = sorted(all_codes)
 
     with open(target_file, "w", encoding="utf-8") as f:
-        f.writelines(new_lines)
+        for code in sorted_codes:
+            f.write(f"{code}\n")
+
 
 def main():
-    holdings = read_stock_codes(holdings_path)
-    append_holdings_to_target(holdings, target_path)
-    remove_duplicates_but_keep_order_and_comments(target_path)
-    print("✅ 已完成持股清單的追加與去重複處理。")
+    sources = [holdings_path, hermits_path, inst_revenue_path]
+    merge_and_deduplicate_and_sort(sources, target_path)
+    print("✅ 已完成多清單合併、去重、排序，結果已寫入 high_relative_strength_stocks.txt。")
+
 
 if __name__ == "__main__":
     main()
