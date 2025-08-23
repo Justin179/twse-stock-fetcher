@@ -85,7 +85,7 @@ def compute_mma5_with_today(
     e = float(last_trading_per_month.iloc[pos - 4]["close"])
     f = float(last_trading_per_month.iloc[pos - 5]["close"])
 
-    mma5 = round((a + b + c + d + e) / 5.0, 2)   # 🔹 四捨五入到小數點後兩位
+    mma5 = (a + b + c + d + e) / 5.0
     return mma5, a, b, c, d, e, f
 
 
@@ -113,9 +113,10 @@ def is_price_above_upward_mma5(
 
     if debug_print:
         # 依你的要求輸出所有關鍵數值（確認無誤後可移除或設 debug_print=False）
+        mma5_2dp = round(mma5, 2)
         print(
             f"[MMA5 DEBUG] stock={stock_id} today_date={today_date} "
-            f"c1(a)={a} mma5={mma5} a={a} b={b} c={c} d={d} e={e} f={f}"
+            f"c1(a)={a} mma5={mma5_2dp} a={a} b={b} c={c} d={d} e={e} f={f}"
         )
 
     cond1 = a > mma5
