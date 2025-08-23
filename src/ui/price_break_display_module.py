@@ -223,7 +223,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
         
         above_upward_wma5 = is_price_above_upward_wma5(stock_id, today_date, c1)
-        above_upward_mma5 = is_price_above_upward_mma5(stock_id, today_date, c1, debug_print=True)
+        above_upward_mma5 = is_price_above_upward_mma5(stock_id, today_date, c1, debug_print=False)
 
 
 
