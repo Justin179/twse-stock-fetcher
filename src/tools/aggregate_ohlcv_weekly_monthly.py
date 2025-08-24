@@ -27,7 +27,7 @@ into two new SQLite tables:
         --stock 2330 2317
 
     # 僅指定 DB，匯總所有股票至今天（以 DB 內最大日期作為定錨）
-    python aggregate_ohlcv_weekly_monthly.py --db data/institution.db
+    python aggregate_ohlcv_weekly_monthly.py --db data/institution.db --today 2025-08-22
 
 """
 
