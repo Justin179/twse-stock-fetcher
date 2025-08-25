@@ -7,11 +7,24 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import pandas as pd
-from datetime import datetime
 import plotly.graph_objects as go
 import streamlit as st
 
+# === 盤中取價（直接用 analyze 模組的函式） ===
+try:
+    # 正常專案結構：src/analyze/analyze_price_break_conditions_dataloader.py
+    from analyze.analyze_price_break_conditions_dataloader import get_today_prices
+except Exception:
+    # 若 PYTHONPATH 設定不同，退而求其次嘗試同目錄匯入
+    try:
+        from analyze_price_break_conditions_dataloader import get_today_prices
+    except Exception:
+        get_today_prices = None  # 仍可 fallback 到 DB 最新收盤
 
+
+# -----------------------------
+# 資料載入（DB）
+# -----------------------------
 def load_daily(conn: sqlite3.Connection, stock_id: str, last_n: int = 270) -> pd.DataFrame:
     sql = f"""
         SELECT date, open, high, low, close, volume
@@ -24,12 +37,12 @@ def load_daily(conn: sqlite3.Connection, stock_id: str, last_n: int = 270) -> pd
     df = df.dropna(subset=["open","high","low","close"])
     df = df[(df["open"]>0) & (df["high"]>0) & (df["low"]>0) & (df["close"]>0)]
     df = df.sort_values("date").reset_index(drop=True)
-    # 產生緊湊的字串標籤，只顯示 yy-mm-dd（例如 "25-08-20"）
     df["date_label"] = df["date"].dt.strftime("%y-%m-%d")
     return df
 
 
 def load_weekly(conn: sqlite3.Connection, stock_id: str, last_n: int = 52) -> pd.DataFrame:
+    # 保留供對照 DB 週K用（實際圖表改用動態聚合）
     sql = f"""
         SELECT year_week AS key, open, high, low, close, volume
         FROM twse_prices_weekly
@@ -44,6 +57,7 @@ def load_weekly(conn: sqlite3.Connection, stock_id: str, last_n: int = 52) -> pd
 
 
 def load_monthly(conn: sqlite3.Connection, stock_id: str, last_n: int = 12) -> pd.DataFrame:
+    # 保留供對照 DB 月K用（實際圖表改用動態聚合）
     sql = f"""
         SELECT year_month AS key, open, high, low, close, volume
         FROM twse_prices_monthly
@@ -67,6 +81,9 @@ def get_c1(conn: sqlite3.Connection, stock_id: str) -> float:
     return float(row.iloc[0]["close"])
 
 
+# -----------------------------
+# 缺口掃描
+# -----------------------------
 @dataclass
 class Gap:
     timeframe: str
@@ -80,7 +97,6 @@ class Gap:
     gap_width: float
 
 
-
 def _fmt_key_for_tf(val, timeframe: str) -> str:
     if timeframe == "D":
         try:
@@ -89,6 +105,7 @@ def _fmt_key_for_tf(val, timeframe: str) -> str:
             s = str(val)
             return s[:10] if len(s) >= 10 else s
     return str(val)
+
 
 def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float) -> List[Gap]:
     out: List[Gap] = []
@@ -102,10 +119,10 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
 
         if ka_high < kb_low:  # up gap
             gap_low, gap_high = ka_high, kb_low
-            edge, gtype = ka_high, "up"           # 下緣支撐：採 ka.high
+            edge, gtype = ka_high, "up"           # 下緣支撐（採 ka.high）
         elif ka_low > kb_high:  # down gap
             gap_low, gap_high = kb_high, ka_low
-            edge, gtype = ka_low, "down"          # 上緣壓力：採 ka.low（修正重點）
+            edge, gtype = ka_low, "down"          # 上緣壓力（採 ka.low）
         else:
             continue
 
@@ -117,11 +134,14 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
     return out
 
 
+# -----------------------------
+# 畫圖
+# -----------------------------
 def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                show_zones: bool, show_labels: bool,
                include: Dict[str, bool]) -> go.Figure:
     fig = go.Figure()
-    # 以字串類別 X 軸避免非交易日空白；並把 K 棒顏色改成 台股習慣：漲=紅、跌=綠
+    # 類別 X 軸避免假日空白；台股習慣：漲=紅、跌=綠
     fig.add_trace(go.Candlestick(
         x=daily["date_label"],
         open=daily["open"], high=daily["high"],
@@ -155,7 +175,6 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                                showarrow=False, font=dict(size=10, color=line_color_role[g.role]),
                                bgcolor="rgba(255,255,255,0.6)", bordercolor="rgba(0,0,0,0.2)")
 
-    # 僅顯示交易日（類別軸），避免節假日空白
     fig.update_xaxes(type="category")
     fig.update_layout(
         xaxis_rangeslider_visible=True,
@@ -168,9 +187,128 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
     return fig
 
 
+# -----------------------------
+# 盤中資料併入日K / 動態聚合
+# -----------------------------
+def _safe_float(d: dict, key: str, default=None):
+    try:
+        v = d.get(key, None)
+        return float(v) if v is not None else default
+    except Exception:
+        return default
+
+
+def attach_intraday_to_daily(daily: pd.DataFrame, today: dict) -> pd.DataFrame:
+    """
+    - 若 today.date 尚未入庫：新增一列（用 API 的 o/h/l/c1/v）
+    - 若 today.date 已存在：覆寫該日 O/H/L/C/V
+    - 僅在記憶體合併，不寫入 DB
+    """
+    if daily.empty or not today:
+        return daily
+
+    t_date_str = str(today.get("date") or "")
+    if not t_date_str:
+        return daily
+
+    t_date = pd.to_datetime(t_date_str).normalize()
+    o   = _safe_float(today, "o")
+    h   = _safe_float(today, "h")
+    l   = _safe_float(today, "l")
+    c1  = _safe_float(today, "c1")
+    vol = _safe_float(today, "v", default=0.0)
+
+    row_today = {
+        "date": t_date,
+        "open": o, "high": h, "low": l, "close": c1,
+        "volume": vol,
+        "date_label": t_date.strftime("%y-%m-%d"),
+    }
+
+    df = daily.copy()
+    mask_same_day = (df["date"].dt.normalize() == t_date)
+    if mask_same_day.any():
+        idx = df.index[mask_same_day][-1]
+        for k, v in row_today.items():
+            df.at[idx, k] = v
+    else:
+        df = pd.concat([df, pd.DataFrame([row_today])], ignore_index=True)
+
+    return df.sort_values("date").reset_index(drop=True)
+
+
+def aggregate_weekly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 52) -> pd.DataFrame:
+    """以日K（含今天）動態聚合週K（ISO 週）"""
+    if daily_with_today.empty:
+        return pd.DataFrame(columns=["key", "open", "high", "low", "close", "volume"])
+    df = daily_with_today.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    iso = df["date"].dt.isocalendar()
+    df["year_week"] = iso.year.astype(str) + "-" + iso.week.map(lambda x: f"{int(x):02d}")
+    wk = (
+        df.sort_values("date")
+          .groupby("year_week", as_index=False)
+          .agg(
+              open=("open", "first"),
+              high=("high", "max"),
+              low =("low",  "min"),
+              close=("close","last"),
+              volume=("volume","sum"),
+          )
+          .rename(columns={"year_week": "key"})
+          .sort_values("key")
+          .reset_index(drop=True)
+    )
+    if last_n is not None:
+        wk = wk.tail(int(last_n)).reset_index(drop=True)
+    return wk
+
+
+def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 12) -> pd.DataFrame:
+    """以日K（含今天）動態聚合月K（YYYY-MM）"""
+    if daily_with_today.empty:
+        return pd.DataFrame(columns=["key", "open", "high", "low", "close", "volume"])
+    df = daily_with_today.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    df["year_month"] = df["date"].dt.strftime("%Y-%m")
+    mk = (
+        df.sort_values("date")
+          .groupby("year_month", as_index=False)
+          .agg(
+              open=("open", "first"),
+              high=("high", "max"),
+              low =("low",  "min"),
+              close=("close","last"),
+              volume=("volume","sum"),
+          )
+          .rename(columns={"year_month": "key"})
+          .sort_values("key")
+          .reset_index(drop=True)
+    )
+    if last_n is not None:
+        mk = mk.tail(int(last_n)).reset_index(drop=True)
+    return mk
+
+
+# -----------------------------
+# 主程式
+# -----------------------------
 def main() -> None:
     st.set_page_config(page_title="Gap S/R (D/W/M)", layout="wide")
     st.title("缺口支撐 / 壓力（D / W / M）互動圖")
+
+    # === Sidebar 寬度：縮窄 ===
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"][aria-expanded="true"]{
+            min-width: 200px !important;
+            max-width: 220px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
     with st.sidebar:
         st.subheader("設定")
@@ -186,7 +324,7 @@ def main() -> None:
         inc_w = st.checkbox("週線 (W)", value=True)
         inc_m = st.checkbox("月線 (M)", value=True)
 
-        c1_override = st.text_input("c1 覆寫（可留空）", value="")
+        c1_override = st.text_input("c1 覆寫（通常留空；僅供測試/模擬）", value="")
         c1_val: Optional[float] = float(c1_override) if c1_override.strip() else None
 
     conn = sqlite3.connect(db_path)
@@ -195,28 +333,61 @@ def main() -> None:
         if daily.empty:
             st.error("查無日K資料。")
             return
-        c1 = c1_val if c1_val is not None else get_c1(conn, stock_id)
 
-        d_gaps = scan_gaps_from_df(daily.rename(columns={"date":"key"}), key_col="key", timeframe="D", c1=c1)
-        wk = load_weekly(conn, stock_id, last_n=52)
-        mo = load_monthly(conn, stock_id, last_n=12)
+        # 先取富邦盤中 today（含 o/h/l/c1/c2/v），失敗則 None
+        today_info = None
+        if get_today_prices is not None:
+            try:
+                today_info = get_today_prices(stock_id, sdk=None)
+            except Exception:
+                today_info = None
+
+        # c1 優先順序：UI 覆寫 > 富邦盤中 > DB 最新收盤
+        if c1_val is not None:
+            c1 = c1_val
+        elif today_info and ("c1" in today_info):
+            c1 = float(today_info["c1"])
+        else:
+            c1 = get_c1(conn, stock_id)
+
+        # 把「今天盤中」併入 daily（形成最新日K；只在記憶體）
+        daily_with_today = attach_intraday_to_daily(daily, today_info or {})
+
+        # 用「含今天」的日K動態聚合 週/月K
+        wk = aggregate_weekly_from_daily(daily_with_today, last_n=52)
+        mo = aggregate_monthly_from_daily(daily_with_today, last_n=12)
+
+        # 缺口掃描（皆用含今天的資料）
+        d_gaps = scan_gaps_from_df(
+            daily_with_today.rename(columns={"date": "key"}),
+            key_col="key", timeframe="D", c1=c1
+        )
         w_gaps = scan_gaps_from_df(wk, key_col="key", timeframe="W", c1=c1)
         m_gaps = scan_gaps_from_df(mo, key_col="key", timeframe="M", c1=c1)
         gaps = d_gaps + w_gaps + m_gaps
 
-        fig = make_chart(daily, gaps, c1, show_zones, show_labels, include={"D": inc_d, "W": inc_w, "M": inc_m})
+        # 作圖（右側空間較大；sidebar 已縮窄）
+        fig = make_chart(
+            daily_with_today, gaps, c1,
+            show_zones, show_labels,
+            include={"D": inc_d, "W": inc_w, "M": inc_m}
+        )
         st.plotly_chart(fig, use_container_width=True)
 
+        # 缺口清單 + 排序提示
         df_out = pd.DataFrame([g.__dict__ for g in gaps])
         if not df_out.empty:
             role_rank = {"resistance": 0, "support": 1, "at_edge": 2}
             tf_rank = {"M": 0, "W": 1, "D": 2}
             df_out["role_rank"] = df_out["role"].map(role_rank)
-            df_out["tf_rank"] = df_out["timeframe"].map(tf_rank)
-            # 排序：角色 → 新近度(kb_key 由新到舊) → 時間框架
-            df_out = df_out.sort_values(["role_rank", "edge_price", "tf_rank"], ascending=[True, False, True]) \
-               .drop(columns=["role_rank", "tf_rank"])
+            df_out["tf_rank"]   = df_out["timeframe"].map(tf_rank)
+            df_out = df_out.sort_values(
+                ["role_rank", "edge_price", "tf_rank"],
+                ascending=[True, False, True]
+            ).drop(columns=["role_rank", "tf_rank"])
+
             st.subheader("缺口清單")
+            st.caption("排序規則：角色（壓力→支撐→交界） → 價位（大→小） → 時間框架（月→週→日）")
             st.dataframe(df_out, height=360, use_container_width=True)
         else:
             st.info("此範圍內未偵測到缺口。")
