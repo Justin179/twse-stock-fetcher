@@ -377,7 +377,8 @@ def main() -> None:
         # 缺口清單 + 排序提示
         df_out = pd.DataFrame([g.__dict__ for g in gaps])
         if not df_out.empty:
-            role_rank = {"resistance": 0, "support": 1, "at_edge": 2}
+            # 角色排名：壓力 → 交界 → 支撐
+            role_rank = {"resistance": 0, "at_edge": 1, "support": 2}
             tf_rank = {"M": 0, "W": 1, "D": 2}
             df_out["role_rank"] = df_out["role"].map(role_rank)
             df_out["tf_rank"]   = df_out["timeframe"].map(tf_rank)
@@ -387,7 +388,7 @@ def main() -> None:
             ).drop(columns=["role_rank", "tf_rank"])
 
             st.subheader("缺口清單")
-            st.caption("排序規則：角色（壓力→支撐→交界） → 價位（大→小） → 時間框架（月→週→日）")
+            st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
             st.dataframe(df_out, height=360, use_container_width=True)
         else:
             st.info("此範圍內未偵測到缺口。")
