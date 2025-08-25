@@ -114,34 +114,62 @@ def get_latest_price_from_db(stock_id):
     }
 
 def get_today_prices(stock_id, sdk=None):
-    if is_fubon_api_maintenance_time(): 
-        pass  # 目前為富邦 API 維護時間，改用資料庫
-    else:
-        # print("富邦 API 可使用時段")
-        try:
-            if sdk is None:
-                sdk = get_logged_in_sdk()
-            sdk.init_realtime()
-            quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=stock_id)
-            
-            # 🔍 檢查完整性，否則 fallback
-            if not all([
-                quote.get("date"),
-                quote.get("closePrice") is not None,
-                quote.get("openPrice") is not None,
-                quote.get("previousClose") is not None
-            ]):
-                raise ValueError("資料不完整，使用 fallback")
+    """
+    回傳：
+      {
+        "date": "YYYY-MM-DD",
+        "c1": <盤中現價 closePrice>,
+        "o":  <openPrice>,
+        "c2": <previousClose>,
+        "h":  <highPrice>,
+        "l":  <lowPrice>,
+        "v":  <成交量(張) = total.tradeVolume>
+      }
+    富邦 API 維護/失敗時，改走 DB fallback（僅保證 date/c1/o/c2）。
+    """
+    if is_fubon_api_maintenance_time():
+        # 富邦 API 維護時段，直接 fallback
+        return get_latest_price_from_db(stock_id)
 
-            return {
-                "date": quote.get("date"),
-                "c1": quote.get("closePrice"),
-                "o": quote.get("openPrice"),
-                "c2": quote.get("previousClose")
-            }
-        except Exception as e:
-            print(f"⚠️ 富邦 API 失敗，改用資料庫 fallback：{e}")
-    return get_latest_price_from_db(stock_id)
+    try:
+        if sdk is None:
+            sdk = get_logged_in_sdk()
+        sdk.init_realtime()
+
+        quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=stock_id)
+
+        # volume 在 total.tradeVolume，保留頂層 volume 作為備援
+        vol = (quote.get("total") or {}).get("tradeVolume")
+        if vol is None:
+            vol = quote.get("volume")
+
+        # 🔎 檢查完整性（API 路徑）
+        need_ok = all([
+            quote.get("date"),
+            quote.get("closePrice") is not None,
+            quote.get("openPrice") is not None,
+            quote.get("previousClose") is not None,
+            quote.get("highPrice") is not None,
+            quote.get("lowPrice") is not None,
+            vol is not None,
+        ])
+        if not need_ok:
+            raise ValueError("富邦 API 回傳欄位不完整，改用 DB fallback")
+
+        return {
+            "date": quote.get("date"),
+            "c1":   quote.get("closePrice"),
+            "o":    quote.get("openPrice"),
+            "c2":   quote.get("previousClose"),
+            "h":    quote.get("highPrice"),
+            "l":    quote.get("lowPrice"),
+            "v":    vol,  # ← 成交量(張)
+        }
+
+    except Exception as e:
+        print(f"⚠️ 富邦 API 失敗，改用資料庫 fallback：{e}")
+        return get_latest_price_from_db(stock_id)
+
 
 
 def analyze_stock(stock_id, dl=None, sdk=None):

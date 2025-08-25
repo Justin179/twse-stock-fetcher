@@ -175,7 +175,7 @@ def main() -> None:
     with st.sidebar:
         st.subheader("設定")
         db_path = st.text_input("SQLite DB 路徑", value="data/institution.db")
-        stock_id = st.text_input("股票代碼（例：2330、2317）", value="2317")
+        stock_id = st.text_input("股票代碼（例：2330、2317）", value="2330")
         last_days = st.number_input("日K 顯示天數", min_value=60, max_value=720, value=120, step=30)
         show_zones = st.checkbox("顯示缺口區間 (hrect)", value=False)
         show_labels = st.checkbox("顯示邊界標籤 (edge labels)", value=False)
