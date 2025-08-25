@@ -153,13 +153,15 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         yaxis="y1"
     ))
 
-    # 成交量（副 y 軸，灰色透明 bar）
+    # 成交量（副 y 軸，灰色透明 bar）— hover 只顯示「張」
     fig.add_trace(go.Bar(
         x=daily["date_label"],
-        y=daily["volume"],
+        y=daily["volume"],                     # 這裡是「股」
         name="Volume",
         marker=dict(color="rgba(128,128,128,0.35)"),
-        yaxis="y2"
+        yaxis="y2",
+        customdata=(daily["volume"] / 1000.0), # 轉成「張」提供給 tooltip
+        hovertemplate="Volume: %{customdata:,.0f} 張<extra></extra>"
     ))
 
     # 現價水平線
@@ -233,10 +235,14 @@ def attach_intraday_to_daily(daily: pd.DataFrame, today: dict) -> pd.DataFrame:
     c1  = _safe_float(today, "c1")
     vol = _safe_float(today, "v", default=0.0)
 
+    # ★ 盤中 v 是「張」，DB volume 是「股」→ 統一轉成股
+    if vol is not None:
+        vol = float(vol) * 1000.0
+
     row_today = {
         "date": t_date,
         "open": o, "high": h, "low": l, "close": c1,
-        "volume": vol,
+        "volume": vol,                           # 已換成「股」
         "date_label": t_date.strftime("%y-%m-%d"),
     }
 
