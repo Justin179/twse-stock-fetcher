@@ -135,13 +135,14 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
 
 
 # -----------------------------
-# 畫圖
+# 畫圖（含成交量）
 # -----------------------------
 def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                show_zones: bool, show_labels: bool,
                include: Dict[str, bool]) -> go.Figure:
     fig = go.Figure()
-    # 類別 X 軸避免假日空白；台股習慣：漲=紅、跌=綠
+
+    # K 線（主 y 軸）
     fig.add_trace(go.Candlestick(
         x=daily["date_label"],
         open=daily["open"], high=daily["high"],
@@ -149,11 +150,23 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         name="Daily",
         increasing_line_color="red", increasing_fillcolor="red",
         decreasing_line_color="green", decreasing_fillcolor="green",
+        yaxis="y1"
     ))
 
+    # 成交量（副 y 軸，灰色透明 bar）
+    fig.add_trace(go.Bar(
+        x=daily["date_label"],
+        y=daily["volume"],
+        name="Volume",
+        marker=dict(color="rgba(128,128,128,0.35)"),
+        yaxis="y2"
+    ))
+
+    # 現價水平線
     fig.add_hline(y=c1, line_color="black", line_width=2, line_dash="dash",
                   annotation_text=f"c1 {c1}", annotation_position="top left")
 
+    # 缺口可視化
     zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)"}
     line_color_role = {"support": "#16a34a", "resistance": "#dc2626", "at_edge": "#737373"}
     line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4}
@@ -169,19 +182,21 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                       line_width=line_width_tf[g.timeframe], line_dash=dash_role[g.role])
 
         if show_labels:
-            fig.add_annotation(xref="paper", x=0.99, xanchor="right",
+            fig.add_annotation(xref="paper", x=0.995, xanchor="right",
                                y=g.edge_price, yanchor="middle",
                                text=f"{g.timeframe} {g.role} {g.edge_price} ({g.kb_key})",
                                showarrow=False, font=dict(size=10, color=line_color_role[g.role]),
                                bgcolor="rgba(255,255,255,0.6)", bordercolor="rgba(0,0,0,0.2)")
 
+    # 類別 X 軸避免假日空白；雙 y 軸設定
     fig.update_xaxes(type="category")
     fig.update_layout(
+        xaxis=dict(domain=[0, 1]),
+        yaxis=dict(title="Price", side="left", showgrid=True, position=0.0),
+        yaxis2=dict(title="Volume", side="right", overlaying="y", showgrid=False, position=1.0),
         xaxis_rangeslider_visible=True,
-        margin=dict(l=40, r=20, t=40, b=40),
-        xaxis_title="Date (yy-mm-dd)",
-        yaxis_title="Price",
-        height=720,
+        margin=dict(l=40, r=40, t=40, b=40),
+        height=820,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0)
     )
     return fig
@@ -366,7 +381,7 @@ def main() -> None:
         m_gaps = scan_gaps_from_df(mo, key_col="key", timeframe="M", c1=c1)
         gaps = d_gaps + w_gaps + m_gaps
 
-        # 作圖（右側空間較大；sidebar 已縮窄）
+        # 作圖（含成交量）
         fig = make_chart(
             daily_with_today, gaps, c1,
             show_zones, show_labels,
