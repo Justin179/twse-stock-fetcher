@@ -333,7 +333,6 @@ def main() -> None:
 
     with st.sidebar:
         st.subheader("設定")
-        db_path = st.text_input("SQLite DB 路徑", value="data/institution.db")
         stock_id = st.text_input("股票代碼（例：2330、2317）", value="2330")
         last_days = st.number_input("日K 顯示天數", min_value=60, max_value=720, value=120, step=30)
         show_zones = st.checkbox("顯示缺口區間 (hrect)", value=False)
@@ -347,6 +346,8 @@ def main() -> None:
 
         c1_override = st.text_input("c1 覆寫（通常留空；僅供測試/模擬）", value="")
         c1_val: Optional[float] = float(c1_override) if c1_override.strip() else None
+
+        db_path = st.text_input("SQLite DB 路徑", value="data/institution.db")
 
     conn = sqlite3.connect(db_path)
     try:
