@@ -82,19 +82,19 @@ def get_c1(conn: sqlite3.Connection, stock_id: str) -> float:
 
 
 # -----------------------------
-# 缺口掃描
+# 通用資料結構
 # -----------------------------
 @dataclass
 class Gap:
     timeframe: str
-    gap_type: str
+    gap_type: str          # "up" / "down" / "hv_red" / "hv_green"
     edge_price: float
-    role: str
+    role: str              # "support" / "resistance" / "at_edge"
     ka_key: str
     kb_key: str
-    gap_low: float
-    gap_high: float
-    gap_width: float
+    gap_low: float         # 對於 heavy SR，=edge_price
+    gap_high: float        # 對於 heavy SR，=edge_price
+    gap_width: float       # 對於 heavy SR，=0.0
 
 
 def _fmt_key_for_tf(val, timeframe: str) -> str:
@@ -107,6 +107,9 @@ def _fmt_key_for_tf(val, timeframe: str) -> str:
     return str(val)
 
 
+# -----------------------------
+# 缺口掃描（既有）
+# -----------------------------
 def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float) -> List[Gap]:
     out: List[Gap] = []
     if len(df) < 2:
@@ -131,6 +134,65 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
                        _fmt_key_for_tf(ka[key_col], timeframe), _fmt_key_for_tf(kb[key_col], timeframe),
                        float(round(gap_low,3)), float(round(gap_high,3)),
                        float(round(gap_high-gap_low,3))))
+    return out
+
+
+# -----------------------------
+# 情況 1：大量 K 棒的 S/R
+# -----------------------------
+def mark_heavy_kbars(df: pd.DataFrame, window: int = 10, multiple: float = 2.0) -> pd.DataFrame:
+    """
+    回傳新 DataFrame（不改動原 df），新增欄位：
+      - v_maN: 近 N 根成交量均值（含當期）
+      - is_heavy: volume >= multiple * v_maN 且 v_maN 有效（至少 N 根）
+      - is_red: close >= open  視為紅 K
+    之後其他方法可重複使用這邏輯。
+    """
+    d = df.copy()
+    d["v_maN"] = d["volume"].rolling(window=window, min_periods=window).mean()
+    d["is_heavy"] = (d["v_maN"].notna()) & (d["volume"] >= multiple * d["v_maN"])
+    d["is_red"] = d["close"] >= d["open"]
+    return d
+
+
+def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float,
+                          window: int = 10, multiple: float = 2.0) -> List[Gap]:
+    """
+    規則：
+      - 帶大量「綠K」的高點 high → 壓力
+      - 帶大量「紅K」的低點 low  → 支撐
+    產生的 edge 仍套用全域 c1 規則做角色翻轉（above→support / below→resistance / equal→at_edge）。
+    """
+    out: List[Gap] = []
+    if df.empty:
+        return out
+
+    d = mark_heavy_kbars(df, window=window, multiple=multiple)
+    d = d[d["is_heavy"]].reset_index(drop=True)
+    if d.empty:
+        return out
+
+    for _, r in d.iterrows():
+        is_red = bool(r["is_red"])
+        # 來源角色（未翻轉）
+        base_type = "hv_red" if is_red else "hv_green"
+        edge = float(r["low"] if is_red else r["high"])
+
+        # 依 c1 位置決定展示角色（符合你既有框架）
+        role = "support" if c1 > edge else "resistance" if c1 < edge else "at_edge"
+
+        key_val = _fmt_key_for_tf(r[key_col], timeframe)
+        out.append(Gap(
+            timeframe=timeframe,
+            gap_type=base_type,
+            edge_price=float(round(edge, 3)),
+            role=role,
+            ka_key=key_val,
+            kb_key=key_val,
+            gap_low=float(round(edge, 3)),
+            gap_high=float(round(edge, 3)),
+            gap_width=0.0
+        ))
     return out
 
 
@@ -168,7 +230,7 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
     fig.add_hline(y=c1, line_color="black", line_width=2, line_dash="dash",
                   annotation_text=f"c1 {c1}", annotation_position="top left")
 
-    # 缺口可視化
+    # 缺口/大量線可視化
     zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)"}
     line_color_role = {"support": "#16a34a", "resistance": "#dc2626", "at_edge": "#737373"}
     line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4}
@@ -177,16 +239,18 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
     for g in gaps:
         if not include.get(g.timeframe, True):
             continue
-        if show_zones:
+        # 只有「區間型」（缺口）才畫 hrect；大量 SR 是線（gap_high==gap_low）
+        if show_zones and (g.gap_high > g.gap_low):
             fig.add_hrect(y0=g.gap_low, y1=g.gap_high, line_width=0,
                           fillcolor=zone_color[g.timeframe], opacity=0.25, layer="below")
         fig.add_hline(y=g.edge_price, line_color=line_color_role[g.role],
                       line_width=line_width_tf[g.timeframe], line_dash=dash_role[g.role])
 
         if show_labels:
+            label_src = "HV" if g.gap_type.startswith("hv_") else g.gap_type  # 標註來源
             fig.add_annotation(xref="paper", x=0.995, xanchor="right",
                                y=g.edge_price, yanchor="middle",
-                               text=f"{g.timeframe} {g.role} {g.edge_price} ({g.kb_key})",
+                               text=f"{g.timeframe} {label_src} {g.role} {g.edge_price} ({g.kb_key})",
                                showarrow=False, font=dict(size=10, color=line_color_role[g.role]),
                                bgcolor="rgba(255,255,255,0.6)", bordercolor="rgba(0,0,0,0.2)")
 
@@ -333,6 +397,7 @@ def main() -> None:
 
     with st.sidebar:
         st.subheader("設定")
+
         stock_id = st.text_input("股票代碼（例：2330、2317）", value="2330")
         last_days = st.number_input("日K 顯示天數", min_value=60, max_value=720, value=120, step=30)
         show_zones = st.checkbox("顯示缺口區間 (hrect)", value=False)
@@ -347,6 +412,7 @@ def main() -> None:
         c1_override = st.text_input("c1 覆寫（通常留空；僅供測試/模擬）", value="")
         c1_val: Optional[float] = float(c1_override) if c1_override.strip() else None
 
+        # 放到最下面（比較少動到）
         db_path = st.text_input("SQLite DB 路徑", value="data/institution.db")
 
     conn = sqlite3.connect(db_path)
@@ -386,7 +452,16 @@ def main() -> None:
         )
         w_gaps = scan_gaps_from_df(wk, key_col="key", timeframe="W", c1=c1)
         m_gaps = scan_gaps_from_df(mo, key_col="key", timeframe="M", c1=c1)
-        gaps = d_gaps + w_gaps + m_gaps
+
+        # 新增：大量 K 棒 S/R（D/W/M）
+        d_hv = scan_heavy_sr_from_df(
+            daily_with_today.rename(columns={"date": "key"}),
+            key_col="key", timeframe="D", c1=c1
+        )
+        w_hv = scan_heavy_sr_from_df(wk, key_col="key", timeframe="W", c1=c1)
+        m_hv = scan_heavy_sr_from_df(mo, key_col="key", timeframe="M", c1=c1)
+
+        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv
 
         # 作圖（含成交量）
         fig = make_chart(
@@ -396,7 +471,7 @@ def main() -> None:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # 缺口清單 + 排序提示
+        # 缺口 / 大量 SR 清單 + 排序提示
         df_out = pd.DataFrame([g.__dict__ for g in gaps])
         if not df_out.empty:
             # 角色排名：壓力 → 交界 → 支撐
@@ -409,11 +484,11 @@ def main() -> None:
                 ascending=[True, False, True]
             ).drop(columns=["role_rank", "tf_rank"])
 
-            st.subheader("缺口清單")
+            st.subheader("缺口清單（含 HV 線）")
             st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
             st.dataframe(df_out, height=360, use_container_width=True)
         else:
-            st.info("此範圍內未偵測到缺口。")
+            st.info("此範圍內未偵測到缺口或大量 K 棒 S/R。")
     finally:
         conn.close()
 
