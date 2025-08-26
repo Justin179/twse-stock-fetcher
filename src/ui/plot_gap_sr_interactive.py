@@ -441,7 +441,8 @@ def main() -> None:
             num_cols = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_df.columns]
             fmt_map = {c: "{:.2f}" for c in num_cols}
 
-            def _highlight_c1(row):
+            def _highlight_rows(row):
+                # c1 marker / c1 value
                 is_marker = (str(row.get("vs_c1","")) == "🔶 c1")
                 same_price = False
                 try:
@@ -450,14 +451,21 @@ def main() -> None:
                     pass
                 if is_marker or same_price:
                     return ["background-color: #fff3cd; font-weight: bold"] * len(row)
+
+                # hv_green / hv_red 特殊底色
+                if str(row.get("gap_type","")) == "hv_green":
+                    return ["background-color: #e6f4ea"] * len(row)   # 淡綠
+                if str(row.get("gap_type","")) == "hv_red":
+                    return ["background-color: #fdecea"] * len(row)   # 淡紅
+
                 return [""] * len(row)
 
             styled = (
                 show_df
-                    # 這行才是關鍵：把數值欄位固定顯示到小數點後兩位
                     .style.format(fmt_map)
-                    .apply(_highlight_c1, axis=1)
+                    .apply(_highlight_rows, axis=1)
             )
+
 
             st.dataframe(styled, height=360, use_container_width=True)
 
