@@ -433,16 +433,26 @@ def main() -> None:
             st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
             st.markdown(f"**現價 c1: {c1}**")
 
+
+
             cols_order = ["vs_c1","timeframe","gap_type","edge_price","role",
                         "ka_key","kb_key","gap_low","gap_high","gap_width"]
             show_df = df_out[[c for c in cols_order if c in df_out.columns]].copy()
 
-            # 需要用 Styler.format 指定數字格式（round 不足以控制顯示位數）
+            # 顯示到小數後兩位（用 Styler.format 控制渲染精度）
             num_cols = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_df.columns]
             fmt_map = {c: "{:.2f}" for c in num_cols}
 
-            def _highlight_rows(row):
-                # c1 marker / c1 value
+            # 只針對 gap_type 欄位上色
+            def highlight_gap_type(val: str) -> str:
+                if val == "hv_green":
+                    return "background-color: #e6f4ea"   # 淡綠
+                if val == "hv_red":
+                    return "background-color: #fdecea"   # 淡紅
+                return ""
+
+            # c1 高亮：整列淡黃 + 粗體
+            def highlight_c1_row(row):
                 is_marker = (str(row.get("vs_c1","")) == "🔶 c1")
                 same_price = False
                 try:
@@ -451,23 +461,18 @@ def main() -> None:
                     pass
                 if is_marker or same_price:
                     return ["background-color: #fff3cd; font-weight: bold"] * len(row)
-
-                # hv_green / hv_red 特殊底色
-                if str(row.get("gap_type","")) == "hv_green":
-                    return ["background-color: #e6f4ea"] * len(row)   # 淡綠
-                if str(row.get("gap_type","")) == "hv_red":
-                    return ["background-color: #fdecea"] * len(row)   # 淡紅
-
                 return [""] * len(row)
 
             styled = (
                 show_df
-                    .style.format(fmt_map)
-                    .apply(_highlight_rows, axis=1)
+                    .style
+                    .format(fmt_map)                                 # 數字兩位小數
+                    .apply(highlight_c1_row, axis=1)                 # 先套整列 c1 高亮
+                    .applymap(highlight_gap_type, subset=["gap_type"])  # 只給 gap_type 欄位上色
             )
 
-
             st.dataframe(styled, height=360, use_container_width=True)
+
 
         else:
             st.info("此範圍內未偵測到缺口或大量 K 棒 S/R。")
