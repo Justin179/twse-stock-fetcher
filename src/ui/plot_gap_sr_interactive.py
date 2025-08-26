@@ -156,7 +156,7 @@ def mark_heavy_kbars(df: pd.DataFrame, window: int = 10, multiple: float = 2.0) 
 
 
 def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float,
-                          window: int = 10, multiple: float = 2.0) -> List[Gap]:
+                          window: int = 10, multiple: float = 1.8) -> List[Gap]:
     """
     規則：
       - 帶大量「綠K」的高點 high → 壓力
@@ -486,6 +486,7 @@ def main() -> None:
 
             st.subheader("缺口清單（含 HV 線）")
             st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
+            st.markdown(f"**現價 c1: {c1}**")
             st.dataframe(df_out, height=360, use_container_width=True)
         else:
             st.info("此範圍內未偵測到缺口或大量 K 棒 S/R。")
