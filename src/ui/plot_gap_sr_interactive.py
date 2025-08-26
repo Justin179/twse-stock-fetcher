@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import numpy as np  # NEW: for vs_c1 / c1 marker row
 
 # === 盤中取價（直接用 analyze 模組的函式） ===
 try:
@@ -349,7 +350,7 @@ def aggregate_weekly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 52
     return wk
 
 
-def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 12) -> pd.DataFrame:
+def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 12) -> pd.Frame:
     """以日K（含今天）動態聚合月K（YYYY-MM）"""
     if daily_with_today.empty:
         return pd.DataFrame(columns=["key", "open", "high", "low", "close", "volume"])
@@ -471,23 +472,67 @@ def main() -> None:
         )
         st.plotly_chart(fig, use_container_width=True)
 
+        # ===============================
         # 缺口 / 大量 SR 清單 + 排序提示
+        # ===============================
         df_out = pd.DataFrame([g.__dict__ for g in gaps])
         if not df_out.empty:
             # 角色排名：壓力 → 交界 → 支撐
             role_rank = {"resistance": 0, "at_edge": 1, "support": 2}
-            tf_rank = {"M": 0, "W": 1, "D": 2}
+            tf_rank   = {"M": 0, "W": 1, "D": 2}
             df_out["role_rank"] = df_out["role"].map(role_rank)
             df_out["tf_rank"]   = df_out["timeframe"].map(tf_rank)
+
+            # 先照你的規則排序
             df_out = df_out.sort_values(
                 ["role_rank", "edge_price", "tf_rank"],
                 ascending=[True, False, True]
-            ).drop(columns=["role_rank", "tf_rank"])
+            ).reset_index(drop=True)
 
+            # 最左欄加上相對 c1 的方向
+            df_out.insert(
+                0, "vs_c1",
+                np.where(df_out["edge_price"] > c1, "▲",
+                        np.where(df_out["edge_price"] < c1, "▼", "●"))
+            )
+
+            # 插入「c1 分隔列」後再用同一把鑰匙排序，確保落在正確位置
+            marker_row = {
+                "timeframe": "—", "gap_type": "—", "edge_price": c1, "role": "at_edge",
+                "ka_key": "—", "kb_key": "—", "gap_low": c1, "gap_high": c1, "gap_width": 0.0,
+                "vs_c1": "🔶 c1",   # 改成顯眼的橘色菱形符號
+                "role_rank": role_rank["at_edge"], "tf_rank": 1,
+            }
+            df_out = pd.concat([df_out, pd.DataFrame([marker_row])], ignore_index=True)
+            df_out = df_out.sort_values(
+                ["role_rank", "edge_price", "tf_rank"],
+                ascending=[True, False, True]
+            ).reset_index(drop=True)
+
+            # ── 畫面區塊 ─────────────────────────────────────
             st.subheader("缺口清單（含 HV 線）")
             st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
             st.markdown(f"**現價 c1: {c1}**")
-            st.dataframe(df_out, height=360, use_container_width=True)
+
+            # 只保留要顯示的欄位（完全不帶 role_rank / tf_rank 等技術欄位）
+            cols_order = ["vs_c1","timeframe","gap_type","edge_price","role",
+                          "ka_key","kb_key","gap_low","gap_high","gap_width"]
+            show_df = df_out[[c for c in cols_order if c in df_out.columns]].copy()
+
+            # 高亮規則：c1 分隔列 或 edge_price==c1
+            def _highlight_c1(row):
+                is_marker = (str(row.get("vs_c1", "")) == "⬤ c1")
+                same_price = False
+                try:
+                    same_price = float(row["edge_price"]) == float(c1)
+                except Exception:
+                    pass
+                if is_marker or same_price:
+                    return ["background-color: #fff3cd; font-weight: bold"] * len(row)
+                return [""] * len(row)
+
+            st.dataframe(show_df.style.apply(_highlight_c1, axis=1),
+                         height=360, use_container_width=True)
         else:
             st.info("此範圍內未偵測到缺口或大量 K 棒 S/R。")
     finally:
