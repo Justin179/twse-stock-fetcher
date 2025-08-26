@@ -9,14 +9,12 @@ from typing import Dict, List, Optional
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-import numpy as np  # NEW: for vs_c1 / c1 marker row
+import numpy as np  # for vs_c1 / c1 marker row
 
 # === 盤中取價（直接用 analyze 模組的函式） ===
 try:
-    # 正常專案結構：src/analyze/analyze_price_break_conditions_dataloader.py
     from analyze.analyze_price_break_conditions_dataloader import get_today_prices
 except Exception:
-    # 若 PYTHONPATH 設定不同，退而求其次嘗試同目錄匯入
     try:
         from analyze_price_break_conditions_dataloader import get_today_prices
     except Exception:
@@ -43,7 +41,6 @@ def load_daily(conn: sqlite3.Connection, stock_id: str, last_n: int = 270) -> pd
 
 
 def load_weekly(conn: sqlite3.Connection, stock_id: str, last_n: int = 52) -> pd.DataFrame:
-    # 保留供對照 DB 週K用（實際圖表改用動態聚合）
     sql = f"""
         SELECT year_week AS key, open, high, low, close, volume
         FROM twse_prices_weekly
@@ -58,7 +55,6 @@ def load_weekly(conn: sqlite3.Connection, stock_id: str, last_n: int = 52) -> pd
 
 
 def load_monthly(conn: sqlite3.Connection, stock_id: str, last_n: int = 12) -> pd.DataFrame:
-    # 保留供對照 DB 月K用（實際圖表改用動態聚合）
     sql = f"""
         SELECT year_month AS key, open, high, low, close, volume
         FROM twse_prices_monthly
@@ -93,9 +89,9 @@ class Gap:
     role: str              # "support" / "resistance" / "at_edge"
     ka_key: str
     kb_key: str
-    gap_low: float         # 對於 heavy SR，=edge_price
-    gap_high: float        # 對於 heavy SR，=edge_price
-    gap_width: float       # 對於 heavy SR，=0.0
+    gap_low: float         # 對 heavy SR，=edge_price
+    gap_high: float        # 對 heavy SR，=edge_price
+    gap_width: float       # 對 heavy SR，=0.0
 
 
 def _fmt_key_for_tf(val, timeframe: str) -> str:
@@ -123,10 +119,10 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
 
         if ka_high < kb_low:  # up gap
             gap_low, gap_high = ka_high, kb_low
-            edge, gtype = ka_high, "up"           # 下緣支撐（採 ka.high）
+            edge, gtype = ka_high, "up"
         elif ka_low > kb_high:  # down gap
             gap_low, gap_high = kb_high, ka_low
-            edge, gtype = ka_low, "down"          # 上緣壓力（採 ka.low）
+            edge, gtype = ka_low, "down"
         else:
             continue
 
@@ -142,13 +138,6 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
 # 情況 1：大量 K 棒的 S/R
 # -----------------------------
 def mark_heavy_kbars(df: pd.DataFrame, window: int = 10, multiple: float = 2.0) -> pd.DataFrame:
-    """
-    回傳新 DataFrame（不改動原 df），新增欄位：
-      - v_maN: 近 N 根成交量均值（含當期）
-      - is_heavy: volume >= multiple * v_maN 且 v_maN 有效（至少 N 根）
-      - is_red: close >= open  視為紅 K
-    之後其他方法可重複使用這邏輯。
-    """
     d = df.copy()
     d["v_maN"] = d["volume"].rolling(window=window, min_periods=window).mean()
     d["is_heavy"] = (d["v_maN"].notna()) & (d["volume"] >= multiple * d["v_maN"])
@@ -158,12 +147,6 @@ def mark_heavy_kbars(df: pd.DataFrame, window: int = 10, multiple: float = 2.0) 
 
 def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float,
                           window: int = 10, multiple: float = 1.8) -> List[Gap]:
-    """
-    規則：
-      - 帶大量「綠K」的高點 high → 壓力
-      - 帶大量「紅K」的低點 low  → 支撐
-    產生的 edge 仍套用全域 c1 規則做角色翻轉（above→support / below→resistance / equal→at_edge）。
-    """
     out: List[Gap] = []
     if df.empty:
         return out
@@ -175,13 +158,9 @@ def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: fl
 
     for _, r in d.iterrows():
         is_red = bool(r["is_red"])
-        # 來源角色（未翻轉）
         base_type = "hv_red" if is_red else "hv_green"
         edge = float(r["low"] if is_red else r["high"])
-
-        # 依 c1 位置決定展示角色（符合你既有框架）
         role = "support" if c1 > edge else "resistance" if c1 < edge else "at_edge"
-
         key_val = _fmt_key_for_tf(r[key_col], timeframe)
         out.append(Gap(
             timeframe=timeframe,
@@ -205,7 +184,6 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                include: Dict[str, bool]) -> go.Figure:
     fig = go.Figure()
 
-    # K 線（主 y 軸）
     fig.add_trace(go.Candlestick(
         x=daily["date_label"],
         open=daily["open"], high=daily["high"],
@@ -216,22 +194,19 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         yaxis="y1"
     ))
 
-    # 成交量（副 y 軸，灰色透明 bar）— hover 只顯示「張」
     fig.add_trace(go.Bar(
         x=daily["date_label"],
-        y=daily["volume"],                     # 這裡是「股」
+        y=daily["volume"],                     # DB 是股
         name="Volume",
         marker=dict(color="rgba(128,128,128,0.35)"),
         yaxis="y2",
-        customdata=(daily["volume"] / 1000.0), # 轉成「張」提供給 tooltip
+        customdata=(daily["volume"] / 1000.0), # 轉張數給 hover
         hovertemplate="Volume: %{customdata:,.0f} 張<extra></extra>"
     ))
 
-    # 現價水平線
     fig.add_hline(y=c1, line_color="black", line_width=2, line_dash="dash",
                   annotation_text=f"c1 {c1}", annotation_position="top left")
 
-    # 缺口/大量線可視化
     zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)"}
     line_color_role = {"support": "#16a34a", "resistance": "#dc2626", "at_edge": "#737373"}
     line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4}
@@ -240,7 +215,6 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
     for g in gaps:
         if not include.get(g.timeframe, True):
             continue
-        # 只有「區間型」（缺口）才畫 hrect；大量 SR 是線（gap_high==gap_low）
         if show_zones and (g.gap_high > g.gap_low):
             fig.add_hrect(y0=g.gap_low, y1=g.gap_high, line_width=0,
                           fillcolor=zone_color[g.timeframe], opacity=0.25, layer="below")
@@ -248,14 +222,13 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                       line_width=line_width_tf[g.timeframe], line_dash=dash_role[g.role])
 
         if show_labels:
-            label_src = "HV" if g.gap_type.startswith("hv_") else g.gap_type  # 標註來源
+            label_src = "HV" if g.gap_type.startswith("hv_") else g.gap_type
             fig.add_annotation(xref="paper", x=0.995, xanchor="right",
                                y=g.edge_price, yanchor="middle",
                                text=f"{g.timeframe} {label_src} {g.role} {g.edge_price} ({g.kb_key})",
                                showarrow=False, font=dict(size=10, color=line_color_role[g.role]),
                                bgcolor="rgba(255,255,255,0.6)", bordercolor="rgba(0,0,0,0.2)")
 
-    # 類別 X 軸避免假日空白；雙 y 軸設定
     fig.update_xaxes(type="category")
     fig.update_layout(
         xaxis=dict(domain=[0, 1]),
@@ -281,11 +254,6 @@ def _safe_float(d: dict, key: str, default=None):
 
 
 def attach_intraday_to_daily(daily: pd.DataFrame, today: dict) -> pd.DataFrame:
-    """
-    - 若 today.date 尚未入庫：新增一列（用 API 的 o/h/l/c1/v）
-    - 若 today.date 已存在：覆寫該日 O/H/L/C/V
-    - 僅在記憶體合併，不寫入 DB
-    """
     if daily.empty or not today:
         return daily
 
@@ -298,25 +266,22 @@ def attach_intraday_to_daily(daily: pd.DataFrame, today: dict) -> pd.DataFrame:
     h   = _safe_float(today, "h")
     l   = _safe_float(today, "l")
     c1  = _safe_float(today, "c1")
-    vol = _safe_float(today, "v", default=0.0)
+    v   = _safe_float(today, "v", default=0.0)
 
-    # ★ 盤中 v 是「張」，DB volume 是「股」→ 統一轉成股
-    if vol is not None:
-        vol = float(vol) * 1000.0
+    # 盤中 v 單位是張 -> 轉股
+    if v is not None: v = float(v) * 1000.0
 
     row_today = {
-        "date": t_date,
-        "open": o, "high": h, "low": l, "close": c1,
-        "volume": vol,                           # 已換成「股」
-        "date_label": t_date.strftime("%y-%m-%d"),
+        "date": t_date, "open": o, "high": h, "low": l, "close": c1,
+        "volume": v, "date_label": t_date.strftime("%y-%m-%d"),
     }
 
     df = daily.copy()
-    mask_same_day = (df["date"].dt.normalize() == t_date)
-    if mask_same_day.any():
-        idx = df.index[mask_same_day][-1]
-        for k, v in row_today.items():
-            df.at[idx, k] = v
+    mask = (df["date"].dt.normalize() == t_date)
+    if mask.any():
+        idx = df.index[mask][-1]
+        for k, vv in row_today.items():
+            df.at[idx, k] = vv
     else:
         df = pd.concat([df, pd.DataFrame([row_today])], ignore_index=True)
 
@@ -324,7 +289,6 @@ def attach_intraday_to_daily(daily: pd.DataFrame, today: dict) -> pd.DataFrame:
 
 
 def aggregate_weekly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 52) -> pd.DataFrame:
-    """以日K（含今天）動態聚合週K（ISO 週）"""
     if daily_with_today.empty:
         return pd.DataFrame(columns=["key", "open", "high", "low", "close", "volume"])
     df = daily_with_today.copy()
@@ -334,13 +298,9 @@ def aggregate_weekly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 52
     wk = (
         df.sort_values("date")
           .groupby("year_week", as_index=False)
-          .agg(
-              open=("open", "first"),
-              high=("high", "max"),
-              low =("low",  "min"),
-              close=("close","last"),
-              volume=("volume","sum"),
-          )
+          .agg(open=("open", "first"), high=("high", "max"),
+               low=("low", "min"), close=("close", "last"),
+               volume=("volume", "sum"))
           .rename(columns={"year_week": "key"})
           .sort_values("key")
           .reset_index(drop=True)
@@ -350,8 +310,7 @@ def aggregate_weekly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 52
     return wk
 
 
-def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 12) -> pd.Frame:
-    """以日K（含今天）動態聚合月K（YYYY-MM）"""
+def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 12) -> pd.DataFrame:  # FIX type
     if daily_with_today.empty:
         return pd.DataFrame(columns=["key", "open", "high", "low", "close", "volume"])
     df = daily_with_today.copy()
@@ -360,13 +319,9 @@ def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 1
     mk = (
         df.sort_values("date")
           .groupby("year_month", as_index=False)
-          .agg(
-              open=("open", "first"),
-              high=("high", "max"),
-              low =("low",  "min"),
-              close=("close","last"),
-              volume=("volume","sum"),
-          )
+          .agg(open=("open", "first"), high=("high", "max"),
+               low=("low", "min"), close=("close", "last"),
+               volume=("volume", "sum"))
           .rename(columns={"year_month": "key"})
           .sort_values("key")
           .reset_index(drop=True)
@@ -383,7 +338,6 @@ def main() -> None:
     st.set_page_config(page_title="Gap S/R (D/W/M)", layout="wide")
     st.title("缺口支撐 / 壓力（D / W / M）互動圖")
 
-    # === Sidebar 寬度：縮窄 ===
     st.markdown(
         """
         <style>
@@ -398,7 +352,6 @@ def main() -> None:
 
     with st.sidebar:
         st.subheader("設定")
-
         stock_id = st.text_input("股票代碼（例：2330、2317）", value="2330")
         last_days = st.number_input("日K 顯示天數", min_value=60, max_value=720, value=120, step=30)
         show_zones = st.checkbox("顯示缺口區間 (hrect)", value=False)
@@ -412,18 +365,14 @@ def main() -> None:
 
         c1_override = st.text_input("c1 覆寫（通常留空；僅供測試/模擬）", value="")
         c1_val: Optional[float] = float(c1_override) if c1_override.strip() else None
-
-        # 放到最下面（比較少動到）
         db_path = st.text_input("SQLite DB 路徑", value="data/institution.db")
 
     conn = sqlite3.connect(db_path)
     try:
         daily = load_daily(conn, stock_id, last_n=int(last_days))
         if daily.empty:
-            st.error("查無日K資料。")
-            return
+            st.error("查無日K資料。"); return
 
-        # 先取富邦盤中 today（含 o/h/l/c1/c2/v），失敗則 None
         today_info = None
         if get_today_prices is not None:
             try:
@@ -431,7 +380,6 @@ def main() -> None:
             except Exception:
                 today_info = None
 
-        # c1 優先順序：UI 覆寫 > 富邦盤中 > DB 最新收盤
         if c1_val is not None:
             c1 = c1_val
         elif today_info and ("c1" in today_info):
@@ -439,37 +387,19 @@ def main() -> None:
         else:
             c1 = get_c1(conn, stock_id)
 
-        # 把「今天盤中」併入 daily（形成最新日K；只在記憶體）
         daily_with_today = attach_intraday_to_daily(daily, today_info or {})
-
-        # 用「含今天」的日K動態聚合 週/月K
         wk = aggregate_weekly_from_daily(daily_with_today, last_n=52)
         mo = aggregate_monthly_from_daily(daily_with_today, last_n=12)
 
-        # 缺口掃描（皆用含今天的資料）
-        d_gaps = scan_gaps_from_df(
-            daily_with_today.rename(columns={"date": "key"}),
-            key_col="key", timeframe="D", c1=c1
-        )
+        d_gaps = scan_gaps_from_df(daily_with_today.rename(columns={"date": "key"}), key_col="key", timeframe="D", c1=c1)
         w_gaps = scan_gaps_from_df(wk, key_col="key", timeframe="W", c1=c1)
         m_gaps = scan_gaps_from_df(mo, key_col="key", timeframe="M", c1=c1)
-
-        # 新增：大量 K 棒 S/R（D/W/M）
-        d_hv = scan_heavy_sr_from_df(
-            daily_with_today.rename(columns={"date": "key"}),
-            key_col="key", timeframe="D", c1=c1
-        )
+        d_hv = scan_heavy_sr_from_df(daily_with_today.rename(columns={"date": "key"}), key_col="key", timeframe="D", c1=c1)
         w_hv = scan_heavy_sr_from_df(wk, key_col="key", timeframe="W", c1=c1)
         m_hv = scan_heavy_sr_from_df(mo, key_col="key", timeframe="M", c1=c1)
-
         gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv
 
-        # 作圖（含成交量）
-        fig = make_chart(
-            daily_with_today, gaps, c1,
-            show_zones, show_labels,
-            include={"D": inc_d, "W": inc_w, "M": inc_m}
-        )
+        fig = make_chart(daily_with_today, gaps, c1, show_zones, show_labels, include={"D": inc_d, "W": inc_w, "M": inc_m})
         st.plotly_chart(fig, use_container_width=True)
 
         # ===============================
@@ -477,51 +407,42 @@ def main() -> None:
         # ===============================
         df_out = pd.DataFrame([g.__dict__ for g in gaps])
         if not df_out.empty:
-            # 角色排名：壓力 → 交界 → 支撐
             role_rank = {"resistance": 0, "at_edge": 1, "support": 2}
             tf_rank   = {"M": 0, "W": 1, "D": 2}
             df_out["role_rank"] = df_out["role"].map(role_rank)
             df_out["tf_rank"]   = df_out["timeframe"].map(tf_rank)
 
-            # 先照你的規則排序
-            df_out = df_out.sort_values(
-                ["role_rank", "edge_price", "tf_rank"],
-                ascending=[True, False, True]
-            ).reset_index(drop=True)
+            df_out = df_out.sort_values(["role_rank", "edge_price", "tf_rank"],
+                                        ascending=[True, False, True]).reset_index(drop=True)
 
-            # 最左欄加上相對 c1 的方向
-            df_out.insert(
-                0, "vs_c1",
-                np.where(df_out["edge_price"] > c1, "▲",
-                        np.where(df_out["edge_price"] < c1, "▼", "●"))
-            )
+            # 更粗、更清楚的方向符號
+            df_out.insert(0, "vs_c1", np.where(df_out["edge_price"] > c1, "▲",
+                                 np.where(df_out["edge_price"] < c1, "▼", "●")))
 
-            # 插入「c1 分隔列」後再用同一把鑰匙排序，確保落在正確位置
+            # 插入「c1 分隔列」並重新排序到正確位置
             marker_row = {
-                "timeframe": "—", "gap_type": "—", "edge_price": c1, "role": "at_edge",
-                "ka_key": "—", "kb_key": "—", "gap_low": c1, "gap_high": c1, "gap_width": 0.0,
-                "vs_c1": "🔶 c1",   # 改成顯眼的橘色菱形符號
-                "role_rank": role_rank["at_edge"], "tf_rank": 1,
+                "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
+                "ka_key":"—","kb_key":"—","gap_low":c1,"gap_high":c1,"gap_width":0.0,
+                "vs_c1":"🔶 c1","role_rank":role_rank["at_edge"],"tf_rank":1,
             }
             df_out = pd.concat([df_out, pd.DataFrame([marker_row])], ignore_index=True)
-            df_out = df_out.sort_values(
-                ["role_rank", "edge_price", "tf_rank"],
-                ascending=[True, False, True]
-            ).reset_index(drop=True)
+            df_out = df_out.sort_values(["role_rank","edge_price","tf_rank"],
+                                        ascending=[True,False,True]).reset_index(drop=True)
 
-            # ── 畫面區塊 ─────────────────────────────────────
             st.subheader("缺口清單（含 HV 線）")
             st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
             st.markdown(f"**現價 c1: {c1}**")
 
-            # 只保留要顯示的欄位（完全不帶 role_rank / tf_rank 等技術欄位）
             cols_order = ["vs_c1","timeframe","gap_type","edge_price","role",
-                          "ka_key","kb_key","gap_low","gap_high","gap_width"]
+                        "ka_key","kb_key","gap_low","gap_high","gap_width"]
             show_df = df_out[[c for c in cols_order if c in df_out.columns]].copy()
 
-            # 高亮規則：c1 分隔列 或 edge_price==c1
+            # 需要用 Styler.format 指定數字格式（round 不足以控制顯示位數）
+            num_cols = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_df.columns]
+            fmt_map = {c: "{:.2f}" for c in num_cols}
+
             def _highlight_c1(row):
-                is_marker = (str(row.get("vs_c1", "")) == "⬤ c1")
+                is_marker = (str(row.get("vs_c1","")) == "🔶 c1")
                 same_price = False
                 try:
                     same_price = float(row["edge_price"]) == float(c1)
@@ -531,8 +452,15 @@ def main() -> None:
                     return ["background-color: #fff3cd; font-weight: bold"] * len(row)
                 return [""] * len(row)
 
-            st.dataframe(show_df.style.apply(_highlight_c1, axis=1),
-                         height=360, use_container_width=True)
+            styled = (
+                show_df
+                    # 這行才是關鍵：把數值欄位固定顯示到小數點後兩位
+                    .style.format(fmt_map)
+                    .apply(_highlight_c1, axis=1)
+            )
+
+            st.dataframe(styled, height=360, use_container_width=True)
+
         else:
             st.info("此範圍內未偵測到缺口或大量 K 棒 S/R。")
     finally:
