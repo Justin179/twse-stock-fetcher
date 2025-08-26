@@ -468,7 +468,7 @@ def main() -> None:
                     .style
                     .format(fmt_map)                                 # 數字兩位小數
                     .apply(highlight_c1_row, axis=1)                 # 先套整列 c1 高亮
-                    .applymap(highlight_gap_type, subset=["gap_type"])  # 只給 gap_type 欄位上色
+                    .map(highlight_gap_type, subset=["gap_type"])    # 只給 gap_type 欄位上色
             )
 
             st.dataframe(styled, height=360, use_container_width=True)
