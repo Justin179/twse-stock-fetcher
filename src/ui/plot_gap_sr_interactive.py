@@ -136,16 +136,18 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
 
 
 # =============================
-# 模組化：大量/比昨價/今價 判斷（新）
+# 模組化：大量 / 比昨價 / 今價 判斷（新）
 # =============================
-def enrich_kbar_signals(df: pd.DataFrame, ma_window: int = 20,
+def enrich_kbar_signals(df: pd.DataFrame,
+                        ma_window: int = 20,
                         heavy_ma_multiple: float = 1.7,
-                        heavy_prev_multiple: float = 1.6) -> pd.DataFrame:
+                        heavy_prev_multiple: float = 1.5,
+                        no_shrink_ratio: float = 0.8) -> pd.DataFrame:
     """
     回傳含以下欄位的 DataFrame：
       - v_maN: 近 N 日均量
-      - is_heavy_ma: 量 >= 近 N 日均量 * heavy_ma_multiple
-      - prev_volume: 前一根的量
+      - prev_volume: 前一根量
+      - is_heavy_ma: 量 >= 近 N 日均量 * heavy_ma_multiple 且 量 >= prev_volume * no_shrink_ratio
       - is_heavy_prev: 量 >= 前一根 * heavy_prev_multiple
       - is_heavy: is_heavy_ma or is_heavy_prev
 
@@ -156,22 +158,25 @@ def enrich_kbar_signals(df: pd.DataFrame, ma_window: int = 20,
     """
     d = df.copy()
 
-    # 均量
+    # 均量與前一根量
     d["v_maN"] = d["volume"].rolling(window=ma_window, min_periods=ma_window).mean()
-    d["is_heavy_ma"] = (d["v_maN"].notna()) & (d["volume"] >= heavy_ma_multiple * d["v_maN"])
-
-    # 與前一根比較（量）
     d["prev_volume"] = d["volume"].shift(1)
+
+    # 條件1：均量倍數 + 不量縮（kb >= 0.8 * ka）
+    cond_ma = (d["v_maN"].notna()) & (d["volume"] >= heavy_ma_multiple * d["v_maN"])
+    cond_no_shrink = d["prev_volume"].notna() & (d["volume"] >= no_shrink_ratio * d["prev_volume"])
+    d["is_heavy_ma"] = cond_ma & cond_no_shrink
+
+    # 條件2：相對前一根倍數
     d["is_heavy_prev"] = d["prev_volume"].notna() & (d["volume"] >= heavy_prev_multiple * d["prev_volume"])
 
-    # 帶大量（兩條件其一）
+    # 帶大量（任一成立）
     d["is_heavy"] = d["is_heavy_ma"] | d["is_heavy_prev"]
 
     # 價格關係
     d["prev_close"] = d["close"].shift(1)
     d["up_vs_prev"] = d["prev_close"].notna() & (d["close"] > d["prev_close"])
     d["down_vs_prev"] = d["prev_close"].notna() & (d["close"] < d["prev_close"])
-
     d["up_today"] = d["close"] > d["open"]
     d["down_today"] = d["close"] < d["open"]
 
@@ -185,28 +190,34 @@ def enrich_kbar_signals(df: pd.DataFrame, ma_window: int = 20,
 # 情況 1：大量 K 棒的 S/R（新版規則）
 # -----------------------------
 def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float,
-                          window: int = 20, multiple: float = 1.7) -> List[Gap]:
+                          window: int = 20,
+                          multiple: float = 1.7,
+                          prev_multiple: float = 1.5,
+                          no_shrink_ratio: float = 0.8) -> List[Gap]:
     """
-    新規則：
-      帶大量 := (volume >= 近20均量*1.7) or (volume >= 前一根*1.6)
+    帶大量 :=
+      (volume >= 近20均量 * multiple 且 volume >= prev_volume * no_shrink_ratio)
+      or (volume >= prev_volume * prev_multiple)
 
-      四情境（均為「帶大量」前提）：
-        a) 比昨跌 + 今跌 → 高點 = 一級加粗 壓力 
-        b) 比昨漲 + 今漲 → 低點 = 一級加粗 支撐；高點 = 二級一般 壓力 (成交量是大紅棒 aka價漲量增)
-        c) 比昨跌 + 今漲 → 高點 = 二級一般 壓力
-        d) 比昨漲 + 今跌 → 低點 = 二級一般 支撐；高點 = 二級一般 壓力 (成交量是大紅棒 aka價漲量增)
+    四情境（均為帶大量前提）：
+      a) 比昨跌 + 今跌 → 高點 = 一級加粗 壓力
+      b) 比昨漲 + 今漲 → 低點 = 一級加粗 支撐；高點 = 二級一般 壓力 (成交量是大紅棒 aka價漲量增)
+      c) 比昨跌 + 今漲 → 高點 = 二級一般 壓力
+      d) 比昨漲 + 今跌 → 低點 = 二級一般 支撐；高點 = 二級一般 壓力 (成交量是大紅棒 aka價漲量增)
 
-      規則補充：
-        - 不論情境，高點一定是壓力候選（最後仍依 c1 相對位置做動態 role 轉換）
-        - 週/月 K 與日 K 以同一套邏輯處理
+    高點一律視為壓力候選（最後依 c1 動態轉換）。
     """
     out: List[Gap] = []
     if df.empty:
         return out
 
-    d = enrich_kbar_signals(df, ma_window=window,
-                            heavy_ma_multiple=multiple,
-                            heavy_prev_multiple=1.6)
+    d = enrich_kbar_signals(
+        df,
+        ma_window=window,
+        heavy_ma_multiple=multiple,
+        heavy_prev_multiple=prev_multiple,
+        no_shrink_ratio=no_shrink_ratio,
+    )
 
     d = d[d["is_heavy"]].reset_index(drop=True)
     if d.empty:
@@ -225,12 +236,9 @@ def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: fl
         high_p = float(r["high"])
         low_p  = float(r["low"])
 
-        # ---- 高點：永遠視為「壓力」來源（最終 role 仍依 c1 轉換）
-        # 一級加粗：a 情境（比昨跌 & 今跌）
+        # 高點：永遠是壓力來源；一級加粗 = 情境 a（比昨跌＆今跌）
         high_strength = "primary" if (down_vs_prev and down_today) else "secondary"
-        # 類型標示（保留 hv_* 前綴；真紅/真綠加上 hv_true_*）
         high_type = "hv_true_green" if is_true_green else ("hv_true_red" if is_true_red else ("hv_green" if down_today else "hv_red"))
-
         role_high = "support" if c1 > high_p else "resistance" if c1 < high_p else "at_edge"
         out.append(Gap(
             timeframe=timeframe,
@@ -244,17 +252,15 @@ def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: fl
             strength=high_strength
         ))
 
-        # ---- 低點：依情境加入支撐
+        # 低點：情境 b/d 會加入；情境 b = 一級加粗
         add_low = False
         low_strength = "secondary"
         low_type = "hv_true_red" if is_true_red else ("hv_true_green" if is_true_green else ("hv_red" if up_today else "hv_green"))
 
-        # b: 比昨漲 + 今漲 → 低點 = 一級加粗 支撐
-        if up_vs_prev and up_today:
+        if up_vs_prev and up_today:      # b
             add_low = True
             low_strength = "primary"
-        # d: 比昨漲 + 今跌 → 低點 = 二級一般 支撐
-        elif up_vs_prev and down_today:
+        elif up_vs_prev and down_today:  # d
             add_low = True
 
         if add_low:
@@ -308,7 +314,7 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
     zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)"}
     line_color_role = {"support": "#16a34a", "resistance": "#dc2626", "at_edge": "#737373"}
     line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4}
-    strength_mul = {"primary": 1.8, "secondary": 1.0}  # NEW：一級加粗倍率
+    strength_mul = {"primary": 1.8, "secondary": 1.0}
     dash_role = {"support": "dot", "resistance": "solid", "at_edge": "dash"}
 
     for g in gaps:
@@ -413,7 +419,7 @@ def aggregate_weekly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 52
     return wk
 
 
-def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 12) -> pd.DataFrame:  # FIX type
+def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 12) -> pd.DataFrame:
     if daily_with_today.empty:
         return pd.DataFrame(columns=["key", "open", "high", "low", "close", "volume"])
     df = daily_with_today.copy()
@@ -455,10 +461,8 @@ def main() -> None:
 
     with st.sidebar:
         st.subheader("設定")
-        stock_id = st.text_input("股票代碼（例：2330、2317）", value="2330")
+        stock_id = st.text_input("股票代碼（例：2330）", value="2330")
         last_days = st.number_input("日K 顯示天數", min_value=60, max_value=720, value=120, step=30)
-        show_zones = st.checkbox("顯示缺口區間 (hrect)", value=False)
-        show_labels = st.checkbox("顯示邊界標籤 (edge labels)", value=False)
 
         st.markdown("---")
         st.caption("顯示哪種時間框架的缺口")
@@ -466,9 +470,19 @@ def main() -> None:
         inc_w = st.checkbox("週線 (W)", value=True)
         inc_m = st.checkbox("月線 (M)", value=True)
 
+        st.markdown("---")
+        st.caption("帶大量判斷參數")
+        hv_ma_mult = st.number_input("近20日均量倍數（條件1）", min_value=1.0, max_value=5.0, value=1.7, step=0.1)
+        no_shrink_ratio = st.number_input("不量縮下限（kb >= ka × ?）", min_value=0.1, max_value=1.0, value=0.8, step=0.05)
+        hv_prev_mult = st.number_input("相對前一根倍數（條件2）", min_value=1.0, max_value=5.0, value=1.5, step=0.1)
+        
+        st.markdown("---")
         c1_override = st.text_input("c1 覆寫（通常留空；僅供測試/模擬）", value="")
         c1_val: Optional[float] = float(c1_override) if c1_override.strip() else None
         db_path = st.text_input("SQLite DB 路徑", value="data/institution.db")
+
+        show_zones = st.checkbox("顯示缺口區間 (hrect)", value=False)
+        show_labels = st.checkbox("顯示邊界標籤 (edge labels)", value=False)
 
     conn = sqlite3.connect(db_path)
     try:
@@ -497,12 +511,24 @@ def main() -> None:
         d_gaps = scan_gaps_from_df(daily_with_today.rename(columns={"date": "key"}), key_col="key", timeframe="D", c1=c1)
         w_gaps = scan_gaps_from_df(wk, key_col="key", timeframe="W", c1=c1)
         m_gaps = scan_gaps_from_df(mo, key_col="key", timeframe="M", c1=c1)
-        d_hv = scan_heavy_sr_from_df(daily_with_today.rename(columns={"date": "key"}), key_col="key", timeframe="D", c1=c1)
-        w_hv = scan_heavy_sr_from_df(wk, key_col="key", timeframe="W", c1=c1)
-        m_hv = scan_heavy_sr_from_df(mo, key_col="key", timeframe="M", c1=c1)
+
+        d_hv = scan_heavy_sr_from_df(
+            daily_with_today.rename(columns={"date": "key"}), key_col="key", timeframe="D", c1=c1,
+            window=20, multiple=hv_ma_mult, prev_multiple=hv_prev_mult, no_shrink_ratio=no_shrink_ratio
+        )
+        w_hv = scan_heavy_sr_from_df(
+            wk, key_col="key", timeframe="W", c1=c1,
+            window=20, multiple=hv_ma_mult, prev_multiple=hv_prev_mult, no_shrink_ratio=no_shrink_ratio
+        )
+        m_hv = scan_heavy_sr_from_df(
+            mo, key_col="key", timeframe="M", c1=c1,
+            window=20, multiple=hv_ma_mult, prev_multiple=hv_prev_mult, no_shrink_ratio=no_shrink_ratio
+        )
+
         gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv
 
-        fig = make_chart(daily_with_today, gaps, c1, show_zones, show_labels, include={"D": inc_d, "W": inc_w, "M": inc_m})
+        fig = make_chart(daily_with_today, gaps, c1, show_zones, show_labels,
+                         include={"D": inc_d, "W": inc_w, "M": inc_m})
         st.plotly_chart(fig, use_container_width=True)
 
         # ===============================
