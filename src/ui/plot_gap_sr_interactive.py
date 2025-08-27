@@ -137,7 +137,7 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
 # -----------------------------
 # 情況 1：大量 K 棒的 S/R
 # -----------------------------
-def mark_heavy_kbars(df: pd.DataFrame, window: int = 20, multiple: float = 1.8) -> pd.DataFrame:
+def mark_heavy_kbars(df: pd.DataFrame, window: int = 20, multiple: float = 1.7) -> pd.DataFrame:
     d = df.copy()
     d["v_maN"] = d["volume"].rolling(window=window, min_periods=window).mean()
     d["is_heavy"] = (d["v_maN"].notna()) & (d["volume"] >= multiple * d["v_maN"])
@@ -146,7 +146,7 @@ def mark_heavy_kbars(df: pd.DataFrame, window: int = 20, multiple: float = 1.8) 
 
 
 def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float,
-                          window: int = 20, multiple: float = 1.8) -> List[Gap]:
+                          window: int = 20, multiple: float = 1.7) -> List[Gap]:
     out: List[Gap] = []
     if df.empty:
         return out
