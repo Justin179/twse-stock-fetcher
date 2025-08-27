@@ -84,7 +84,7 @@ def get_c1(conn: sqlite3.Connection, stock_id: str) -> float:
 @dataclass
 class Gap:
     timeframe: str
-    gap_type: str          # "up" / "down" / "hv_red" / "hv_green"
+    gap_type: str          # "up" / "down" / "hv_red" / "hv_green" / "hv_true_red" / "hv_true_green"
     edge_price: float
     role: str              # "support" / "resistance" / "at_edge"
     ka_key: str
@@ -92,6 +92,7 @@ class Gap:
     gap_low: float         # 對 heavy SR，=edge_price
     gap_high: float        # 對 heavy SR，=edge_price
     gap_width: float       # 對 heavy SR，=0.0
+    strength: str = "secondary"  # "primary"=一級加粗, "secondary"=一般
 
 
 def _fmt_key_for_tf(val, timeframe: str) -> str:
@@ -134,45 +135,142 @@ def scan_gaps_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float)
     return out
 
 
-# -----------------------------
-# 情況 1：大量 K 棒的 S/R
-# -----------------------------
-def mark_heavy_kbars(df: pd.DataFrame, window: int = 20, multiple: float = 1.7) -> pd.DataFrame:
+# =============================
+# 模組化：大量/比昨價/今價 判斷（新）
+# =============================
+def enrich_kbar_signals(df: pd.DataFrame, ma_window: int = 20,
+                        heavy_ma_multiple: float = 1.7,
+                        heavy_prev_multiple: float = 1.6) -> pd.DataFrame:
+    """
+    回傳含以下欄位的 DataFrame：
+      - v_maN: 近 N 日均量
+      - is_heavy_ma: 量 >= 近 N 日均量 * heavy_ma_multiple
+      - prev_volume: 前一根的量
+      - is_heavy_prev: 量 >= 前一根 * heavy_prev_multiple
+      - is_heavy: is_heavy_ma or is_heavy_prev
+
+      - prev_close: 前一根收盤
+      - up_vs_prev / down_vs_prev: 比昨價漲/跌
+      - up_today / down_today: 今價漲/跌
+      - is_true_red / is_true_green: 真紅/真綠（比昨 + 今日同向）
+    """
     d = df.copy()
-    d["v_maN"] = d["volume"].rolling(window=window, min_periods=window).mean()
-    d["is_heavy"] = (d["v_maN"].notna()) & (d["volume"] >= multiple * d["v_maN"])
-    d["is_red"] = d["close"] >= d["open"]
+
+    # 均量
+    d["v_maN"] = d["volume"].rolling(window=ma_window, min_periods=ma_window).mean()
+    d["is_heavy_ma"] = (d["v_maN"].notna()) & (d["volume"] >= heavy_ma_multiple * d["v_maN"])
+
+    # 與前一根比較（量）
+    d["prev_volume"] = d["volume"].shift(1)
+    d["is_heavy_prev"] = d["prev_volume"].notna() & (d["volume"] >= heavy_prev_multiple * d["prev_volume"])
+
+    # 帶大量（兩條件其一）
+    d["is_heavy"] = d["is_heavy_ma"] | d["is_heavy_prev"]
+
+    # 價格關係
+    d["prev_close"] = d["close"].shift(1)
+    d["up_vs_prev"] = d["prev_close"].notna() & (d["close"] > d["prev_close"])
+    d["down_vs_prev"] = d["prev_close"].notna() & (d["close"] < d["prev_close"])
+
+    d["up_today"] = d["close"] > d["open"]
+    d["down_today"] = d["close"] < d["open"]
+
+    d["is_true_red"] = d["up_vs_prev"] & d["up_today"]
+    d["is_true_green"] = d["down_vs_prev"] & d["down_today"]
+
     return d
 
 
+# -----------------------------
+# 情況 1：大量 K 棒的 S/R（新版規則）
+# -----------------------------
 def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: float,
                           window: int = 20, multiple: float = 1.7) -> List[Gap]:
+    """
+    新規則：
+      帶大量 := (volume >= 近20均量*1.7) or (volume >= 前一根*1.6)
+
+      四情境（均為「帶大量」前提）：
+        a) 比昨跌 + 今跌 → 高點 = 一級加粗 壓力 
+        b) 比昨漲 + 今漲 → 低點 = 一級加粗 支撐；高點 = 二級一般 壓力 (成交量是大紅棒 aka價漲量增)
+        c) 比昨跌 + 今漲 → 高點 = 二級一般 壓力
+        d) 比昨漲 + 今跌 → 低點 = 二級一般 支撐；高點 = 二級一般 壓力 (成交量是大紅棒 aka價漲量增)
+
+      規則補充：
+        - 不論情境，高點一定是壓力候選（最後仍依 c1 相對位置做動態 role 轉換）
+        - 週/月 K 與日 K 以同一套邏輯處理
+    """
     out: List[Gap] = []
     if df.empty:
         return out
 
-    d = mark_heavy_kbars(df, window=window, multiple=multiple)
+    d = enrich_kbar_signals(df, ma_window=window,
+                            heavy_ma_multiple=multiple,
+                            heavy_prev_multiple=1.6)
+
     d = d[d["is_heavy"]].reset_index(drop=True)
     if d.empty:
         return out
 
     for _, r in d.iterrows():
-        is_red = bool(r["is_red"])
-        base_type = "hv_red" if is_red else "hv_green"
-        edge = float(r["low"] if is_red else r["high"])
-        role = "support" if c1 > edge else "resistance" if c1 < edge else "at_edge"
         key_val = _fmt_key_for_tf(r[key_col], timeframe)
+
+        up_vs_prev   = bool(r["up_vs_prev"])
+        down_vs_prev = bool(r["down_vs_prev"])
+        up_today     = bool(r["up_today"])
+        down_today   = bool(r["down_today"])
+        is_true_red   = bool(r["is_true_red"])
+        is_true_green = bool(r["is_true_green"])
+
+        high_p = float(r["high"])
+        low_p  = float(r["low"])
+
+        # ---- 高點：永遠視為「壓力」來源（最終 role 仍依 c1 轉換）
+        # 一級加粗：a 情境（比昨跌 & 今跌）
+        high_strength = "primary" if (down_vs_prev and down_today) else "secondary"
+        # 類型標示（保留 hv_* 前綴；真紅/真綠加上 hv_true_*）
+        high_type = "hv_true_green" if is_true_green else ("hv_true_red" if is_true_red else ("hv_green" if down_today else "hv_red"))
+
+        role_high = "support" if c1 > high_p else "resistance" if c1 < high_p else "at_edge"
         out.append(Gap(
             timeframe=timeframe,
-            gap_type=base_type,
-            edge_price=float(round(edge, 3)),
-            role=role,
-            ka_key=key_val,
-            kb_key=key_val,
-            gap_low=float(round(edge, 3)),
-            gap_high=float(round(edge, 3)),
-            gap_width=0.0
+            gap_type=high_type,
+            edge_price=float(round(high_p, 3)),
+            role=role_high,
+            ka_key=key_val, kb_key=key_val,
+            gap_low=float(round(high_p, 3)),
+            gap_high=float(round(high_p, 3)),
+            gap_width=0.0,
+            strength=high_strength
         ))
+
+        # ---- 低點：依情境加入支撐
+        add_low = False
+        low_strength = "secondary"
+        low_type = "hv_true_red" if is_true_red else ("hv_true_green" if is_true_green else ("hv_red" if up_today else "hv_green"))
+
+        # b: 比昨漲 + 今漲 → 低點 = 一級加粗 支撐
+        if up_vs_prev and up_today:
+            add_low = True
+            low_strength = "primary"
+        # d: 比昨漲 + 今跌 → 低點 = 二級一般 支撐
+        elif up_vs_prev and down_today:
+            add_low = True
+
+        if add_low:
+            role_low = "support" if c1 > low_p else "resistance" if c1 < low_p else "at_edge"
+            out.append(Gap(
+                timeframe=timeframe,
+                gap_type=low_type,
+                edge_price=float(round(low_p, 3)),
+                role=role_low,
+                ka_key=key_val, kb_key=key_val,
+                gap_low=float(round(low_p, 3)),
+                gap_high=float(round(low_p, 3)),
+                gap_width=0.0,
+                strength=low_strength
+            ))
+
     return out
 
 
@@ -210,6 +308,7 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
     zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)"}
     line_color_role = {"support": "#16a34a", "resistance": "#dc2626", "at_edge": "#737373"}
     line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4}
+    strength_mul = {"primary": 1.8, "secondary": 1.0}  # NEW：一級加粗倍率
     dash_role = {"support": "dot", "resistance": "solid", "at_edge": "dash"}
 
     for g in gaps:
@@ -218,8 +317,12 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         if show_zones and (g.gap_high > g.gap_low):
             fig.add_hrect(y0=g.gap_low, y1=g.gap_high, line_width=0,
                           fillcolor=zone_color[g.timeframe], opacity=0.25, layer="below")
+
+        base_w = line_width_tf[g.timeframe]
+        lw = base_w * strength_mul.get(getattr(g, "strength", "secondary"), 1.0)
+
         fig.add_hline(y=g.edge_price, line_color=line_color_role[g.role],
-                      line_width=line_width_tf[g.timeframe], line_dash=dash_role[g.role])
+                      line_width=lw, line_dash=dash_role[g.role])
 
         if show_labels:
             label_src = "HV" if g.gap_type.startswith("hv_") else g.gap_type
@@ -433,21 +536,20 @@ def main() -> None:
             st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
             st.markdown(f"**現價 c1: {c1}**")
 
-
-
             cols_order = ["vs_c1","timeframe","gap_type","edge_price","role",
-                        "ka_key","kb_key","gap_low","gap_high","gap_width"]
+                          "ka_key","kb_key","gap_low","gap_high","gap_width"]
             show_df = df_out[[c for c in cols_order if c in df_out.columns]].copy()
 
             # 顯示到小數後兩位（用 Styler.format 控制渲染精度）
             num_cols = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_df.columns]
             fmt_map = {c: "{:.2f}" for c in num_cols}
 
-            # 只針對 gap_type 欄位上色
+            # 只針對 gap_type 欄位上色（擴充：包含 hv_true_*）
             def highlight_gap_type(val: str) -> str:
-                if val == "hv_green":
+                v = str(val)
+                if v in ("hv_green","hv_true_green"):
                     return "background-color: #e6f4ea"   # 淡綠
-                if val == "hv_red":
+                if v in ("hv_red","hv_true_red"):
                     return "background-color: #fdecea"   # 淡紅
                 return ""
 
@@ -472,7 +574,6 @@ def main() -> None:
             )
 
             st.dataframe(styled, height=360, use_container_width=True)
-
 
         else:
             st.info("此範圍內未偵測到缺口或大量 K 棒 S/R。")
