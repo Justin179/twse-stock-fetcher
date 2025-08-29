@@ -10,6 +10,9 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 import numpy as np  # for vs_c1 / c1 marker row
+# 其它 import 之後
+from common.stock_loader import load_stock_list_with_names
+
 
 # === 盤中取價（直接用 analyze 模組的函式） ===
 try:
@@ -20,6 +23,21 @@ except Exception:
     except Exception:
         get_today_prices = None  # 仍可 fallback 到 DB 最新收盤
 
+
+def get_stock_name_by_id(stock_id: str) -> str:
+    """
+    從 load_stock_list_with_names() 取得的顯示字串中，找出指定代碼的名稱。
+    顯示字串通常長得像：'2330 台積電' 或 '1101 台泥'。
+    """
+    try:
+        _, stock_display = load_stock_list_with_names(refresh=False)
+        for s in stock_display:
+            parts = s.split()
+            if parts and parts[0] == stock_id:
+                return " ".join(parts[1:]) if len(parts) > 1 else ""
+    except Exception:
+        pass
+    return ""
 
 # -----------------------------
 # 資料載入（DB）
@@ -285,7 +303,8 @@ def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: fl
 # -----------------------------
 def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                show_zones: bool, show_labels: bool,
-               include: Dict[str, bool]) -> go.Figure:
+               include: Dict[str, bool],
+               stock_id: str = "", stock_name: str = "") -> go.Figure:
     fig = go.Figure()
 
     fig.add_trace(go.Candlestick(
@@ -308,8 +327,11 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         hovertemplate="Volume: %{customdata:,.0f} 張<extra></extra>"
     ))
 
-    fig.add_hline(y=c1, line_color="black", line_width=2, line_dash="dash",
-                  annotation_text=f"c1 {c1}", annotation_position="top left")
+    fig.add_hline(
+        y=c1, line_color="black", line_width=2, line_dash="dash",
+        annotation_text=f"{stock_id} {stock_name}  c1 {c1:.2f}",
+        annotation_position="top left"
+    )
 
     zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)"}
     line_color_role = {"support": "#16a34a", "resistance": "#dc2626", "at_edge": "#737373"}
@@ -484,6 +506,9 @@ def main() -> None:
         show_zones = st.checkbox("顯示缺口區間 (hrect)", value=False)
         show_labels = st.checkbox("顯示邊界標籤 (edge labels)", value=False)
 
+
+    stock_name = get_stock_name_by_id(stock_id)
+
     conn = sqlite3.connect(db_path)
     try:
         daily = load_daily(conn, stock_id, last_n=int(last_days))
@@ -527,8 +552,12 @@ def main() -> None:
 
         gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv
 
-        fig = make_chart(daily_with_today, gaps, c1, show_zones, show_labels,
-                         include={"D": inc_d, "W": inc_w, "M": inc_m})
+        fig = make_chart(
+            daily_with_today, gaps, c1, show_zones, show_labels,
+            include={"D": inc_d, "W": inc_w, "M": inc_m},
+            stock_id=stock_id, stock_name=stock_name
+        )
+
         st.plotly_chart(fig, use_container_width=True)
 
         # ===============================
@@ -560,7 +589,8 @@ def main() -> None:
 
             st.subheader("缺口清單（含 HV 線）")
             st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
-            st.markdown(f"**現價 c1: {c1}**")
+            st.markdown(f"**{stock_id} {stock_name}｜現價 c1: {c1:.2f}**")
+
 
             cols_order = ["vs_c1","timeframe","gap_type","edge_price","role",
                           "ka_key","kb_key","gap_low","gap_high","gap_width"]
