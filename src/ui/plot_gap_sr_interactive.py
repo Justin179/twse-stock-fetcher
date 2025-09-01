@@ -12,7 +12,7 @@ import streamlit as st
 import numpy as np  # for vs_c1 / c1 marker row
 # 其它 import 之後
 from common.stock_loader import load_stock_list_with_names
-
+from ui.sr_prev_high_on_heavy import scan_prev_high_on_heavy_from_df  # 或用 scan_prev_high_on_heavy_all
 
 # === 盤中取價（直接用 analyze 模組的函式） ===
 try:
@@ -487,17 +487,26 @@ def main() -> None:
         last_days = st.number_input("日K 顯示天數", min_value=60, max_value=720, value=120, step=30)
 
         st.markdown("---")
+        st.caption("帶大量判斷參數")
+        hv_ma_mult = st.number_input("近20日均量倍數（條件1）", min_value=1.0, max_value=5.0, value=1.7, step=0.1)
+        no_shrink_ratio = st.number_input("不量縮下限（kb >= ka × ?）", min_value=0.1, max_value=1.0, value=0.8, step=0.05)
+        hv_prev_mult = st.number_input("相對前一根倍數（條件2）", min_value=1.0, max_value=5.0, value=1.2, step=0.1)
+
+        st.markdown("---")
+        st.caption("Pivot High 參數設定")
+        d_pivot_left = st.number_input("日K pivot_left", min_value=1, max_value=10, value=3, step=1)
+        d_pivot_right = st.number_input("日K pivot_right", min_value=1, max_value=10, value=3, step=1)
+        w_pivot_left = st.number_input("週K pivot_left", min_value=1, max_value=10, value=2, step=1)
+        w_pivot_right = st.number_input("週K pivot_right", min_value=1, max_value=10, value=2, step=1)
+        m_pivot_left = st.number_input("月K pivot_left", min_value=1, max_value=10, value=1, step=1)
+        m_pivot_right = st.number_input("月K pivot_right", min_value=1, max_value=10, value=1, step=1)
+
+        st.markdown("---")
         st.caption("顯示哪種時間框架的缺口")
         inc_d = st.checkbox("日線 (D)", value=True)
         inc_w = st.checkbox("週線 (W)", value=True)
         inc_m = st.checkbox("月線 (M)", value=True)
 
-        st.markdown("---")
-        st.caption("帶大量判斷參數")
-        hv_ma_mult = st.number_input("近20日均量倍數（條件1）", min_value=1.0, max_value=5.0, value=1.7, step=0.1)
-        no_shrink_ratio = st.number_input("不量縮下限（kb >= ka × ?）", min_value=0.1, max_value=1.0, value=0.8, step=0.05)
-        hv_prev_mult = st.number_input("相對前一根倍數（條件2）", min_value=1.0, max_value=5.0, value=1.5, step=0.1)
-        
         st.markdown("---")
         c1_override = st.text_input("c1 覆寫（通常留空；僅供測試/模擬）", value="")
         c1_val: Optional[float] = float(c1_override) if c1_override.strip() else None
@@ -550,7 +559,31 @@ def main() -> None:
             window=20, multiple=hv_ma_mult, prev_multiple=hv_prev_mult, no_shrink_ratio=no_shrink_ratio
         )
 
-        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv
+
+        # 既有：缺口 & 大量K棒 S/R 都算完了
+        # d_gaps, w_gaps, m_gaps 已就緒
+        # d_hv, w_hv, m_hv 已就緒
+
+        # === 新增：日 / 週 / 月 的「帶大量前波高」 ===
+        d_prev = scan_prev_high_on_heavy_from_df(
+            daily_with_today.rename(columns={"date": "key"}), key_col="key", timeframe="D", c1=c1,
+            window=20, multiple=hv_ma_mult, prev_multiple=hv_prev_mult, no_shrink_ratio=no_shrink_ratio,
+            pivot_left=d_pivot_left, pivot_right=d_pivot_right, max_lookback=120, pivot_heavy_only=True
+        )
+        w_prev = scan_prev_high_on_heavy_from_df(
+            wk, key_col="key", timeframe="W", c1=c1,
+            window=20, multiple=hv_ma_mult, prev_multiple=hv_prev_mult, no_shrink_ratio=no_shrink_ratio,
+            pivot_left=w_pivot_left, pivot_right=w_pivot_right, max_lookback=60, pivot_heavy_only=True
+        )
+        m_prev = scan_prev_high_on_heavy_from_df(
+            mo, key_col="key", timeframe="M", c1=c1,
+            window=20, multiple=hv_ma_mult, prev_multiple=hv_prev_mult, no_shrink_ratio=no_shrink_ratio,
+            pivot_left=m_pivot_left, pivot_right=m_pivot_right, max_lookback=36, pivot_heavy_only=True
+        )
+
+        # === 修改：把三個前波高的結果併進 gaps ===
+        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + d_prev + w_prev + m_prev
+
 
         fig = make_chart(
             daily_with_today, gaps, c1, show_zones, show_labels,
@@ -577,6 +610,10 @@ def main() -> None:
             df_out.insert(0, "vs_c1", np.where(df_out["edge_price"] > c1, "▲",
                                  np.where(df_out["edge_price"] < c1, "▼", "●")))
 
+            # ⬇️ 新增：若為帶量前波高，標註 Pivot High
+            mask_prev = (df_out["gap_type"] == "hv_prev_high")
+            df_out.loc[mask_prev, "vs_c1"] = df_out.loc[mask_prev, "vs_c1"] + " Pivot High"
+
             # 插入「c1 分隔列」並重新排序到正確位置
             marker_row = {
                 "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
@@ -588,9 +625,27 @@ def main() -> None:
                                         ascending=[True,False,True]).reset_index(drop=True)
 
             st.subheader("缺口清單（含 HV 線）")
-            st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
-            st.markdown(f"**{stock_id} {stock_name}｜現價 c1: {c1:.2f}**")
 
+            # ⬇️ 新增：把所有提示收納進 expander
+            with st.expander("📌 提示 / 規則說明", expanded=False):
+                st.markdown(f"""
+            - **排序規則**：角色（壓力 → 交界 → 支撐） → 價位（大 → 小） → 時間框架（月 → 週 → 日）。
+            - **帶大量規則**（滿足其一即視為帶大量）：
+                - 條件①（均量倍數 + 不量縮）：`volume ≥ 近20日均量 × {hv_ma_mult:.2f}` 且 `volume ≥ 前一根 × {no_shrink_ratio:.2f}`  
+                （對應欄位：`is_heavy_ma`）
+                - 條件②（相對前一根倍數）：`volume ≥ 前一根 × {hv_prev_mult:.2f}`  
+                （對應欄位：`is_heavy_prev`）
+            - **帶量前波高（hv_prev_high）**：
+                - 前波高 = **pivot high 且該 K 棒本身帶大量**（`pivot_heavy_only=True`）。
+                - 後續再次出現**帶大量 K 棒**時觸發啟用此線（`kb_key`=觸發日期；`ka_key`=前波高日期）。
+            - 其他：
+                - `vs_c1` 欄位若標示 **“Pivot High”**，代表此列為「帶量前波高」。
+                """)
+                
+            # 原本這行可以刪掉或保留在 expander 底下
+            # st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
+
+            st.markdown(f"**{stock_id} {stock_name}｜現價 c1: {c1:.2f}**")
 
             cols_order = ["vs_c1","timeframe","gap_type","edge_price","role",
                           "ka_key","kb_key","gap_low","gap_high","gap_width"]
