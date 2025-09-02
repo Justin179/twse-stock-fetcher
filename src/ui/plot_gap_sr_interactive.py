@@ -651,8 +651,7 @@ def main() -> None:
             df_out = df_out.sort_values(["role_rank","edge_price","tf_rank"],
                                         ascending=[True,False,True]).reset_index(drop=True)
 
-            st.subheader("缺口 & 大量K棒 S/R")
-
+            
             # ⬇️ 新增：把所有提示收納進 expander
             with st.expander("📌 提示 / 規則說明", expanded=False):
                 st.markdown(f"""
@@ -668,11 +667,12 @@ def main() -> None:
             - 其他：
                 - `vs_c1` 欄位若標示 **“Pivot High”**，代表此列為「帶量前波高」。
                 """)
-                
+
             # 原本這行可以刪掉或保留在 expander 底下
             # st.caption("排序規則：角色（壓力→交界→支撐） → 價位（大→小） → 時間框架（月→週→日）")
-
             st.markdown(f"**{stock_id} {stock_name}｜現價 c1: {c1:.2f}**")
+            st.subheader("缺口 & 大量K棒 S/R")
+            
 
             cols_order = ["vs_c1","timeframe","gap_type","edge_price","role",
                           "ka_key","kb_key","gap_low","gap_high","gap_width"]
