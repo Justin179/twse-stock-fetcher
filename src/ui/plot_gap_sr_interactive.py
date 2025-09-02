@@ -724,7 +724,7 @@ def main() -> None:
             # ② 帶量前波高「專區」表格（獨立）
             # ===============================
             st.markdown("---")
-            st.subheader("帶量前波高（Pivot High）專區")
+            st.subheader("帶量前波高 Pivot High")
 
             # 用 df_prev_source，而不是 df_out
             df_prev = df_prev_source[df_prev_source["gap_type"] == "hv_prev_high"].copy()
