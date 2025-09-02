@@ -160,7 +160,7 @@ def enrich_kbar_signals(df: pd.DataFrame,
                         ma_window: int = 20,
                         heavy_ma_multiple: float = 1.7,
                         heavy_prev_multiple: float = 1.5,
-                        no_shrink_ratio: float = 0.8) -> pd.DataFrame:
+                        no_shrink_ratio: float = 0.6) -> pd.DataFrame:
     """
     回傳含以下欄位的 DataFrame：
       - v_maN: 近 N 日均量
@@ -180,7 +180,7 @@ def enrich_kbar_signals(df: pd.DataFrame,
     d["v_maN"] = d["volume"].rolling(window=ma_window, min_periods=ma_window).mean()
     d["prev_volume"] = d["volume"].shift(1)
 
-    # 條件1：均量倍數 + 不量縮（kb >= 0.8 * ka）
+    # 條件1：均量倍數 + 不量縮（kb >= 0.6 * ka）
     cond_ma = (d["v_maN"].notna()) & (d["volume"] >= heavy_ma_multiple * d["v_maN"])
     cond_no_shrink = d["prev_volume"].notna() & (d["volume"] >= no_shrink_ratio * d["prev_volume"])
     d["is_heavy_ma"] = cond_ma & cond_no_shrink
@@ -211,7 +211,7 @@ def scan_heavy_sr_from_df(df: pd.DataFrame, key_col: str, timeframe: str, c1: fl
                           window: int = 20,
                           multiple: float = 1.7,
                           prev_multiple: float = 1.5,
-                          no_shrink_ratio: float = 0.8) -> List[Gap]:
+                          no_shrink_ratio: float = 0.6) -> List[Gap]:
     """
     帶大量 :=
       (volume >= 近20均量 * multiple 且 volume >= prev_volume * no_shrink_ratio)
@@ -489,7 +489,7 @@ def main() -> None:
         st.markdown("---")
         st.caption("帶大量判斷參數")
         hv_ma_mult = st.number_input("近20日均量倍數（條件1）", min_value=1.0, max_value=5.0, value=1.7, step=0.1)
-        no_shrink_ratio = st.number_input("不量縮下限（kb >= ka × ?）", min_value=0.1, max_value=1.0, value=0.8, step=0.05)
+        no_shrink_ratio = st.number_input("不量縮下限（kb >= ka × ?）", min_value=0.1, max_value=1.0, value=0.6, step=0.05)
         hv_prev_mult = st.number_input("相對前一根倍數（條件2）", min_value=1.0, max_value=5.0, value=1.2, step=0.1)
 
         st.markdown("---")
@@ -541,6 +541,29 @@ def main() -> None:
         daily_with_today = attach_intraday_to_daily(daily, today_info or {})
         wk = aggregate_weekly_from_daily(daily_with_today, last_n=52)
         mo = aggregate_monthly_from_daily(daily_with_today, last_n=12)
+
+        # === 建立 year-week → 該週第一個交易日(MM-DD) 的對照（供表格友善顯示） ===
+        week_first_day_map = {}
+        if not daily_with_today.empty:
+            _t = daily_with_today.copy()
+            iso = _t["date"].dt.isocalendar()
+            _t["year_week"] = iso.year.astype(str) + "-" + iso.week.map(lambda x: f"{int(x):02d}")
+            week_first_day_map = (
+                _t.groupby("year_week", as_index=True)["date"]
+                .min()                         # 該週第一個「交易日」
+                .dt.strftime("%m-%d")          # 只顯示月-日
+                .to_dict()
+            )
+
+        def _augment_week_key(val: str) -> str:
+            """把 'YYYY-WW' 變成 'YYYY-WW (MM-DD)'；非週格式或查不到就原樣返回。"""
+            try:
+                if isinstance(val, str) and val in week_first_day_map:
+                    return f"{val} ({week_first_day_map[val]})"
+            except Exception:
+                pass
+            return val
+
 
         d_gaps = scan_gaps_from_df(daily_with_today.rename(columns={"date": "key"}), key_col="key", timeframe="D", c1=c1)
         w_gaps = scan_gaps_from_df(wk, key_col="key", timeframe="W", c1=c1)
@@ -655,6 +678,13 @@ def main() -> None:
                           "ka_key","kb_key","gap_low","gap_high","gap_width"]
             show_df = df_out[[c for c in cols_order if c in df_out.columns]].copy()
 
+            # 週K鍵值美化：'YYYY-WW' -> 'YYYY-WW (MM-DD)'（日/月維持原樣）
+            if "ka_key" in show_df.columns:
+                show_df["ka_key"] = show_df["ka_key"].apply(_augment_week_key)
+            if "kb_key" in show_df.columns:
+                show_df["kb_key"] = show_df["kb_key"].apply(_augment_week_key)
+
+
             # 顯示到小數後兩位（用 Styler.format 控制渲染精度）
             num_cols = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_df.columns]
             fmt_map = {c: "{:.2f}" for c in num_cols}
@@ -735,6 +765,13 @@ def main() -> None:
                 cols_prev = ["vs_c1","timeframe","edge_price","role","ka_key","kb_key","gap_low","gap_high","gap_width"]
                 show_prev = df_prev[[c for c in cols_prev if c in df_prev.columns]].copy()
                 show_prev = show_prev.rename(columns={"ka_key":"pivot_key", "kb_key":"trigger_key"})
+
+                # 週K鍵值美化：'YYYY-WW' -> 'YYYY-WW (MM-DD)'
+                if "pivot_key" in show_prev.columns:
+                    show_prev["pivot_key"] = show_prev["pivot_key"].apply(_augment_week_key)
+                if "trigger_key" in show_prev.columns:
+                    show_prev["trigger_key"] = show_prev["trigger_key"].apply(_augment_week_key)
+
 
                 # 樣式：c1 黃底、數字兩位小數
                 num_cols_prev = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_prev.columns]
