@@ -467,7 +467,7 @@ def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 1
 # -----------------------------
 def main() -> None:
     st.set_page_config(page_title="Gap S/R (D/W/M)", layout="wide")
-    st.title("this is money -> 缺口支撐 / 壓力（D / W / M）")
+    st.title("this is money -> 支撐 / 壓力（D / W / M）")
 
     st.markdown(
         """
@@ -598,6 +598,12 @@ def main() -> None:
         # ===============================
         df_out = pd.DataFrame([g.__dict__ for g in gaps])
         if not df_out.empty:
+            # ✅ 先保留一份原始（含 Pivot High）給專區用
+            df_prev_source = df_out.copy()
+
+            # ⬇️ 缺口清單要乾淨 → 過濾掉帶量前波高
+            df_out = df_out[df_out["gap_type"] != "hv_prev_high"].copy()
+
             role_rank = {"resistance": 0, "at_edge": 1, "support": 2}
             tf_rank   = {"M": 0, "W": 1, "D": 2}
             df_out["role_rank"] = df_out["role"].map(role_rank)
@@ -608,11 +614,9 @@ def main() -> None:
 
             # 更粗、更清楚的方向符號
             df_out.insert(0, "vs_c1", np.where(df_out["edge_price"] > c1, "▲",
-                                 np.where(df_out["edge_price"] < c1, "▼", "●")))
+                                np.where(df_out["edge_price"] < c1, "▼", "●")))
 
-            # ⬇️ 新增：若為帶量前波高，標註 Pivot High
-            mask_prev = (df_out["gap_type"] == "hv_prev_high")
-            df_out.loc[mask_prev, "vs_c1"] = df_out.loc[mask_prev, "vs_c1"] + " Pivot High"
+            # ⚠️ 注意：這裡不用再標註 "Pivot High"，因為已經獨立到專區了
 
             # 插入「c1 分隔列」並重新排序到正確位置
             marker_row = {
@@ -624,7 +628,7 @@ def main() -> None:
             df_out = df_out.sort_values(["role_rank","edge_price","tf_rank"],
                                         ascending=[True,False,True]).reset_index(drop=True)
 
-            st.subheader("缺口清單（含 HV 線）")
+            st.subheader("缺口 & 大量K棒 S/R")
 
             # ⬇️ 新增：把所有提示收納進 expander
             with st.expander("📌 提示 / 規則說明", expanded=False):
@@ -685,6 +689,78 @@ def main() -> None:
             )
 
             st.dataframe(styled, height=360, use_container_width=True)
+
+            # ===============================
+            # ② 帶量前波高「專區」表格（獨立）
+            # ===============================
+            st.markdown("---")
+            st.subheader("帶量前波高（Pivot High）專區")
+
+            # 用 df_prev_source，而不是 df_out
+            df_prev = df_prev_source[df_prev_source["gap_type"] == "hv_prev_high"].copy()
+
+            if df_prev.empty:
+                st.info("此範圍內沒有偵測到『帶量前波高』。")
+            else:
+                # 角色與時間框架排序權重（時間框架：月→週→日）
+                role_rank_ph = {"resistance": 0, "at_edge": 1, "support": 2}
+                tf_rank_ph   = {"M": 0, "W": 1, "D": 2}
+
+                # 排序鍵：時間框架（月→週→日） → ka_key(大到小) → 角色（壓力→交界→支撐） → 價位（大→小）
+                # ka_key 都是字串（D:YYYY-MM-DD / W:YYYY-WW / M:YYYY-MM），字串倒序與時間倒序一致
+                df_prev["tf_rank_ph"]   = df_prev["timeframe"].map(tf_rank_ph)
+                df_prev["role_rank_ph"] = df_prev["role"].map(role_rank_ph)
+
+                # 先插入 c1 標記列（和第一張表一致）
+                marker_row_ph = {
+                    "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
+                    "ka_key":"—","kb_key":"—","gap_low":c1,"gap_high":c1,"gap_width":0.0,
+                    "vs_c1":"🔶 c1","tf_rank_ph":tf_rank_ph["W"],"role_rank_ph":role_rank_ph["at_edge"],
+                }
+                df_prev = pd.concat([df_prev, pd.DataFrame([marker_row_ph])], ignore_index=True)
+
+                # 方向符號：維持與主表一致；並加上 Pivot High 標記字樣
+                df_prev["vs_c1"] = np.where(df_prev["edge_price"] > c1, "▲",
+                                    np.where(df_prev["edge_price"] < c1, "▼", "●"))
+                mask_prev2 = (df_prev["gap_type"] == "hv_prev_high")
+                df_prev.loc[mask_prev2, "vs_c1"] = df_prev.loc[mask_prev2, "vs_c1"] + " Pivot High"
+
+                # 依規則排序（注意 ka_key 以字串倒序達成「大到小」）
+                df_prev = df_prev.sort_values(
+                    by=["tf_rank_ph", "ka_key", "role_rank_ph", "edge_price"],
+                    ascending=[True, False, True, False]
+                ).reset_index(drop=True)
+
+                # 欄位顯示（把 ka_key/kb_key 改名，避免誤會）
+                cols_prev = ["vs_c1","timeframe","edge_price","role","ka_key","kb_key","gap_low","gap_high","gap_width"]
+                show_prev = df_prev[[c for c in cols_prev if c in df_prev.columns]].copy()
+                show_prev = show_prev.rename(columns={"ka_key":"pivot_key", "kb_key":"trigger_key"})
+
+                # 樣式：c1 黃底、數字兩位小數
+                num_cols_prev = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_prev.columns]
+                fmt_map_prev = {c: "{:.2f}" for c in num_cols_prev}
+
+                def highlight_c1_row_prev(row):
+                    is_marker = (str(row.get("vs_c1","")) == "🔶 c1")
+                    same_price = False
+                    try:
+                        same_price = float(row["edge_price"]) == float(c1)
+                    except Exception:
+                        pass
+                    if is_marker or same_price:
+                        return ["background-color: #fff3cd; font-weight: bold"] * len(row)
+                    return [""] * len(row)
+
+                styled_prev = (
+                    show_prev
+                        .style
+                        .format(fmt_map_prev)
+                        .apply(highlight_c1_row_prev, axis=1)
+                )
+
+                # 顯示第二張表（高度你可再調）
+                st.dataframe(styled_prev, height=260, use_container_width=True)
+
 
         else:
             st.info("此範圍內未偵測到缺口或大量 K 棒 S/R。")
