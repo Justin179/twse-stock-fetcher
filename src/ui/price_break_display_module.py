@@ -97,6 +97,100 @@ def compute_ma_with_today(stock_id: str, today_date: str, today_close: float, n:
     ma = (today_close + float(tail.sum())) / n
     return ma
 
+def is_uptrending_now(stock_id: str, today_date: str, c1, w1, m1, ma5, ma10, ma24, tol: float = 1e-6) -> bool:
+    """
+    判斷「當下現價 c1」是否為【向上趨勢盤】：
+      條件1：c1 > w1 且 c1 > m1
+      條件2：上彎5日均 > 上彎10日均 > 上彎24日均，且三條均線皆為上彎
+             （上彎沿用現有定義：c1 > N日均線的「基準價 baseline」）
+      條件3：c1 > 5日均線（且 5日均線必為上彎；由條件2中的 up5 保證）
+    其餘則視為【盤整盤】（False）。
+    """
+    # 基本數據不足
+    if any(x is None for x in [c1, w1, m1, ma5, ma10, ma24]):
+        return False
+
+    try:
+        c1 = float(c1); w1 = float(w1); m1 = float(m1)
+        ma5 = float(ma5); ma10 = float(ma10); ma24 = float(ma24)
+    except Exception:
+        return False
+
+    # 條件1：現價同時過上週與上月高
+    cond1 = (c1 > w1) and (c1 > m1)
+
+    # 取各 N 日均線的「基準價 baseline」
+    b5, _  = get_baseline_and_deduction(stock_id, today_date, n=5)
+    b10, _ = get_baseline_and_deduction(stock_id, today_date, n=10)
+    b24, _ = get_baseline_and_deduction(stock_id, today_date, n=24)
+    if any(b is None for b in [b5, b10, b24]):
+        return False
+
+    # 均線是否上彎（以 c1 相對 baseline 判斷）
+    up5  = c1 > float(b5)  + tol
+    up10 = c1 > float(b10) + tol
+    up24 = c1 > float(b24) + tol
+
+    # 多頭排列：5 > 10 > 24
+    bull_stack = (ma5 > ma10 > ma24)
+
+    # 條件2：三條均線上彎 + 多頭排列
+    cond2 = up5 and up10 and up24 and bull_stack
+
+    # 條件3：現價站上 5 日均線
+    cond3 = c1 > ma5
+
+    return bool(cond1 and cond2 and cond3)
+
+def is_downtrending_now(
+    stock_id: str, today_date: str, c1, w2, m2, ma5, ma10, ma24, tol: float = 1e-6
+) -> bool:
+    """
+    判斷「當下現價 c1」是否為【向下趨勢盤】：
+      條件1：c1 < w2 且 c1 < m2
+      條件2：下彎5日均 < 下彎10日均 < 下彎24日均，且三條均線皆為下彎
+             （下彎定義：c1 < N日均線的「基準價 baseline」）
+      條件3：c1 < 5日均線（且 5日均線必為下彎；由條件2中的 down5 保證）
+    其餘則視為非向下趨勢（False）。
+    """
+    if any(x is None for x in [c1, w2, m2, ma5, ma10, ma24]):
+        return False
+
+    try:
+        c1 = float(c1); w2 = float(w2); m2 = float(m2)
+        ma5 = float(ma5); ma10 = float(ma10); ma24 = float(ma24)
+    except Exception:
+        return False
+
+    # 條件1：現價同時跌破上週低、上月低
+    cond1 = (c1 < w2) and (c1 < m2)
+
+    # 取各 N 日均線 baseline
+    b5, _  = get_baseline_and_deduction(stock_id, today_date, n=5)
+    b10, _ = get_baseline_and_deduction(stock_id, today_date, n=10)
+    b24, _ = get_baseline_and_deduction(stock_id, today_date, n=24)
+    if any(b is None for b in [b5, b10, b24]):
+        return False
+
+    # 是否「下彎」：c1 低於 baseline
+    down5  = c1 < float(b5)  - tol
+    down10 = c1 < float(b10) - tol
+    down24 = c1 < float(b24) - tol
+
+    # 空頭排列：5 < 10 < 24
+    bear_stack = (ma5 < ma10 < ma24)
+
+    # 條件2：三條均線皆下彎 + 空頭排列
+    cond2 = down5 and down10 and down24 and bear_stack
+
+    # 條件3：現價跌破 5 日均線
+    cond3 = c1 < ma5
+
+    return bool(cond1 and cond2 and cond3)
+
+
+
+
 def calc_bias(a, b):
     """依 A→B 計算乖離率 ((B-A)/A*100)。資料不足或 A=0 時回傳 None。"""
     try:
@@ -179,6 +273,10 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
         # 取得基準價、扣抵值
         baseline5, deduction5 = get_baseline_and_deduction(stock_id, today_date)
+        # 後面 col_mid / col_right 都可用
+        ma5  = compute_ma_with_today(stock_id, today_date, c1, 5)
+        ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
+        ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
 
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
@@ -206,16 +304,28 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
         with col_mid:
             st.markdown("**提示訊息：**")
+            # ✅ 在這裡判斷，先把詞條加到 tips
+            is_up   = is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24)
+            is_down = is_downtrending_now(stock_id, today_date, c1, w2, m2, ma5, ma10, ma24)
+
+            if is_up:
+                tips.insert(0, "向上趨勢盤，帶量 考慮追價!")
+            elif is_down:
+                tips.insert(0, "向下趨勢盤，帶量 考慮離場!")
+            else:
+                tips.insert(0, "非趨勢盤，量縮 考慮區間佈局!")
+
             for tip in tips:
                 if (tip.startswith("今收盤(現價) 過昨高")
                     or tip.startswith("今收盤(現價) 過上週高點")
-                    or tip.startswith("今收盤(現價) 過上月高點")):
+                    or tip.startswith("今收盤(現價) 過上月高點")
+                    or tip.startswith("向上趨勢盤")):
                     icon = "✅"
                 elif ("過" in tip and "高" in tip) or ("開高" in tip):
                     icon = "✔️"
-                elif ("破" in tip and "低" in tip) or ("開低" in tip):
+                elif ("破" in tip and "低" in tip) or ("開低" in tip) or (tip.startswith("向下趨勢盤")):
                     icon = "❌"
-                elif "開平" in tip:
+                elif ("開平" in tip) or (tip.startswith("非趨勢盤")):
                     icon = "➖"
                 else:
                     icon = "ℹ️"
@@ -231,9 +341,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
         with col_right:
             st.markdown("**乖離率：**")
-            ma5  = compute_ma_with_today(stock_id, today_date, c1, 5)
-            ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
-            ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
+
             render_bias_line("5日均線乖離",  ma5,  c1, stock_id=stock_id, today_date=today_date)
             render_bias_line("10日均線乖離", ma10, c1, stock_id=stock_id, today_date=today_date)
             render_bias_line("24日均線乖離", ma24, c1, stock_id=stock_id, today_date=today_date)
