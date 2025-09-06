@@ -48,8 +48,16 @@ def get_week_month_high_low(stock_id):
 
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(
-        "SELECT date, high, low FROM twse_prices WHERE stock_id = ?", conn, params=(stock_id,)
+        """
+        SELECT date, high, low
+        FROM twse_prices
+        WHERE stock_id = ?
+        AND close IS NOT NULL
+        AND close != 0
+        """,
+        conn, params=(stock_id,)
     )
+
     conn.close()
 
     df["date"] = pd.to_datetime(df["date"])
@@ -84,6 +92,7 @@ def get_week_month_high_low(stock_id):
     else:
         m1 = m2 = None
 
+    # print(f"📊 {stock_id} 上週高低：{w1}, {w2}；上月高低：{m1}, {m2}")
     return w1, w2, m1, m2
 
 
