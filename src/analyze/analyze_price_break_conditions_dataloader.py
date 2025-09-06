@@ -137,7 +137,7 @@ def get_today_prices(stock_id, sdk=None):
     富邦 API 維護/失敗時，改走 DB fallback（僅保證 date/c1/o/c2）。
     """
     if is_fubon_api_maintenance_time():
-        # 富邦 API 維護時段，直接 fallback
+        # print("⚠️ 富邦 API 維護時間，改用資料庫 fallback")
         return get_latest_price_from_db(stock_id)
 
     try:

@@ -162,6 +162,7 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
         today = get_today_prices(stock_id, sdk)
+        # print(f"📊 {stock_id} 成交量v: {today.get('v')}") # 1101 成交量v: None
         
         today_date = today["date"]
         db_data = get_recent_prices(stock_id, today_date)
