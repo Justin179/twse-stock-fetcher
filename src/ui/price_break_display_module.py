@@ -7,6 +7,8 @@ from common.db_helpers import fetch_close_history_from_db, fetch_close_history_t
 from analyze.price_baseline_checker import check_price_vs_baseline_and_deduction
 from analyze.moving_average_weekly import is_price_above_upward_wma5
 from analyze.moving_average_monthly import is_price_above_upward_mma5
+# 檔頭適當位置加入
+from analyze.week_month_kbar_tags_helper import get_week_month_tags
 
 
 import sqlite3
@@ -314,6 +316,21 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 tips.insert(0, "向下趨勢盤，帶量 考慮離場!")
             else:
                 tips.insert(0, "非趨勢盤，量縮 考慮區間佈局!")
+
+            # 在 with col_mid:、st.markdown("**提示訊息：**") 之後、for tip in tips: 之前插入
+            tags = get_week_month_tags(
+                stock_id,
+                db_path="data/institution.db",
+                today_info=today,                # 直接把今天盤中 dict 傳入（上面已經拿到 today）
+                weekly_threshold_pct=6.5,
+                monthly_threshold_pct=15.0,
+                multiple_ma=1.7,
+                multiple_prev=1.5,
+                no_shrink_ratio=0.8,
+            )
+            st.markdown(f"- {tags['week']}")
+            st.markdown(f"- {tags['month']}")
+
 
             for tip in tips:
                 if (tip.startswith("今收盤(現價) 過昨高")
