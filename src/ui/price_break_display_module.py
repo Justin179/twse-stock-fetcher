@@ -253,6 +253,18 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
         unsafe_allow_html=True,
     )
 
+# 只標記「(大)漲/(大)跌」與「帶大量」三個關鍵詞的樣式
+def _stylize_week_month_tag(line: str) -> str:
+    import re
+    def repl(m):
+        w = m.group(0)
+        if w in ("大漲", "漲"):
+            return f"<span style='color:#ef4444'>{w}</span>"
+        else:  # 大跌 / 跌
+            return f"<span style='color:#16a34a'>{w}</span>"
+    s = re.sub(r"大漲|大跌|漲|跌", repl, line)
+    s = s.replace("帶大量", "<b>帶大量</b>")
+    return s
 
 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
@@ -328,11 +340,8 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 multiple_prev=1.5,
                 no_shrink_ratio=0.8,
             )
-            st.markdown(f"- {tags['week']}")
-            st.markdown(f"- {tags['month']}")
 
-
-            for tip in tips:
+            for idx, tip in enumerate(tips):
                 if (tip.startswith("今收盤(現價) 過昨高")
                     or tip.startswith("今收盤(現價) 過上週高點")
                     or tip.startswith("今收盤(現價) 過上月高點")
@@ -347,14 +356,25 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 else:
                     icon = "ℹ️"
 
-                # 顏色判斷區：今收盤(現價)=藍色，昨收盤=橘色，其餘正常
+                # 原有顏色規則
                 if tip.startswith("今收盤(現價)"):
                     tip_html = f'<span style="color:blue">{tip}</span>'
                 elif tip.startswith("昨收盤"):
                     tip_html = f'<span style="color:orange">{tip}</span>'
                 else:
                     tip_html = tip
+
+                # 先印第 idx 條 tip
                 st.markdown(f"{icon} {tip_html}", unsafe_allow_html=True)
+
+                # ⭐ 只在「趨勢盤」這一行印完後，馬上加上上週／上月詞條
+                if idx == 0:
+                    wk_html = _stylize_week_month_tag(tags['week'])
+                    mo_html = _stylize_week_month_tag(tags['month'])
+                    # 以縮排箭頭表示附屬於趨勢盤
+                    st.markdown(f"　 {wk_html}", unsafe_allow_html=True)
+                    st.markdown(f"　 {mo_html}", unsafe_allow_html=True)
+
 
         with col_right:
             st.markdown("**乖離率：**")

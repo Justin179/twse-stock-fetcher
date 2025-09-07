@@ -122,7 +122,7 @@ def _to_line(row: pd.Series, title: str, threshold_pct: float) -> str:
     o, h, c = float(row["open"]), float(row["high"]), float(row["close"])
     tag_move, pct = _classify_move(o, c, threshold_pct)
     tag_vol = "帶大量" if bool(row.get("is_heavy", False)) else "一般量"
-    tag_wick = "，留長上影線" if _has_long_upper_shadow(o, h, c) else ""
+    tag_wick = "，留上影線" if _has_long_upper_shadow(o, h, c) else ""
     return f"{title} {tag_move}({pct:.2f}%) {tag_vol}{tag_wick}"
 
 # ---------- 對外主函式 ----------
