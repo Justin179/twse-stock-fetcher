@@ -89,7 +89,7 @@ with col2:
             display_rs_rsi_info(selected)
 
         with col_mid:
-            render_bias_calculator(key_suffix=selected)
+            render_bias_calculator(key_suffix=selected, compact=True)
 
         with col_right:
             render_peg_calculator(selected, sdk=sdk, key_suffix=selected)

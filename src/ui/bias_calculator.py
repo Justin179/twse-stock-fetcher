@@ -2,29 +2,38 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-def render_bias_calculator(key_suffix: str = ""):
+def render_bias_calculator(key_suffix: str = "", compact: bool = False):
     st.caption("✏️ 乖離率快算 (A→B)")
 
     suffix = f"-{key_suffix}" if key_suffix else ""
 
+    # 🔹依 compact 模式決定寬度 & 樣式
+    input_width = "100px" if compact else "160px"
+    padding = "6px 8px" if compact else "8px 10px"
+    label_font = "13px" if compact else "14px"
+    border_radius = "6px" if compact else "8px"
+    min_width_result = "80px" if compact else "120px"
+    gap = "8px" if compact else "12px"
+    height = 120 if compact else 160
+
     components.html(
         f"""
         <div style="font-family: ui-sans-serif, system-ui; line-height:1.4;">
-          <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+          <div style="display:flex; gap:{gap}; align-items:end; flex-wrap:nowrap;">
             <div style="display:flex; flex-direction:column;">
-              <label style="font-size:14px; color:#6b7280; margin-bottom:4px;">起點價</label>
-              <input id="bias-a{suffix}" type="text" inputmode="decimal" placeholder="A 點"
-                     style="padding:8px 10px; width:160px; border:1px solid #d1d5db; border-radius:8px; outline:none;">
+              <label style="font-size:{label_font}; color:#6b7280; margin-bottom:2px;">起點價</label>
+              <input id="bias-a{suffix}" type="text" inputmode="decimal" placeholder="A"
+                     style="padding:{padding}; width:{input_width}; border:1px solid #d1d5db; border-radius:{border_radius}; outline:none;">
             </div>
             <div style="display:flex; flex-direction:column;">
-              <label style="font-size:14px; color:#6b7280; margin-bottom:4px;">終點價</label>
-              <input id="bias-b{suffix}" type="text" inputmode="decimal" placeholder="B 點"
-                     style="padding:8px 10px; width:160px; border:1px solid #d1d5db; border-radius:8px; outline:none;">
+              <label style="font-size:{label_font}; color:#6b7280; margin-bottom:2px;">終點價</label>
+              <input id="bias-b{suffix}" type="text" inputmode="decimal" placeholder="B"
+                     style="padding:{padding}; width:{input_width}; border:1px solid #d1d5db; border-radius:{border_radius}; outline:none;">
             </div>
             <div style="display:flex; flex-direction:column;">
-              <label style="font-size:14px; color:#6b7280; margin-bottom:4px;">乖離率</label>
+              <label style="font-size:{label_font}; color:#6b7280; margin-bottom:2px;">乖離率</label>
               <div id="bias-result{suffix}"
-                   style="min-width:120px; padding:8px 10px; border:1px solid #f3f4f6; border-radius:8px; background:#f9fafb; font-weight:600;">
+                   style="min-width:{min_width_result}; padding:{padding}; border:1px solid #f3f4f6; border-radius:{border_radius}; background:#f9fafb; font-weight:600; text-align:right;">
                 -
               </div>
             </div>
@@ -82,5 +91,5 @@ def render_bias_calculator(key_suffix: str = ""):
         }})();
         </script>
         """,
-        height=160,
+        height=height,
     )
