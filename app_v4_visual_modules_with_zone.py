@@ -22,6 +22,7 @@ from ui.collect_stock_button import render_collect_stock_button
 from ui.show_temp_list_expander import render_temp_list_expander
 from ui.bias_calculator import render_bias_calculator
 from ui.peg_calculator import render_peg_calculator
+from ui.volume_avg_calculator import render_volume_avg_calculator
 
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
@@ -90,6 +91,7 @@ with col2:
 
         with col_mid:
             render_bias_calculator(key_suffix=selected, compact=True)
+            render_volume_avg_calculator(key_suffix=selected, compact=True, default_days=5)
 
         with col_right:
             render_peg_calculator(selected, sdk=sdk, key_suffix=selected)
