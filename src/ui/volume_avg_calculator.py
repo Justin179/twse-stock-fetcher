@@ -9,30 +9,35 @@ def render_volume_avg_calculator(
 ):
     """
     成交量快算：輸入「成交量」與「交易日數」，顯示「日均量」(四捨五入到小數點後第二位)
-    - Enter 在「成交量」欄位 -> 跳到「交易日數」
-    - Enter 或 Tab 在「交易日數」欄位 -> 計算
-    - 預設交易日數為 5，可自行改
+
+    現在的快捷鍵：
+    - 在「總成交量」欄位按 Enter -> 直接計算、顯示結果，並清空成交量欄位（保留交易日數）
+    - 在「交易日數」欄位按 Enter 或 Tab -> 計算
     """
     st.caption("🧮 成交量快算（估日均量）")
 
     suffix = f"-{key_suffix}" if key_suffix else ""
 
-    # 依 compact 模式控制尺寸，與 bias_calculator 風格一致
+    # 尺寸與樣式（比照 bias_calculator）
     input_width = "100px" if compact else "160px"
     padding = "6px 8px" if compact else "8px 10px"
     label_font = "13px" if compact else "14px"
     border_radius = "6px" if compact else "8px"
     min_width_result = "100px" if compact else "140px"
     gap = "8px" if compact else "12px"
-    height = 120 if compact else 160
+
+    # 輕微上移（縮減與上個元件的垂直留白）
+    # 並把高度略縮短
+    height = 108 if compact else 150
+    top_margin = "-8px" if compact else "-6px"
 
     components.html(
         f"""
-        <div style="font-family: ui-sans-serif, system-ui; line-height:1.4;">
+        <div style="font-family: ui-sans-serif, system-ui; line-height:1.4; margin-top:{top_margin};">
           <div style="display:flex; gap:{gap}; align-items:end; flex-wrap:nowrap;">
             <!-- 成交量 -->
             <div style="display:flex; flex-direction:column;">
-              <label style="font-size:{label_font}; color:#6b7280; margin-bottom:2px;">成交量</label>
+              <label style="font-size:{label_font}; color:#6b7280; margin-bottom:2px;">總成交量</label>
               <input id="vol-total{suffix}" type="text" inputmode="decimal" placeholder="例如 800"
                      style="padding:{padding}; width:{input_width}; border:1px solid #d1d5db; border-radius:{border_radius}; outline:none;">
             </div>
@@ -88,16 +93,17 @@ def render_volume_avg_calculator(
             }}
 
             const avg = total / days;
-            // 四捨五入到小數點後第二位
-            resEl.textContent = avg.toFixed(2);
+            resEl.textContent = avg.toFixed(2); // 四捨五入至小數第二位
             resEl.style.color = "#111827";
           }}
 
-          // 成交量：Enter -> 跳到交易日數
+          // 成交量：Enter -> 直接計算並清空成交量欄位
           totalEl.addEventListener("keydown", (e) => {{
             if (e.key === "Enter") {{
               e.preventDefault();
-              daysEl.focus();
+              compute();
+              totalEl.value = "";
+              setTimeout(() => totalEl.focus(), 0);
             }}
           }});
 
