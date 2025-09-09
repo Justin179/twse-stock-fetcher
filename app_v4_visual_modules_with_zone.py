@@ -63,7 +63,7 @@ with col1:
 
     # 🔹 這一行就把整個功能帶進來（顯示在上方）
     render_collect_stock_button(
-        source_files=["匯入XQ_rs90強勢股.csv","匯入XQ_籌碼集中度.csv","過上週上月高個股.csv"],
+        source_files=["匯入XQ_rs90強勢股.csv","匯入XQ_籌碼集中度.csv","匯入XQ_過上月高點.csv","過上週上月高個股.csv"],
         temp_txt="temp_list.txt",
     )
 

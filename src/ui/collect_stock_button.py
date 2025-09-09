@@ -21,6 +21,7 @@ def _collect_and_write_with_single_blank_line(
         source_files = [
             "匯入XQ_rs90強勢股.csv",
             "匯入XQ_籌碼集中度.csv",
+            "匯入XQ_過上月高點.csv",
             "過上週上月高個股.csv",
         ]
 

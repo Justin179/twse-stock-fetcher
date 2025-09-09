@@ -38,6 +38,8 @@ if input_name == "shareholding_concentration_list":
     xq_filename = "匯入XQ_籌碼集中度.csv"
 elif input_name == "high_relative_strength_stocks":
     xq_filename = "匯入XQ_rs90強勢股.csv"
+elif input_name == "break_above_last_months_high":
+    xq_filename = "匯入XQ_過上月高點.csv"
 else:
     xq_filename = f"{input_name}_output.csv"
 
