@@ -18,7 +18,7 @@ from datetime import datetime
 from ui.bias_calculator import render_bias_calculator
 import re
 from math import isclose
-
+from typing import Optional
 
 def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     """
@@ -267,6 +267,48 @@ def _stylize_week_month_tag(line: str) -> str:
     return s
 
 
+
+def _safe_float(v) -> Optional[float]:
+    try:
+        return float(v)
+    except Exception:
+        return None
+
+def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[float]) -> str:
+    """
+    回傳一條已排版好的文字，用於顯示：
+       今日/昨日成交量：ooo / xxx（達成率：YY%）（富邦api）
+    - today_info.get('v') 單位：張
+    - y_volume_in_shares  單位：股（DB 取出的 yesterday volume）→ 會自動轉張
+    - 若今日或昨日任一缺資料，達成率顯示為 '--'
+    - 任何例外都不會丟出，最終回傳一條可安全顯示的字串
+    """
+    # 今日
+    today_v = None
+    if isinstance(today_info, dict):
+        today_v = _safe_float(today_info.get("v"))
+
+    # 昨日（DB 是「股」→ 轉「張」）
+    y_vol = None
+    if y_volume_in_shares is not None:
+        y_vol = _safe_float(y_volume_in_shares)
+        if y_vol is not None:
+            y_vol = y_vol / 1000.0
+
+    # 顯示文字
+    today_str = f"{today_v:,.0f} 張" if today_v is not None else "查無資料"
+    yest_str  = f"{y_vol:,.0f} 張"  if y_vol  is not None else "查無資料"
+
+    # 達成率
+    if (today_v is not None) and (y_vol is not None) and (y_vol > 0):
+        rate_pct = today_v / y_vol * 100.0
+        rate_str = f"{rate_pct:.0f}%"
+    else:
+        rate_str = "--"
+
+    return f"今/昨 成交量：{today_str} / {yest_str}（達成: {rate_str}, 富邦api）"
+
+
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
         today = get_today_prices(stock_id, sdk)
@@ -298,7 +340,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
         with col_left:
-            st.markdown(f"- 昨日成交量：{v1 / 1000:,.0f} 張 (富邦api)" if v1 is not None else "- 昨日成交量：無資料")
+            st.markdown(f"- {format_daily_volume_line(today, v1)}")
             st.markdown(f"- <span style='color:orange'>昨收：<b>{c2}</b></span> -> 今開(<span style='color:red'>{today_date[5:]}</span>)：<b>{o}</b>", unsafe_allow_html=True)
             st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
 
