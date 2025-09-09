@@ -483,7 +483,22 @@ def main() -> None:
 
     with st.sidebar:
         st.subheader("設定")
-        stock_id = st.text_input("股票代碼（例：2330）", value="2330")
+        # stock_id = st.text_input("股票代碼（例：2330）", value="2330")
+        # 用 on_change 模擬提交，然後自動清空
+        def submit_stock_id():
+            st.session_state["submitted_stock_id"] = st.session_state["stock_id_input"]
+            st.session_state["stock_id_input"] = ""  # 清空輸入框
+
+        st.text_input(
+            "股票代碼（例：2330）",
+            key="stock_id_input",
+            placeholder="例如：2330",
+            on_change=submit_stock_id
+        )
+
+        # 使用者輸入完成按 Enter → submit_stock_id 被呼叫
+        stock_id = st.session_state.get("submitted_stock_id", "").strip()
+
         last_days = st.number_input("日K 顯示天數", min_value=60, max_value=720, value=120, step=30)
 
         st.markdown("---")
