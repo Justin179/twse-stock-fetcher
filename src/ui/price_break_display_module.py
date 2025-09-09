@@ -271,6 +271,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
     try:
         today = get_today_prices(stock_id, sdk)
         # print(f"📊 {stock_id} 成交量v: {today.get('v')}") # 1101 成交量v: None
+        # 盤中 會有成交量 v，這意味著可以算現在的成交量達成率
+        # 1101 成交量v: 16991
+        # 2330 成交量v: 13800
         
         today_date = today["date"]
         db_data = get_recent_prices(stock_id, today_date)
