@@ -533,6 +533,22 @@ def main() -> None:
 
     stock_name = get_stock_name_by_id(stock_id)
 
+    from pathlib import Path
+
+    COVER_CANDIDATES = [
+        "support-and-resistance-cover-image.png",
+        "data/images/support-and-resistance-cover-image.png",
+    ]
+    cover_img = next((p for p in COVER_CANDIDATES if Path(p).exists()), None)
+
+    if not stock_id:
+        if cover_img:
+            st.image(cover_img, use_container_width=True)
+        else:
+            st.info("請在左側輸入股票代碼（例：2330）")
+        st.stop()  # 直接中止，不要進入查資料與畫圖
+
+
     conn = sqlite3.connect(db_path)
     try:
         daily = load_daily(conn, stock_id, last_n=int(last_days))
