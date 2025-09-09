@@ -84,17 +84,17 @@ with col1:
 
 with col2:
     if selected:
-        # 顯示 RS / RSI（左） + 乖離率快算（中） + PEG 快算（右）
-        col_left, col_mid, col_right = st.columns([2, 3, 3])
-        with col_left:
-            display_rs_rsi_info(selected)
+        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算", expanded=False):
+            col_left, col_mid, col_right = st.columns([2, 3, 3])
+            with col_left:
+                display_rs_rsi_info(selected)
 
-        with col_mid:
-            render_bias_calculator(key_suffix=selected, compact=True)
-            render_volume_avg_calculator(key_suffix=selected, compact=True, default_days=5)
+            with col_mid:
+                render_bias_calculator(key_suffix=selected, compact=True)
+                render_volume_avg_calculator(key_suffix=selected, compact=True, default_days=5)
 
-        with col_right:
-            render_peg_calculator(selected, sdk=sdk, key_suffix=selected)
+            with col_right:
+                render_peg_calculator(selected, sdk=sdk, key_suffix=selected)
 
         st.subheader("📌 關鍵價位分析")
         result = display_price_break_analysis(selected, dl=dl, sdk=sdk)
