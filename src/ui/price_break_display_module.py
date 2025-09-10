@@ -368,9 +368,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             is_down = is_downtrending_now(stock_id, today_date, c1, w2, m2, ma5, ma10, ma24)
 
             if is_up:
-                tips.insert(0, "向上趨勢盤，帶量 考慮追價!")
+                tips.insert(0, "向上趨勢盤，帶量 破壓追價!")
             elif is_down:
-                tips.insert(0, "向下趨勢盤，帶量 考慮離場!")
+                tips.insert(0, "向下趨勢盤，帶量 破撐離場!")
             else:
                 tips.insert(0, "非趨勢盤，量縮 考慮區間佈局!")
 
