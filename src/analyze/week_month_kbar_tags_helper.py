@@ -113,16 +113,17 @@ def _classify_move(open_p: float, close_p: float, threshold_pct: float) -> Tuple
     else:
         return ("大跌", pct) if abs(pct) > threshold_pct else ("跌", pct)
 
-def _has_long_upper_shadow(open_p: float, high_p: float, close_p: float) -> bool:
+def _has_long_upper_shadow(open_p: float, high_p: float, low_p: float, close_p: float) -> bool:
     upper = high_p - max(open_p, close_p)
     body  = abs(close_p - open_p)
-    return (upper > 0) and (upper > body)
+    lower = min(open_p, close_p) - low_p
+    return (upper > 0) and (upper > body) and (upper > lower)
 
 def _to_line(row: pd.Series, title: str, threshold_pct: float) -> str:
-    o, h, c = float(row["open"]), float(row["high"]), float(row["close"])
+    o, h, l, c = float(row["open"]), float(row["high"]), float(row["low"]), float(row["close"])
     tag_move, pct = _classify_move(o, c, threshold_pct)
     tag_vol = "帶大量" if bool(row.get("is_heavy", False)) else "一般量"
-    tag_wick = "，留上影線" if _has_long_upper_shadow(o, h, c) else ""
+    tag_wick = "，留上影線" if _has_long_upper_shadow(o, h, l, c) else ""
     return f"{title} {tag_move}({pct:.2f}%) {tag_vol}{tag_wick}"
 
 # ---------- 對外主函式 ----------
