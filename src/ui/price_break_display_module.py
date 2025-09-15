@@ -280,7 +280,7 @@ def _inject_rate_after_volume(raw_line: str, rate: float | None) -> str:
     def repl(m: re.Match):
         vol = m.group(1)
         shadow = m.group(2) or ""
-        return f"{vol}（達成: {rate:.0f}%）{shadow}"
+        return f"{vol}（達成: <span style='color:#ef4444'>{rate:.0f}%</span>）{shadow}"
 
     return re.sub(pattern, repl, raw_line, count=1)
 
@@ -450,7 +450,7 @@ def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[floa
     # 達成率
     if (today_v is not None) and (y_vol is not None) and (y_vol > 0):
         rate_pct = today_v / y_vol * 100.0
-        rate_str = f"{rate_pct:.0f}%"
+        rate_str = f"<span style='color:#ef4444'>{rate_pct:.0f}%</span>"
     else:
         rate_str = "--"
 
@@ -488,7 +488,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
         with col_left:
-            st.markdown(f"- {format_daily_volume_line(today, v1)}")
+            st.markdown(f"- {format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
             st.markdown(f"- <span style='color:orange'>昨收：<b>{c2}</b></span> -> 今開(<span style='color:red'>{today_date[5:]}</span>)：<b>{o}</b>", unsafe_allow_html=True)
             st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
 
