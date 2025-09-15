@@ -18,7 +18,7 @@ from datetime import datetime
 from ui.bias_calculator import render_bias_calculator
 import re
 from math import isclose
-from typing import Optional
+from typing import Optional, Dict
 
 def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     """
@@ -266,13 +266,161 @@ def _stylize_week_month_tag(line: str) -> str:
     s = s.replace("帶大量", "<b>帶大量</b>")
     return s
 
+def _inject_rate_after_volume(raw_line: str, rate: float | None) -> str:
+    """
+    將「達成率」插入到『帶大量/一般量』之後，並讓『，留上影線』永遠放在該段最後。
+    例：
+      上週 跌(-0.67%) 帶大量，留上影線  →  上週 跌(-0.67%) 帶大量（達成: 7%），留上影線
+      上月 跌(-7.04%) 一般量            →  上月 跌(-7.04%) 一般量（達成: 53%）
+    """
+    if rate is None:
+        return raw_line
 
+    pattern = r"(帶大量|一般量)(，留上影線)?"
+    def repl(m: re.Match):
+        vol = m.group(1)
+        shadow = m.group(2) or ""
+        return f"{vol}（達成: {rate:.0f}%）{shadow}"
+
+    return re.sub(pattern, repl, raw_line, count=1)
 
 def _safe_float(v) -> Optional[float]:
     try:
         return float(v)
     except Exception:
         return None
+
+
+
+def _load_recent_daily_volumes(db_path: str, stock_id: str, last_n: int = 300) -> pd.DataFrame:
+    """
+    讀取最近 N 日的日K（只要日期與成交量），來源：twse_prices。
+    注意：DB 成交量單位為「股」。
+    """
+    sql = f"""
+        SELECT date, volume
+        FROM twse_prices
+        WHERE stock_id = ?
+        ORDER BY date DESC
+        LIMIT {int(last_n)}
+    """
+    with sqlite3.connect(db_path) as conn:
+        df = pd.read_sql_query(sql, conn, params=[stock_id], parse_dates=["date"])
+    df = df.dropna(subset=["date", "volume"]).copy()
+    df["date"] = pd.to_datetime(df["date"]).dt.normalize()
+    # 僅保留 >0 的有效成交量
+    df = df[df["volume"] > 0].sort_values("date").reset_index(drop=True)
+    return df
+
+def _attach_intraday_volume(df: pd.DataFrame, today_info: dict) -> pd.DataFrame:
+    """
+    把今日盤中資料併進日K序列：
+    - today_info['date']：字串日期
+    - today_info['v']   ：張（需 *1000 轉股）
+    若 df 已含今日，更新其 volume；否則直接 append。
+    """
+    if not isinstance(today_info, dict) or not today_info.get("date"):
+        return df
+    t_date = pd.to_datetime(str(today_info["date"])).normalize()
+    v = today_info.get("v", None)
+    try:
+        v = float(v) * 1000.0 if v is not None else None  # 張→股
+    except Exception:
+        v = None
+
+    if v is None:
+        return df
+
+    dfx = df.copy()
+    mask = (dfx["date"] == t_date)
+    if mask.any():
+        dfx.loc[mask, "volume"] = float(v)
+    else:
+        dfx = pd.concat([dfx, pd.DataFrame([{"date": t_date, "volume": float(v)}])], ignore_index=True)
+    return dfx.sort_values("date").reset_index(drop=True)
+
+def _aggregate_weekly(df: pd.DataFrame) -> pd.DataFrame:
+    """與互動圖一致：使用 ISO 年-週，volume 為該週總和。"""
+    iso = df["date"].dt.isocalendar()
+    wk = (
+        df.assign(year_week = iso.year.astype(str) + "-" + iso.week.map(lambda x: f"{int(x):02d}"))
+          .groupby("year_week", as_index=False)["volume"].sum()
+          .rename(columns={"year_week": "key", "volume": "volume_sum"})
+          .sort_values("key").reset_index(drop=True)
+    )
+    return wk
+
+def _aggregate_monthly(df: pd.DataFrame) -> pd.DataFrame:
+    """與互動圖一致：使用 YYYY-MM，volume 為該月總和。"""
+    mk = (
+        df.assign(year_month = df["date"].dt.strftime("%Y-%m"))
+          .groupby("year_month", as_index=False)["volume"].sum()
+          .rename(columns={"year_month": "key", "volume": "volume_sum"})
+          .sort_values("key").reset_index(drop=True)
+    )
+    return mk
+
+def _calc_achievement(curr: float, prev: Optional[float]) -> Optional[float]:
+    """計算達成率（curr / prev * 100），若前值缺或<=0 則回傳 None。"""
+    try:
+        prev = float(prev) if prev is not None else None
+        curr = float(curr)
+        if (prev is None) or (prev <= 0):
+            return None
+        return curr / prev * 100.0
+    except Exception:
+        return None
+
+def compute_week_month_volume_achievement(
+    stock_id: str,
+    today_info: dict,
+    db_path: str = "data/institution.db",
+) -> Dict[str, Optional[float]]:
+    """
+    回傳 {'week': 週量達成率, 'month': 月量達成率}：
+      - 以 DB 的日K成交量（股）為基礎，併入今日盤中成交量（張→股）
+      - 以 ISO 週 / YYYY-MM 聚合
+      - 使用「本週/本月累計」對比「上一週/上一月總量」計算達成率
+    """
+    df = _load_recent_daily_volumes(db_path, stock_id, last_n=300)
+    if df.empty:
+        return {"week": None, "month": None}
+
+    # 併入今日盤中
+    df2 = _attach_intraday_volume(df, today_info)
+    if df2.empty:
+        return {"week": None, "month": None}
+
+    # 取今日所屬週/月的 key
+    t_date = pd.to_datetime(str(today_info.get("date", df2["date"].iloc[-1]))).normalize()
+    iso = t_date.isocalendar()
+    curr_wk_key = f"{int(iso.year)}-{int(iso.week):02d}"
+    curr_mo_key = t_date.strftime("%Y-%m")
+
+    # 週聚合 & 月聚合
+    wk = _aggregate_weekly(df2)
+    mo = _aggregate_monthly(df2)
+
+    # 週：找目前週與上一週
+    wk_idx = wk.index[wk["key"] == curr_wk_key].tolist()
+    week_rate = None
+    if wk_idx:
+        i = wk_idx[0]
+        curr_wk = float(wk.iloc[i]["volume_sum"])
+        prev_wk = float(wk.iloc[i-1]["volume_sum"]) if i-1 >= 0 else None
+        week_rate = _calc_achievement(curr_wk, prev_wk)
+
+    # 月：找目前月與上一月
+    mo_idx = mo.index[mo["key"] == curr_mo_key].tolist()
+    month_rate = None
+    if mo_idx:
+        j = mo_idx[0]
+        curr_mo = float(mo.iloc[j]["volume_sum"])
+        prev_mo = float(mo.iloc[j-1]["volume_sum"]) if j-1 >= 0 else None
+        month_rate = _calc_achievement(curr_mo, prev_mo)
+
+    return {"week": week_rate, "month": month_rate}
+
 
 def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[float]) -> str:
     """
@@ -386,6 +534,15 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 no_shrink_ratio=0.8,
             )
 
+            # ⭐ 週/月達成率（含今日盤中）—— 計好等下接在詞條後面
+            wm_rate = compute_week_month_volume_achievement(
+                stock_id=stock_id,
+                today_info=today,
+                db_path="data/institution.db",
+            )
+            wk_rate = wm_rate.get("week", None)
+            mo_rate = wm_rate.get("month", None)
+
             for idx, tip in enumerate(tips):
                 if (tip.startswith("今收盤(現價) 過昨高")
                     or tip.startswith("今收盤(現價) 過上週高點")
@@ -414,8 +571,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
                 # ⭐ 只在「趨勢盤」這一行印完後，馬上加上上週／上月詞條
                 if idx == 0:
-                    wk_html = _stylize_week_month_tag(tags['week'])
-                    mo_html = _stylize_week_month_tag(tags['month'])
+                    wk_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['week'], wk_rate))
+                    mo_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['month'], mo_rate))
+
                     # 以縮排箭頭表示附屬於趨勢盤
                     st.markdown(f"　 {wk_html}", unsafe_allow_html=True)
                     st.markdown(f"　 {mo_html}", unsafe_allow_html=True)
