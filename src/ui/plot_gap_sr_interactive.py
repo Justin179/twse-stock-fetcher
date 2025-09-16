@@ -467,7 +467,7 @@ def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 1
 # -----------------------------
 def main() -> None:
     st.set_page_config(page_title="S/R 撐壓系統 (D/W/M)", layout="wide")
-    st.title("this is money -> 支撐 x 壓力 x 成交量（D / W / M）")
+    st.title("this is money -> 支撐 x 壓力 x 成交量（D / W / M / 可當沖）")
 
     st.markdown(
         """
