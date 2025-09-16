@@ -454,7 +454,12 @@ def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[floa
     else:
         rate_str = "--"
 
-    return f"今/昨 成交量：{today_str} / {yest_str}（達成: {rate_str}, 富邦api）"
+    return (
+        f"今/昨 <span style='color:blue; font-weight:bold'>成交量</span>："
+        f"{today_str} / {yest_str}"
+        f"（<span style='color:blue; font-weight:bold'>達成:</span> {rate_str}, 富邦api）"
+    )
+
 
 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
@@ -490,7 +495,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         with col_left:
             st.markdown(f"- {format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
             st.markdown(f"- <span style='color:orange'>昨收：<b>{c2}</b></span> -> 今開(<span style='color:red'>{today_date[5:]}</span>)：<b>{o}</b>", unsafe_allow_html=True)
-            st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價(現價)**：<span style='color:blue; font-weight:bold; font-size:18px'>{c1}</span>", unsafe_allow_html=True)
+            st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價**<span style='color:blue; font-weight:bold'>(現價)：{c1}</span>", unsafe_allow_html=True)
 
             if above_upward_wma5:
                 st.markdown("- ✅ **現價站上 上彎5週均線！**", unsafe_allow_html=True)
