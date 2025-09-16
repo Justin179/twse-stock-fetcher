@@ -460,6 +460,33 @@ def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[floa
         f"（<span style='color:blue; font-weight:bold'>達成:</span> {rate_str}, 富邦api）"
     )
 
+def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
+    """
+    判斷現價 vs 昨收、今開，回傳字串 "(漲跌 / K棒色)"。
+    - 現價 > 昨收 → 價漲
+    - 現價 < 昨收 → 價跌
+    - 現價 = 昨收 → 價平
+    - 現價 > 今開 → 📕K
+    - 現價 < 今開 → 📗K
+    - 現價 = 今開 → 平K
+    """
+    # 漲跌
+    if c1 > c2:
+        change_str = "<span style='color:blue; font-weight:bold'>價漲</span>"
+    elif c1 < c2:
+        change_str = "<span style='color:blue; font-weight:bold'>價跌</span>"
+    else:
+        change_str = "<span style='color:blue; font-weight:bold'>價平</span>"
+
+    # K棒色
+    if c1 > o:
+        kbar_str = "📕K"
+    elif c1 < o:
+        kbar_str = "📗K"
+    else:
+        kbar_str = "平K"
+
+    return f" ({change_str} / {kbar_str})"
 
 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
@@ -495,7 +522,13 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         with col_left:
             st.markdown(f"- {format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
             st.markdown(f"- <span style='color:orange'>昨收：<b>{c2}</b></span> -> 今開(<span style='color:red'>{today_date[5:]}</span>)：<b>{o}</b>", unsafe_allow_html=True)
-            st.markdown(f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價**<span style='color:blue; font-weight:bold'>(現價)：{c1}</span>", unsafe_allow_html=True)
+            extra_info = get_price_change_and_kbar(c1, c2, o)
+            st.markdown(
+                f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價**"
+                f"<span style='color:blue; font-weight:bold'>(現價)：{c1}</span>{extra_info}",
+                unsafe_allow_html=True,
+            )
+
 
             if above_upward_wma5:
                 st.markdown("- ✅ **現價站上 上彎5週均線！**", unsafe_allow_html=True)
