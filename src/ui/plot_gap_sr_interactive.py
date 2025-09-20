@@ -13,7 +13,7 @@ import numpy as np  # for vs_c1 / c1 marker row
 # 其它 import 之後
 from common.stock_loader import load_stock_list_with_names
 from ui.sr_prev_high_on_heavy import scan_prev_high_on_heavy_from_df  # 或用 scan_prev_high_on_heavy_all
-
+from common.login_helper import init_session_login_objects
 # === 盤中取價（直接用 analyze 模組的函式） ===
 try:
     from analyze.analyze_price_break_conditions_dataloader import get_today_prices
@@ -555,6 +555,8 @@ def main() -> None:
         if daily.empty:
             st.error("查無日K資料。"); return
 
+        # 取得 session 的 sdk/dl（只會初始化一次）
+        sdk, dl = init_session_login_objects()
         today_info = None
         if get_today_prices is not None:
             try:
