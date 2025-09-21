@@ -19,6 +19,7 @@ from ui.bias_calculator import render_bias_calculator
 import re
 from math import isclose
 from typing import Optional, Dict
+from decimal import Decimal, ROUND_HALF_UP
 
 def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     """
@@ -464,20 +465,17 @@ def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     """
     判斷現價 vs 昨收、今開，回傳字串 "(漲跌 / K棒色)"。
     同時附加昨收 -> 現價 的漲跌百分比（黑色、非粗體），若無法計算則不顯示百分比。
-    - 現價 > 昨收 → 價漲
-    - 現價 < 昨收 → 價跌
-    - 現價 = 昨收 → 價平
-    - 現價 > 今開 → 📕K
-    - 現價 < 今開 → 📗K
-    - 現價 = 今開 → 平K
+    四捨五入使用 Decimal ROUND_HALF_UP 到小數後兩位。
     """
-    # 計算漲跌百分比（以 昨收 c2 為基準）
     pct_html = ""
     try:
         if (c2 is not None) and (c1 is not None) and float(c2) != 0:
-            pct = (float(c1) - float(c2)) / float(c2) * 100.0
-            pct_rounded = round(pct, 2)
-            pct_html = f" <span style='color:black; font-weight:normal'>{pct_rounded:.2f}%</span>"
+            # 使用 Decimal 以確保穩定的四捨五入（half-up）
+            d_c1 = Decimal(str(c1))
+            d_c2 = Decimal(str(c2))
+            pct = (d_c1 - d_c2) / d_c2 * Decimal("100")
+            pct_display = pct.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            pct_html = f" <span style='color:black; font-weight:normal'>{pct_display:+.2f}%</span>"
     except Exception:
         pct_html = ""
 
