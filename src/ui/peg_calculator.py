@@ -61,6 +61,7 @@ def _get_current_price(stock_id: str, sdk=None):
 def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
     """
     在畫面上渲染：今年預估 EPS、明年預估 EPS、三段式結果（PE / 成長率 = PEG）
+    若同時有今年與明年預估 eps，會額外顯示「單年 PEG（明年 / 今年→明年）」。
     """
     last_eps = _get_last_year_eps(stock_id)
     price = _get_current_price(stock_id, sdk)
@@ -86,16 +87,36 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
               <input id="peg-next{suffix}" type="text" inputmode="decimal" placeholder="明年 EPS"
                      style="padding:8px 10px; width:180px; border:1px solid #d1d5db; border-radius:8px; outline:none;">
             </div>
-            <div style="display:flex; flex-direction:column;">
-              <label style="font-size:14px; color:#6b7280; margin-bottom:4px;">PEG = Forward PE / EPS成長率</label>
-              <div id="peg-wrap{suffix}"
-                   style="min-width:260px; padding:8px 10px; border:1px solid #f3f4f6; border-radius:8px; background:#f9fafb; font-weight:600; display:flex; align-items:center;">
-                <span id="peg{suffix}">-</span>
-                <span style="margin:0 6px; opacity:.8;">=</span>
-                <span id="pe{suffix}">-</span>
-                <span style="margin:0 6px; opacity:.8;">/</span>
-                <span id="growth{suffix}">-%</span>
+
+            <!-- 顯示區：若只有今年 EPS 顯示一個結果；若有今年與明年 EPS 顯示兩個結果（2Y avg + 1Y） -->
+            <div style="display:flex; flex-direction:column; gap:6px; min-width:260px;">
+              <label style="font-size:14px; color:#6b7280; margin-bottom:4px;">PEG 結果</label>
+              <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-start;">
+                <div id="peg-wrap-2y{suffix}"
+                     style="width:100%; padding:8px 10px; border:1px solid #f3f4f6; border-radius:8px; background:#f9fafb; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12px; color:#6b7280;">2Y avg</span>
+                    <span id="peg{suffix}">-</span>
+                    <span style="margin:0 6px; opacity:.8;">=</span>
+                    <span id="pe{suffix}">-</span>
+                    <span style="margin:0 6px; opacity:.8;">/</span>
+                    <span id="growth{suffix}">-%</span>
+                  </div>
+                </div>
+
+                <div id="peg-wrap-1y{suffix}"
+                     style="width:100%; padding:8px 10px; border:1px solid #f3f4f6; border-radius:8px; background:#fffaf0; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12px; color:#6b7280;">1Y</span>
+                    <span id="peg1y{suffix}">-</span>
+                    <span style="margin:0 6px; opacity:.8;">=</span>
+                    <span id="pe1y{suffix}">-</span>
+                    <span style="margin:0 6px; opacity:.8;">/</span>
+                    <span id="growth1y{suffix}">-%</span>
+                  </div>
+                </div>
               </div>
+
               <!-- 特例提示（預設隱藏） -->
               <div id="peg-note{suffix}" style="margin-top:4px; font-size:12px; color:#6b7280; display:none;"></div>
             </div>
@@ -116,11 +137,17 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
           const thisEl = document.getElementById("peg-this" + S);
           const nextEl = document.getElementById("peg-next" + S);
 
-          // 結果元素
-          const wrapEl = document.getElementById("peg-wrap" + S);
+          // 結果元素（2Y）
+          const wrap2El = document.getElementById("peg-wrap-2y" + S);
           const peEl   = document.getElementById("pe" + S);
           const grEl   = document.getElementById("growth" + S);
           const pegEl  = document.getElementById("peg" + S);
+
+          // 結果元素（1Y）
+          const wrap1El = document.getElementById("peg-wrap-1y" + S);
+          const pe1El   = document.getElementById("pe1y" + S);
+          const gr1El   = document.getElementById("growth1y" + S);
+          const peg1El  = document.getElementById("peg1y" + S);
 
           // 特例提示元素
           const noteEl = document.getElementById("peg-note" + S);
@@ -140,106 +167,120 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
             return Number(s);
           }};
 
-          // 依 PEG 區間回傳前綴符號
-          function pegPrefix(peg) {{
+          const pegPrefix = (peg) => {{
             if (!isFinite(peg)) return "";
             if (peg >= 0 && peg <= 0.50) return "✅ ";
             if (peg > 0.50 && peg <= 1.00) return "✔️ ";
             if (peg > 1.00 && peg <= 1.20) return "⚠️ ";
             if (peg > 1.20) return "❌ ";
             return "";
-          }}
+          }};
 
-          function showTriplet(pe, growthPct, peg, ok=true) {{
+          function showTripletTo(peTarget, grTarget, pegTarget, wrapTarget, pe, growthPct, peg, ok=true) {{
             if (!ok) {{
-              peEl.textContent = "-";
-              grEl.textContent = "-%";
-              pegEl.textContent = "-";
-              wrapEl.style.color = "#ef4444";
+              peTarget.textContent = "-";
+              grTarget.textContent = "-%";
+              pegTarget.textContent = "-";
+              wrapTarget.style.color = "#ef4444";
               return;
             }}
-            peEl.textContent  = (isFinite(pe) ? pe.toFixed(2) : "-");
-            grEl.textContent  = (isFinite(growthPct) ? growthPct.toFixed(2) + "%" : "-%");
+            peTarget.textContent  = (isFinite(pe) ? pe.toFixed(2) : "-");
+            grTarget.textContent  = (isFinite(growthPct) ? growthPct.toFixed(2) + "%" : "-%");
             const prefix = pegPrefix(peg);
-            pegEl.textContent = (isFinite(peg) ? prefix + peg.toFixed(2) : "-");
-            wrapEl.style.color = (isFinite(peg) && peg <= 1) ? "#16a34a" : "#111827";
+            pegTarget.textContent = (isFinite(peg) ? prefix + peg.toFixed(2) : "-");
+            wrapTarget.style.color = (isFinite(peg) && peg <= 1) ? "#16a34a" : "#111827";
           }}
 
           function compute() {{
             const thisEPS = toNum(thisEl.value);
             const nextEPS = toNum(nextEl.value);
 
+            // 重置顯示
+            showTripletTo(peEl, grEl, pegEl, wrap2El, NaN, NaN, NaN, false);
+            showTripletTo(pe1El, gr1El, peg1El, wrap1El, NaN, NaN, NaN, false);
+            showNote("");
+
             // 基本檢查
             if (!isFinite(thisEPS) || thisEPS <= 0) {{
-              showTriplet(NaN, NaN, NaN, false); // 今年EPS無效
-              showNote("");
+              // 今年EPS無效
               return;
             }}
             if (!isFinite(price) || price <= 0) {{
-              showTriplet(NaN, NaN, NaN, false); // 缺現價
-              showNote("");
+              // 缺現價
               return;
             }}
 
-            // --- 特例：去年EPS <= 0 或無資料，但今年/明年皆有且 > 0 ---
-            if (isFinite(nextEPS) && nextEPS > 0 && (!isFinite(lastEPS) || lastEPS <= 0)) {{
-              const g = ((nextEPS - thisEPS) / thisEPS) * 100;   // 今年→明年 成長率（%）
-              if (!isFinite(g) || g <= 0) {{
-                showTriplet(NaN, NaN, NaN, false);
-                showNote("");
+            // 若有明年 EPS
+            if (isFinite(nextEPS) && nextEPS > 0) {{
+              // 特例：去年EPS <= 0 或無資料，只有單年可算（今年→明年）
+              if (!isFinite(lastEPS) || lastEPS <= 0) {{
+                const g = ((nextEPS - thisEPS) / thisEPS) * 100;   // 今年→明年 成長率（%）
+                if (!isFinite(g) || g <= 0) {{
+                  showTripletTo(pe1El, gr1El, peg1El, wrap1El, NaN, NaN, NaN, false);
+                  return;
+                }}
+                const pe = price / nextEPS;                        // Forward PE 用明年EPS
+                const peg = pe / g;                                // 成長率以百分比計
+                showTripletTo(pe1El, gr1El, peg1El, wrap1El, pe, g, peg, true);
+                showNote("去年EPS為負或無資料，僅顯示單年 PEG（明年 / 今年→明年）。");
+
+                // 清空輸入並 focus
+                thisEl.value = "";
+                nextEl.value = "";
+                setTimeout(() => thisEl.focus(), 0);
                 return;
               }}
-              const pe = price / nextEPS;                        // Forward PE 用明年EPS
-              const peg = pe / g;                                // 成長率以百分比計
-              showTriplet(pe, g, peg, true);
-              showNote("去年EPS為負或無資料，採用：Forward PE(明年) / 今年→明年成長率。");
 
-              // 收尾
+              // 正常情況（有去年EPS且有今年+明年）：同時計算 2Y 平均 與 1Y
+              const g1 = ((thisEPS - lastEPS) / lastEPS) * 100; // 去年→今年（%）
+              const g2 = ((nextEPS - thisEPS) / thisEPS) * 100; // 今年→明年（%）
+              const growthAvg = (g1 + g2) / 2.0;
+              const peForward = price / nextEPS;
+
+              // 2Y avg （需要 growthAvg > 0）
+              if (!isFinite(growthAvg) || growthAvg <= 0) {{
+                showTripletTo(peEl, grEl, pegEl, wrap2El, NaN, NaN, NaN, false);
+              }} else {{
+                const peg2 = peForward / growthAvg;
+                showTripletTo(peEl, grEl, pegEl, wrap2El, peForward, growthAvg, peg2, true);
+              }}
+
+              // 1Y 單年（今年→明年）
+              if (!isFinite(g2) || g2 <= 0) {{
+                showTripletTo(pe1El, gr1El, peg1El, wrap1El, NaN, NaN, NaN, false);
+              }} else {{
+                const peg1 = peForward / g2;
+                showTripletTo(pe1El, gr1El, peg1El, wrap1El, peForward, g2, peg1, true);
+              }}
+
+              // 清空輸入並 focus
               thisEl.value = "";
               nextEl.value = "";
               setTimeout(() => thisEl.focus(), 0);
               return;
             }}
 
-            // --- 既有邏輯：需要「去年EPS > 0」 ---
+            // 若沒有明年 EPS，維持原先行為：用今年EPS 做 Forward PE，成長率為 去年→今年
             if (!isFinite(lastEPS) || lastEPS <= 0) {{
-              showTriplet(NaN, NaN, NaN, false); // 缺去年EPS且未符合特例
-              showNote("");
+              // 缺去年EPS
               return;
             }}
-
-            // 去年→今年
-            const g1 = ((thisEPS - lastEPS) / lastEPS) * 100; // 成長率（%）
-            let growthPct = g1;
-            let pe = price / thisEPS;                         // 預設用今年EPS做 Forward PE
-
-            // 若有明年：平均成長率，PE用明年
-            if (isFinite(nextEPS) && nextEPS > 0) {{
-              const g2 = ((nextEPS - thisEPS) / thisEPS) * 100; // 今年→明年
-              growthPct = (g1 + g2) / 2.0;                      // 平均成長率（%）
-              pe = price / nextEPS;                             // Forward 1Y
-            }}
-
-            if (!isFinite(growthPct) || growthPct <= 0) {{
-              showTriplet(NaN, NaN, NaN, false);
-              showNote("");
+            const g_last_to_this = ((thisEPS - lastEPS) / lastEPS) * 100;
+            if (!isFinite(g_last_to_this) || g_last_to_this <= 0) {{
               return;
             }}
+            const pe_now = price / thisEPS;
+            const peg_now = pe_now / g_last_to_this;
+            // 顯示在 2Y 區塊（舊的主要位置）
+            showTripletTo(peEl, grEl, pegEl, wrap2El, pe_now, g_last_to_this, peg_now, true);
+            // 1Y 區塊不顯示
+            showTripletTo(pe1El, gr1El, peg1El, wrap1El, NaN, NaN, NaN, false);
 
-            const peg = pe / growthPct; // 成長率以百分比計
-            showTriplet(pe, growthPct, peg, true);
-            showNote("");
-
-            // 收尾
             thisEl.value = "";
-            nextEl.value = "";
             setTimeout(() => thisEl.focus(), 0);
           }}
 
-          /* 今年 EPS 欄位
-             - Enter：直接計算（視為沒有明年EPS）
-             - Tab：維持預設行為，跳到 B 欄
-          */
+          // 鍵盤事件
           thisEl.addEventListener("keydown", (e) => {{
             if (e.key === "Enter") {{
               e.preventDefault();
@@ -247,8 +288,6 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
               compute();
             }}
           }});
-
-          // B 欄：Enter 或 Tab -> 計算
           nextEl.addEventListener("keydown", (e) => {{
             if (e.key === "Enter" || e.key === "Tab") {{
               e.preventDefault();
@@ -260,5 +299,5 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
         }})();
         </script>
         """,
-        height=230,
+        height=260,
     )
