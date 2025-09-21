@@ -476,7 +476,8 @@ def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     try:
         if (c2 is not None) and (c1 is not None) and float(c2) != 0:
             pct = (float(c1) - float(c2)) / float(c2) * 100.0
-            pct_html = f" <span style='color:black; font-weight:normal'>{pct:.2f}%</span>"
+            pct_rounded = round(pct, 2)
+            pct_html = f" <span style='color:black; font-weight:normal'>{pct_rounded:.2f}%</span>"
     except Exception:
         pct_html = ""
 
