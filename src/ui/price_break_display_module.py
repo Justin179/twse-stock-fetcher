@@ -245,7 +245,7 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
     elif "均線開口" in title and 0 < val < 0.5:
         icon_prefix = "✔️ "
 
-    # ===== 組合顯示的 title（先彎向，再原 title） =====
+    # ===== 組合顯示的 title（先彎向，再原 title）=====
     display_title = f"{slope_prefix}{title}" if slope_prefix else title
 
     st.markdown(
@@ -463,6 +463,7 @@ def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[floa
 def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     """
     判斷現價 vs 昨收、今開，回傳字串 "(漲跌 / K棒色)"。
+    同時附加昨收 -> 現價 的漲跌百分比（黑色、非粗體），若無法計算則不顯示百分比。
     - 現價 > 昨收 → 價漲
     - 現價 < 昨收 → 價跌
     - 現價 = 昨收 → 價平
@@ -470,23 +471,38 @@ def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     - 現價 < 今開 → 📗K
     - 現價 = 今開 → 平K
     """
-    # 漲跌
-    if c1 > c2:
-        change_str = "<span style='color:blue; font-weight:bold'>價漲</span>"
-    elif c1 < c2:
-        change_str = "<span style='color:blue; font-weight:bold'>價跌</span>"
-    else:
+    # 計算漲跌百分比（以 昨收 c2 為基準）
+    pct_html = ""
+    try:
+        if (c2 is not None) and (c1 is not None) and float(c2) != 0:
+            pct = (float(c1) - float(c2)) / float(c2) * 100.0
+            pct_html = f" <span style='color:black; font-weight:normal'>{pct:.2f}%</span>"
+    except Exception:
+        pct_html = ""
+
+    # 漲跌（藍色粗體，保留）
+    try:
+        if c1 > c2:
+            change_str = "<span style='color:blue; font-weight:bold'>價漲</span>"
+        elif c1 < c2:
+            change_str = "<span style='color:blue; font-weight:bold'>價跌</span>"
+        else:
+            change_str = "<span style='color:blue; font-weight:bold'>價平</span>"
+    except Exception:
         change_str = "<span style='color:blue; font-weight:bold'>價平</span>"
 
     # K棒色
-    if c1 > o:
-        kbar_str = "📕K"
-    elif c1 < o:
-        kbar_str = "📗K"
-    else:
+    try:
+        if c1 > o:
+            kbar_str = "📕K"
+        elif c1 < o:
+            kbar_str = "📗K"
+        else:
+            kbar_str = "平K"
+    except Exception:
         kbar_str = "平K"
 
-    return f" ({change_str} / {kbar_str})"
+    return f" ({change_str}{pct_html} / {kbar_str})"
 
 
 def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
