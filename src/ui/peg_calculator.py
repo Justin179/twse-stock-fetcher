@@ -271,10 +271,9 @@ def render_peg_calculator(stock_id: str, sdk=None, key_suffix: str = ""):
             }}
             const pe_now = price / thisEPS;
             const peg_now = pe_now / g_last_to_this;
-            // 顯示在 2Y 區塊（舊的主要位置）
-            showTripletTo(peEl, grEl, pegEl, wrap2El, pe_now, g_last_to_this, peg_now, true);
-            // 1Y 區塊不顯示
-            showTripletTo(pe1El, gr1El, peg1El, wrap1El, NaN, NaN, NaN, false);
+            // 顯示在 1Y 區塊（單年）並隱藏 2Y
+            showTripletTo(pe1El, gr1El, peg1El, wrap1El, pe_now, g_last_to_this, peg_now, true);
+            showTripletTo(peEl, grEl, pegEl, wrap2El, NaN, NaN, NaN, false);
 
             thisEl.value = "";
             setTimeout(() => thisEl.focus(), 0);
