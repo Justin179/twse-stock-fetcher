@@ -23,32 +23,25 @@ from decimal import Decimal, ROUND_HALF_UP
 
 def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     """
-    針對 N 日均線，回傳兩個參考價位（以「交易日」為單位，已排除無收盤價的日子）：
-
-    基準價 / 扣抵值 的「天數定位」需依 today 是否已入庫來決定：
-    - 若 today 尚未入庫：以「目前 df 的最新一筆」為第 0 天 ⇒ 基準 = desc 第 N 筆、扣抵 = desc 第 N-1 筆
-    - 若 today 已入庫：以「today」為第 0 天           ⇒ 基準 = desc 第 N+1 筆、扣抵 = desc 第 N   筆
-
-    例（N=5）：
-      未入庫：基準 = iloc[-5]，扣抵 = iloc[-4]
-      已入庫：基準 = iloc[-6]，扣抵 = iloc[-5]
-
-      再進一步簡化邏輯
-        today_date未入庫，基準價為df desc的第5筆
-        today_date已入庫，基準價為df desc的第6筆
+    針對 N 日均線，回傳：
+      baseline, deduction, deduction1, deduction2, deduction3
+    baseline / 扣抵值 的「天數定位」說明同原本：
+      - 若 today 尚未入庫：以 df 最新一筆為第 0 天 ⇒ baseline = desc 第 N 筆
+      - 若 today 已入庫：以 today 為第 0 天           ⇒ baseline = desc 第 N+1 筆
+    並同時嘗試取 baseline 之後的三個交易日作為扣1/扣2/扣3（若不存在則為 None）。
     """
     df = fetch_close_history_trading_only_from_db(stock_id)  # 只取有收盤價的日子
     if df.empty:
-        return None, None
+        return None, None, None, None, None
 
     import pandas as pd
     df["date"] = pd.to_datetime(df["date"])
     cutoff = pd.to_datetime(today_date)
 
     # 僅使用 today_date（含）之前的資料；若 today 尚未入庫，df 的最後一筆就是「第 0 天」
-    df = df[df["date"] <= cutoff].sort_values("date")
+    df = df[df["date"] <= cutoff].sort_values("date").reset_index(drop=True)
     if df.empty:
-        return None, None
+        return None, None, None, None, None
 
     latest_in_df = df["date"].iloc[-1].normalize()
     today_norm   = cutoff.normalize()
@@ -56,23 +49,35 @@ def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     # 判斷 today 是否已入庫
     today_in_db = (latest_in_df == today_norm)
 
+    # 決定 baseline 的 index（以 df 的正向索引 0..len-1 表示）
     if today_in_db:
         # 需要至少 N+1 筆（含 today 在內）
         need = n + 1
         if len(df) < need:
-            return None, None
-        baseline = df.iloc[-(n + 1)]["close"]  # desc 第 N+1 筆
-        deduction = df.iloc[-n]["close"]       # desc 第 N   筆
+            return None, None, None, None, None
+        baseline_idx = len(df) - (n + 1)
     else:
         # 需要至少 N 筆（以 df 最新一筆為第 0 天）
         need = n
         if len(df) < need:
-            return None, None
-        baseline = df.iloc[-n]["close"]        # desc 第 N   筆
-        # N=1 時，desc 第 0 筆就是最後一筆
-        deduction = df.iloc[-1]["close"] if n == 1 else df.iloc[-(n - 1)]["close"]
+            return None, None, None, None, None
+        baseline_idx = len(df) - n
 
-    return float(baseline), float(deduction)
+    def _safe_get_close_at(idx: int):
+        if 0 <= idx < len(df):
+            try:
+                return float(df.iloc[idx]["close"])
+            except Exception:
+                return None
+        return None
+
+    baseline   = _safe_get_close_at(baseline_idx)
+    deduction  = _safe_get_close_at(baseline_idx + 1)  # 原本的扣抵值（baseline 的下一個交易日）
+    ded_1      = _safe_get_close_at(baseline_idx + 2)  # 扣1
+    ded_2      = _safe_get_close_at(baseline_idx + 3)  # 扣2
+    ded_3      = _safe_get_close_at(baseline_idx + 4)  # 扣3
+
+    return baseline, deduction, ded_1, ded_2, ded_3
 
 
 
@@ -123,9 +128,9 @@ def is_uptrending_now(stock_id: str, today_date: str, c1, w1, m1, ma5, ma10, ma2
     cond1 = (c1 > w1) and (c1 > m1)
 
     # 取各 N 日均線的「基準價 baseline」
-    b5, _  = get_baseline_and_deduction(stock_id, today_date, n=5)
-    b10, _ = get_baseline_and_deduction(stock_id, today_date, n=10)
-    b24, _ = get_baseline_and_deduction(stock_id, today_date, n=24)
+    b5, _, * _ = get_baseline_and_deduction(stock_id, today_date, n=5)
+    b10, _, * _ = get_baseline_and_deduction(stock_id, today_date, n=10)
+    b24, _, * _ = get_baseline_and_deduction(stock_id, today_date, n=24)
     if any(b is None for b in [b5, b10, b24]):
         return False
 
@@ -169,9 +174,9 @@ def is_downtrending_now(
     cond1 = (c1 < w2) and (c1 < m2)
 
     # 取各 N 日均線 baseline
-    b5, _  = get_baseline_and_deduction(stock_id, today_date, n=5)
-    b10, _ = get_baseline_and_deduction(stock_id, today_date, n=10)
-    b24, _ = get_baseline_and_deduction(stock_id, today_date, n=24)
+    b5, _, * _ = get_baseline_and_deduction(stock_id, today_date, n=5)
+    b10, _, * _ = get_baseline_and_deduction(stock_id, today_date, n=10)
+    b24, _, * _ = get_baseline_and_deduction(stock_id, today_date, n=24)
     if any(b is None for b in [b5, b10, b24]):
         return False
 
@@ -222,7 +227,7 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
         m = re.search(r"(\d+)日均線乖離", title)
         if m:
             n = int(m.group(1))
-            baseline, _ = get_baseline_and_deduction(stock_id, today_date, n=n)
+            baseline, * _ = get_baseline_and_deduction(stock_id, today_date, n=n)
             if baseline is not None:
                 # print(f"🔍 {stock_id} {title} 基準價：{baseline}, 當前值：{b}, today_date:{today_date}")
                 if b > baseline + 1e-9:
@@ -526,7 +531,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         tips = analyze_stock(stock_id, dl=dl, sdk=sdk)
 
         # 取得基準價、扣抵值
-        baseline5, deduction5 = get_baseline_and_deduction(stock_id, today_date)
+        baseline5, deduction5, ded1_5, ded2_5, ded3_5 = get_baseline_and_deduction(stock_id, today_date)
         # 後面 col_mid / col_right 都可用
         ma5  = compute_ma_with_today(stock_id, today_date, c1, 5)
         ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
@@ -558,6 +563,16 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             if baseline5 is not None and deduction5 is not None:
                 msg = check_price_vs_baseline_and_deduction(c1, baseline5, deduction5)
                 st.markdown(msg, unsafe_allow_html=True)
+                # 顯示扣1/扣2/扣3 供核對（若無則顯示 '—'）
+                def _fmt(v):
+                    try:
+                        return f"{float(v):.2f}"
+                    except Exception:
+                        return "—"
+                st.markdown(
+                    f"- 扣1：<b>{_fmt(ded1_5)}</b>　扣2：<b>{_fmt(ded2_5)}</b>　扣3：<b>{_fmt(ded3_5)}</b>",
+                    unsafe_allow_html=True,
+                )
             else:
                 st.markdown("- **基準價 / 扣抵值**：資料不足")
 
