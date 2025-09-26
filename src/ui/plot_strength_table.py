@@ -97,6 +97,31 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
     rotated = rotated.reset_index(drop=True)
     columns = [col for col in rotated.columns if col != "條件名稱"]
 
+    # --- 新增：以關鍵字群組並給予不同底色以視覺區隔 ---
+    # 定義群組關鍵字與顏色（可依需求增刪或調整顏色）
+    group_rules = [
+        ("站上", "rgba(255,200,200,0.45)"),       # 淺紅：所有包含「站上」的條件
+        ("短中均線", "rgba(200,220,255,0.45)"),  # 淺藍：所有包含「短中均線」的條件
+    ]
+
+    # 針對每一 row 的條件名稱決定底色
+    row_labels = rotated["條件名稱"].astype(str).tolist()
+    row_colors = []
+    for lbl in row_labels:
+        matched = False
+        for key, color in group_rules:
+            if key in lbl:
+                row_colors.append(color)
+                matched = True
+                break
+        if not matched:
+            # 使用與原本相近的淡背景
+            row_colors.append("white")
+
+    # Plotly 要求每一個欄位都提供一組 row color list，所以重複 row_colors
+    num_columns = len(rotated.columns)  # 包含條件名稱欄
+    cell_fill = [row_colors for _ in range(num_columns)]
+
     fig = go.Figure(data=[
         go.Table(
             columnwidth=[3] + [1] * len(columns),
@@ -108,16 +133,17 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
             ),
             cells=dict(
                 values=[rotated["條件名稱"]] + [rotated[col] for col in columns],
-                fill_color='lavender',
+                fill_color=cell_fill,
                 align='left',
-                font=dict(size=14)
+                font=dict(size=14),
+                line=dict(color='lightgrey', width=1)  # 加細邊線以強化分隔
             )
         )
     ])
 
     fig.update_layout(
         margin=dict(t=0, b=0, l=0, r=0),
-        height=280 # 調整表格高度以適應內容，增加條件時這裡就要調整
+        height=60 + 28 * len(rotated)  # 動態高度
     )
 
     return fig
