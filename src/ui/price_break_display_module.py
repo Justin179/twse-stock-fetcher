@@ -563,16 +563,46 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             if baseline5 is not None and deduction5 is not None:
                 msg = check_price_vs_baseline_and_deduction(c1, baseline5, deduction5)
                 st.markdown(msg, unsafe_allow_html=True)
-                # 顯示扣1/扣2/扣3 供核對（若無則顯示 '—'）
+                
+                
+                # 顯示「未來N天的壓力(...)升/降 ...%」詞條（用 5 日基準與四個扣抵計算）
                 def _fmt(v):
                     try:
-                        return f"{float(v):.2f}"
+                        return float(v)
                     except Exception:
-                        return "—"
-                st.markdown(
-                    f"- 扣1：<b>{_fmt(ded1_5)}</b>　扣2：<b>{_fmt(ded2_5)}</b>　扣3：<b>{_fmt(ded3_5)}</b>",
-                    unsafe_allow_html=True,
-                )
+                        return None
+
+                ded_vals_raw = [deduction5, ded1_5, ded2_5, ded3_5]
+                ded_vals = [float(x) for x in ded_vals_raw if x is not None]
+
+                if ded_vals and (baseline5 is not None) and float(baseline5) != 0:
+                    avg = sum(ded_vals) / len(ded_vals)
+                    pct = (avg - float(baseline5)) / float(baseline5) * 100.0
+                    if pct > 0:
+                        arrow = "<b>上升</b> 📈"
+                    elif pct < 0:
+                        arrow = "<b>下降</b> 📉"
+                    else:
+                        arrow = "持平"
+                    # 若四個扣都存在則顯示「未來4天」，否則顯示實際可用天數
+                    days_label = 4 if len(ded_vals) == 4 else len(ded_vals)
+                    st.markdown(
+                        f"- 未來{days_label}天的<b>壓力</b>({avg:.2f}) {arrow} <b>{pct:+.2f}%</b>",
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    # 資料不足時回退顯示原本扣位，方便除錯
+                    def _fmt_str(v):
+                        try:
+                            return f"{float(v):.2f}"
+                        except Exception:
+                            return "—"
+                    st.markdown(
+                        f"- 扣1：<b>{_fmt_str(ded1_5)}</b>　扣2：<b>{_fmt_str(ded2_5)}</b>　扣3：<b>{_fmt_str(ded3_5)}</b>",
+                        unsafe_allow_html=True,
+                    )
+
+
             else:
                 st.markdown("- **基準價 / 扣抵值**：資料不足")
 
