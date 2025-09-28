@@ -24,7 +24,7 @@ from decimal import Decimal, ROUND_HALF_UP
 def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     """
     針對 N 日均線，回傳：
-      baseline, deduction, deduction1, deduction2, deduction3
+      baseline, deduction, deduction1, deduction2, deduction3, prev_baseline
     baseline / 扣抵值 的「天數定位」說明同原本：
       - 若 today 尚未入庫：以 df 最新一筆為第 0 天 ⇒ baseline = desc 第 N 筆
       - 若 today 已入庫：以 today 為第 0 天           ⇒ baseline = desc 第 N+1 筆
@@ -32,7 +32,7 @@ def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     """
     df = fetch_close_history_trading_only_from_db(stock_id)  # 只取有收盤價的日子
     if df.empty:
-        return None, None, None, None, None
+        return None, None, None, None, None, None
 
     import pandas as pd
     df["date"] = pd.to_datetime(df["date"])
@@ -41,7 +41,7 @@ def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     # 僅使用 today_date（含）之前的資料；若 today 尚未入庫，df 的最後一筆就是「第 0 天」
     df = df[df["date"] <= cutoff].sort_values("date").reset_index(drop=True)
     if df.empty:
-        return None, None, None, None, None
+        return None, None, None, None, None, None
 
     latest_in_df = df["date"].iloc[-1].normalize()
     today_norm   = cutoff.normalize()
@@ -54,13 +54,13 @@ def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
         # 需要至少 N+1 筆（含 today 在內）
         need = n + 1
         if len(df) < need:
-            return None, None, None, None, None
+            return None, None, None, None, None, None
         baseline_idx = len(df) - (n + 1)
     else:
         # 需要至少 N 筆（以 df 最新一筆為第 0 天）
         need = n
         if len(df) < need:
-            return None, None, None, None, None
+            return None, None, None, None, None, None
         baseline_idx = len(df) - n
 
     def _safe_get_close_at(idx: int):
@@ -77,7 +77,10 @@ def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
     ded_2      = _safe_get_close_at(baseline_idx + 3)  # 扣2
     ded_3      = _safe_get_close_at(baseline_idx + 4)  # 扣3
 
-    return baseline, deduction, ded_1, ded_2, ded_3
+    # 新增：baseline 前一交易日收盤（昨基），若不存在則 None
+    prev_baseline = _safe_get_close_at(baseline_idx - 1) if baseline_idx is not None else None
+
+    return baseline, deduction, ded_1, ded_2, ded_3, prev_baseline
 
 
 
@@ -531,7 +534,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         tips = analyze_stock(stock_id, dl=dl, sdk=sdk)
 
         # 取得基準價、扣抵值
-        baseline5, deduction5, ded1_5, ded2_5, ded3_5 = get_baseline_and_deduction(stock_id, today_date)
+        baseline5, deduction5, ded1_5, ded2_5, ded3_5, prev_baseline5 = get_baseline_and_deduction(stock_id, today_date)
         # 後面 col_mid / col_right 都可用
         ma5  = compute_ma_with_today(stock_id, today_date, c1, 5)
         ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
@@ -564,6 +567,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 msg = check_price_vs_baseline_and_deduction(c1, baseline5, deduction5)
                 st.markdown(msg, unsafe_allow_html=True)
                 
+                # 顯示昨基（基準價的前一交易日收盤）以便你確認
+                if prev_baseline5 is not None:
+                    st.markdown(f"- 昨基（基準價前一交易日收盤）：<b>{prev_baseline5:.2f}</b>", unsafe_allow_html=True)
+                else:
+                    st.markdown("- 昨基：查無資料或不足", unsafe_allow_html=True)
                 
                 # 顯示「未來N天的壓力(...)升/降 ...%」詞條（用 5 日基準與四個扣抵計算）
                 def _fmt(v):
