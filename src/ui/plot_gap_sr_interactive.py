@@ -397,7 +397,7 @@ def attach_intraday_to_daily(daily: pd.DataFrame, today: dict) -> pd.DataFrame:
     h   = _safe_float(today, "h")
     l   = _safe_float(today, "l")
     c1  = _safe_float(today, "c1")
-    v   = _safe_float(today, "v", default=0.0)
+    v   = _safe_float(today, "v", default=None)
 
     # 盤中 v 單位是張 -> 轉股
     if v is not None: v = float(v) * 1000.0
@@ -412,7 +412,8 @@ def attach_intraday_to_daily(daily: pd.DataFrame, today: dict) -> pd.DataFrame:
     if mask.any():
         idx = df.index[mask][-1]
         for k, vv in row_today.items():
-            df.at[idx, k] = vv
+            if vv is not None: # 改成只在 vv(value) 非 None 時才覆寫DB資料
+                df.at[idx, k] = vv
     else:
         df = pd.concat([df, pd.DataFrame([row_today])], ignore_index=True)
 
