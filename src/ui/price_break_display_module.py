@@ -597,23 +597,32 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     # 若四個扣都存在則顯示「未來4天」，否則顯示實際可用天數
                     days_label = 4 if len(ded_vals) == 4 else len(ded_vals)
 
-                    # ===== 新增：比較 昨基(prev_baseline5) 與 基(baseline5)，產生前綴詞 =====
+                    # ===== 新增：比較 昨基(prev_baseline5) 與 基(baseline5)，產生前綴詞（並顯示乖離率） =====
                     prefix = ""
                     try:
                         if (prev_baseline5 is not None) and (baseline5 is not None):
-                            pb = float(prev_baseline5)
-                            b = float(baseline5)
-                            if pb < b:
-                                prefix = "今壓上升📈 "
-                            elif pb > b:
-                                prefix = "今壓下降📉 "
+                            # 使用 Decimal 做精確計算與四捨五入
+                            pb_dec = Decimal(str(prev_baseline5))
+                            b_dec = Decimal(str(baseline5))
+                            if pb_dec == 0:
+                                # 無法計算乖離率
+                                pct_suffix = ""
                             else:
-                                prefix = "今壓持平➖ "
+                                prev_pct_dec = (b_dec - pb_dec) / pb_dec * Decimal("100")
+                                prev_pct_rounded = prev_pct_dec.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                                pct_suffix = f" ({float(prev_pct_rounded):+.2f}%)"
+
+                            if pb_dec < b_dec:
+                                prefix = f"<b>今壓</b>上升📈{pct_suffix} "
+                            elif pb_dec > b_dec:
+                                prefix = f"<b>今壓</b>下降📉{pct_suffix} "
+                            else:
+                                prefix = f"<b>今壓</b>持平➖{pct_suffix} "
                     except Exception:
                         prefix = ""
 
                     st.markdown(
-                        f"- {prefix}; 未來{days_label}天的<b>壓力</b>({float(avg_rounded):.2f}) {arrow} <b>{float(pct_rounded):+.2f}%</b>",
+                        f"- {prefix} ⚡ 未來{days_label}天的<b>壓力</b>({float(avg_rounded):.2f}) {arrow} <b>{float(pct_rounded):+.2f}%</b>",
                         unsafe_allow_html=True,
                     )
                 else:
