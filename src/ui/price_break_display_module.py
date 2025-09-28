@@ -576,18 +576,26 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 ded_vals = [float(x) for x in ded_vals_raw if x is not None]
 
                 if ded_vals and (baseline5 is not None) and float(baseline5) != 0:
-                    avg = sum(ded_vals) / len(ded_vals)
-                    pct = (avg - float(baseline5)) / float(baseline5) * 100.0
-                    if pct > 0:
+                    
+                    # 使用 Decimal 做精確四捨五入 (ROUND_HALF_UP) 到小數第2位
+                    avg_dec = sum(Decimal(str(x)) for x in ded_vals) / Decimal(len(ded_vals))
+                    avg_rounded = avg_dec.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+                    base_dec = Decimal(str(baseline5))
+                    pct_dec = (avg_dec - base_dec) / base_dec * Decimal("100")
+                    pct_rounded = pct_dec.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+                    if pct_dec > 0:
                         arrow = "<b>上升</b> 📈"
-                    elif pct < 0:
+                    elif pct_dec < 0:
                         arrow = "<b>下降</b> 📉"
                     else:
                         arrow = "持平"
+
                     # 若四個扣都存在則顯示「未來4天」，否則顯示實際可用天數
                     days_label = 4 if len(ded_vals) == 4 else len(ded_vals)
                     st.markdown(
-                        f"- 未來{days_label}天的<b>壓力</b>({avg:.2f}) {arrow} <b>{pct:+.2f}%</b>",
+                        f"- 未來{days_label}天的<b>壓力</b>({avg_rounded}) {arrow} <b>{float(pct_rounded):+.2f}%</b>",
                         unsafe_allow_html=True,
                     )
                 else:
