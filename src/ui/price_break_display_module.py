@@ -567,12 +567,6 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 msg = check_price_vs_baseline_and_deduction(c1, baseline5, deduction5)
                 st.markdown(msg, unsafe_allow_html=True)
                 
-                # 顯示昨基（基準價的前一交易日收盤）以便你確認
-                if prev_baseline5 is not None:
-                    st.markdown(f"- 昨基（基準價前一交易日收盤）：<b>{prev_baseline5:.2f}</b>", unsafe_allow_html=True)
-                else:
-                    st.markdown("- 昨基：查無資料或不足", unsafe_allow_html=True)
-                
                 # 顯示「未來N天的壓力(...)升/降 ...%」詞條（用 5 日基準與四個扣抵計算）
                 def _fmt(v):
                     try:
@@ -602,8 +596,24 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
                     # 若四個扣都存在則顯示「未來4天」，否則顯示實際可用天數
                     days_label = 4 if len(ded_vals) == 4 else len(ded_vals)
+
+                    # ===== 新增：比較 昨基(prev_baseline5) 與 基(baseline5)，產生前綴詞 =====
+                    prefix = ""
+                    try:
+                        if (prev_baseline5 is not None) and (baseline5 is not None):
+                            pb = float(prev_baseline5)
+                            b = float(baseline5)
+                            if pb < b:
+                                prefix = "今壓上升📈 "
+                            elif pb > b:
+                                prefix = "今壓下降📉 "
+                            else:
+                                prefix = "今壓持平➖ "
+                    except Exception:
+                        prefix = ""
+
                     st.markdown(
-                        f"- 未來{days_label}天的<b>壓力</b>({avg_rounded}) {arrow} <b>{float(pct_rounded):+.2f}%</b>",
+                        f"- {prefix}; 未來{days_label}天的<b>壓力</b>({float(avg_rounded):.2f}) {arrow} <b>{float(pct_rounded):+.2f}%</b>",
                         unsafe_allow_html=True,
                     )
                 else:
