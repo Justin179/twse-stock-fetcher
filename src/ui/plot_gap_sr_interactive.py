@@ -10,6 +10,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 import numpy as np  # for vs_c1 / c1 marker row
+from ui.price_break_display_module import (
+    get_baseline_and_deduction,
+    compute_ma_with_today,
+)
 # 其它 import 之後
 from common.stock_loader import load_stock_list_with_names
 from ui.sr_prev_high_on_heavy import scan_prev_high_on_heavy_from_df  # 或用 scan_prev_high_on_heavy_all
@@ -565,6 +569,21 @@ def main() -> None:
             except Exception:
                 today_info = None
 
+        # 取得 today_date（參考 price_break_display_module 的做法）
+        today_date = None
+        if today_info and ("date" in today_info):
+            today_date = today_info["date"]
+        else:
+            # fallback：取 daily_with_today 的最後一筆 date（已包含盤中合併）
+            try:
+                if not daily.empty:
+                    # daily 尚未合併盤中，使用 daily 的最後一筆；若後面需要盤中則使用 daily_with_today
+                    today_date = daily["date"].iloc[-1].strftime("%Y-%m-%d")
+                else:
+                    today_date = None
+            except Exception:
+                today_date = None
+
         if c1_val is not None:
             c1 = c1_val
         elif today_info and ("c1" in today_info):
@@ -684,6 +703,50 @@ def main() -> None:
             df_out = pd.concat([df_out, pd.DataFrame([marker_row])], ignore_index=True)
             df_out = df_out.sort_values(["role_rank","edge_price","tf_rank"],
                                         ascending=[True,False,True]).reset_index(drop=True)
+
+            # --- 新增：在「提示 / 規則說明」上方顯示 5/10/24/72 日均線資訊 ---
+            def _safe_fmt(v):
+                try:
+                    return f"{float(v):.2f}"
+                except Exception:
+                    return "N/A"
+
+            def _ma_slope_label(baseline, current_price):
+                """判斷均線彎向：使用現價 current_price 相對於 baseline（基準價）比較。"""
+                try:
+                    if baseline is None or current_price is None:
+                        return "N/A"
+                    b = float(baseline)
+                    cur = float(current_price)
+                    if cur > b:
+                        return "上彎"
+                    if cur < b:
+                        return "下彎"
+                    return "持平"
+                except Exception:
+                    return "N/A"
+
+            if stock_id and today_date:
+                st.markdown("### 均線快速摘要（5 / 10 / 24 / 72）")
+                for n in (5, 10, 24, 72):
+                    ma = None
+                    try:
+                        ma = compute_ma_with_today(stock_id, today_date, c1, n)
+                    except Exception:
+                        ma = None
+
+                    baseline = deduction = None
+                    try:
+                        baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
+                    except Exception:
+                        baseline = deduction = None
+
+                    st.markdown(
+                        f"- {n}日均：點位 {_safe_fmt(ma)} ／ {_ma_slope_label(baseline, c1)} ／ 基準價 {_safe_fmt(baseline)} ／ 扣抵值 {_safe_fmt(deduction)}",
+                        unsafe_allow_html=True,
+                    )
+                st.markdown("---")
+            # --- 新增結束 ---
 
             
             # ⬇️ 新增：把所有提示收納進 expander
