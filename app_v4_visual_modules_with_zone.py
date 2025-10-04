@@ -23,6 +23,7 @@ from ui.show_temp_list_expander import render_temp_list_expander
 from ui.bias_calculator import render_bias_calculator
 from ui.peg_calculator import render_peg_calculator
 from ui.volume_avg_calculator import render_volume_avg_calculator
+from common.futures_spread_helper import get_futures_spread_info, format_futures_spread_display
 
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
@@ -54,6 +55,12 @@ sdk, dl = init_session_login_objects()
 
 col1, col2 = st.columns([1, 6])
 with col1:
+    # 🔹 期現價差資訊（添加在股票代碼選單上方）
+    with st.expander("📊 台指期現價差", expanded=False):
+        futures_data = get_futures_spread_info()
+        spread_display = format_futures_spread_display(futures_data)
+        st.markdown(spread_display)
+    
     # 下拉選單區
     stock_ids, stock_display = load_stock_list_with_names(refresh=True)
     selected_display = st.selectbox("股票代碼", stock_display)
