@@ -110,6 +110,19 @@ def format_futures_spread_display(data: Dict[str, Any]) -> str:
     def fmt_num(x: float) -> str:
         return f"{x:,.2f}"
     
+    def get_market_sentiment(spread_pts: float) -> str:
+        """根據期現價差判斷市場情緒"""
+        if spread_pts >= 100:
+            return "🔥 市場情緒太樂觀，開高容易拉回，開低容易拉高"
+        elif spread_pts >= 6:
+            return "😊 市場情緒樂觀"
+        elif spread_pts >= -5:
+            return "😐 市場情緒中立"
+        else:
+            return "😰 市場情緒悲觀"
+    
+    sentiment = get_market_sentiment(data['spread_pts'])
+    
     return f"""
 **📅 日期:** {data['trade_date']}
 
@@ -118,4 +131,6 @@ def format_futures_spread_display(data: Dict[str, Any]) -> str:
 - 台指期: {fmt_num(data['future_price'])}({data['future_near_month']}) 
 
 **💰 期現價差:** {fmt_num(data['spread_pts'])} 點
+
+**🎯 市場解讀:** {sentiment}
 """
