@@ -43,6 +43,27 @@ def get_stock_name_by_id(stock_id: str) -> str:
         pass
     return ""
 
+
+def get_stock_id_by_name(stock_name: str) -> str:
+    """
+    從 load_stock_list_with_names() 取得的顯示字串中，找出指定名稱對應的股票代碼。
+    顯示字串通常長得像：'2330 台積電' 或 '1101 台泥'。
+    支援部分名稱匹配，例如輸入「台積」可以找到「台積電」。
+    """
+    try:
+        _, stock_display = load_stock_list_with_names(refresh=False)
+        for s in stock_display:
+            parts = s.split()
+            if len(parts) >= 2:
+                # 取得完整股票名稱（第二部分開始）
+                full_name = " ".join(parts[1:])
+                # 支援部分匹配或完全匹配
+                if stock_name in full_name or full_name == stock_name:
+                    return parts[0]  # 返回股票代碼
+    except Exception:
+        pass
+    return ""
+
 # -----------------------------
 # 資料載入（DB）
 # -----------------------------
@@ -491,14 +512,28 @@ def main() -> None:
         # stock_id = st.text_input("股票代碼（例：2330）", value="2330")
         # 用 on_change 模擬提交，然後自動清空
         def submit_stock_id():
-            st.session_state["submitted_stock_id"] = st.session_state["stock_id_input"]
+            user_input = st.session_state["stock_id_input"].strip()
+            
+            # 判斷輸入是否為純數字（股票代碼）
+            if user_input.isdigit():
+                st.session_state["submitted_stock_id"] = user_input
+            else:
+                # 輸入包含中文或非純數字，嘗試作為股票名稱查詢
+                stock_id = get_stock_id_by_name(user_input)
+                if stock_id:
+                    st.session_state["submitted_stock_id"] = stock_id
+                else:
+                    # 如果找不到對應的股票代碼，直接使用原輸入（可能是特殊代碼格式）
+                    st.session_state["submitted_stock_id"] = user_input
+            
             st.session_state["stock_id_input"] = ""  # 清空輸入框
 
         st.text_input(
-            "股票代碼（例：2330）",
+            "股票代碼或名稱",
             key="stock_id_input",
-            placeholder="例如：2330",
-            on_change=submit_stock_id
+            placeholder="例如：2330 或 台積電",
+            on_change=submit_stock_id,
+            help="可輸入股票代碼（如：2330）或中文名稱（如：台積電）"
         )
 
         # 使用者輸入完成按 Enter → submit_stock_id 被呼叫
