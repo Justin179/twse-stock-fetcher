@@ -138,6 +138,290 @@ class Gap:
     strength: str = "secondary"  # "primary"=一級加粗, "secondary"=一般
 
 
+# -----------------------------
+# 新增：均線支撐壓力掃描
+# -----------------------------
+def scan_ma_sr_from_stock(stock_id: str, today_date: str, c1: float) -> List[Gap]:
+    """
+    掃描均線支撐壓力，包含：
+    1. 上彎/下彎均線：只有上彎且在現價下方的均線才算支撐，只有下彎且在現價上方的均線才算壓力
+    2. 基準價與扣抵值：找距離現價最近的均線，取其基準價和扣抵值作為支撐/壓力
+    """
+    out: List[Gap] = []
+    ma_periods = [5, 10, 24, 72]
+    
+    # 儲存所有均線資訊
+    ma_data = {}
+    
+    for n in ma_periods:
+        try:
+            # 取得均線點位
+            ma = compute_ma_with_today(stock_id, today_date, c1, n)
+            # 取得基準價與扣抵值
+            baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
+            
+            if ma is not None:
+                # 判斷均線上彎/下彎：使用現價 c1 vs baseline
+                is_uptrending = baseline is not None and c1 > baseline
+                is_downtrending = baseline is not None and c1 < baseline
+                
+                ma_data[n] = {
+                    'ma': float(ma),
+                    'baseline': baseline,
+                    'deduction': deduction,
+                    'is_uptrending': is_uptrending,
+                    'is_downtrending': is_downtrending
+                }
+                
+                # 1. 上彎/下彎均線的支撐壓力
+                if is_uptrending and ma < c1:
+                    # 上彎且在現價下方 → 支撐
+                    out.append(Gap(
+                        timeframe="MA",
+                        gap_type=f"ma{n}_up",
+                        edge_price=float(round(ma, 3)),
+                        role="support",
+                        ka_key=f"MA{n}",
+                        kb_key=today_date,
+                        gap_low=float(round(ma, 3)),
+                        gap_high=float(round(ma, 3)),
+                        gap_width=0.0,
+                        strength="secondary"
+                    ))
+                elif is_downtrending and ma > c1:
+                    # 下彎且在現價上方 → 壓力
+                    out.append(Gap(
+                        timeframe="MA",
+                        gap_type=f"ma{n}_down",
+                        edge_price=float(round(ma, 3)),
+                        role="resistance",
+                        ka_key=f"MA{n}",
+                        kb_key=today_date,
+                        gap_low=float(round(ma, 3)),
+                        gap_high=float(round(ma, 3)),
+                        gap_width=0.0,
+                        strength="secondary"
+                    ))
+        except Exception as e:
+            print(f"處理 {n} 日均線時發生錯誤: {e}")
+            continue
+    
+    # 2. 基準價與扣抵值：找距離現價最近的均線
+    if ma_data:
+        # 計算每個均線與現價的距離
+        distances = {n: abs(data['ma'] - c1) for n, data in ma_data.items()}
+        closest_ma = min(distances.keys(), key=lambda k: distances[k])
+        closest_data = ma_data[closest_ma]
+        
+        # 基準價的支撐/壓力
+        if closest_data['baseline'] is not None:
+            baseline = float(closest_data['baseline'])
+            if baseline > c1:
+                # 基準價在現價上方 → 壓力
+                out.append(Gap(
+                    timeframe="MA",
+                    gap_type=f"baseline{closest_ma}",
+                    edge_price=float(round(baseline, 3)),
+                    role="resistance",
+                    ka_key=f"基準價MA{closest_ma}",
+                    kb_key=today_date,
+                    gap_low=float(round(baseline, 3)),
+                    gap_high=float(round(baseline, 3)),
+                    gap_width=0.0,
+                    strength="primary"  # 基準價設為一級加粗
+                ))
+            elif baseline < c1:
+                # 基準價在現價下方 → 支撐
+                out.append(Gap(
+                    timeframe="MA",
+                    gap_type=f"baseline{closest_ma}",
+                    edge_price=float(round(baseline, 3)),
+                    role="support",
+                    ka_key=f"基準價MA{closest_ma}",
+                    kb_key=today_date,
+                    gap_low=float(round(baseline, 3)),
+                    gap_high=float(round(baseline, 3)),
+                    gap_width=0.0,
+                    strength="primary"  # 基準價設為一級加粗
+                ))
+        
+        # 扣抵值的支撐/壓力
+        if closest_data['deduction'] is not None:
+            deduction = float(closest_data['deduction'])
+            if deduction > c1:
+                # 扣抵值在現價上方 → 壓力
+                out.append(Gap(
+                    timeframe="MA",
+                    gap_type=f"deduction{closest_ma}",
+                    edge_price=float(round(deduction, 3)),
+                    role="resistance",
+                    ka_key=f"扣抵值MA{closest_ma}",
+                    kb_key=today_date,
+                    gap_low=float(round(deduction, 3)),
+                    gap_high=float(round(deduction, 3)),
+                    gap_width=0.0,
+                    strength="primary"  # 扣抵值設為一級加粗
+                ))
+            elif deduction < c1:
+                # 扣抵值在現價下方 → 支撐
+                out.append(Gap(
+                    timeframe="MA",
+                    gap_type=f"deduction{closest_ma}",
+                    edge_price=float(round(deduction, 3)),
+                    role="support",
+                    ka_key=f"扣抵值MA{closest_ma}",
+                    kb_key=today_date,
+                    gap_low=float(round(deduction, 3)),
+                    gap_high=float(round(deduction, 3)),
+                    gap_width=0.0,
+                    strength="primary"  # 扣抵值設為一級加粗
+                ))
+    
+    return out
+
+
+# -----------------------------
+# 新增：均線支撐壓力掃描
+# -----------------------------
+def scan_ma_sr_from_stock(stock_id: str, today_date: str, c1: float) -> List[Gap]:
+    """
+    掃描均線支撐壓力，包含：
+    1. 上彎/下彎均線：只有上彎且在現價下方的均線才算支撐，只有下彎且在現價上方的均線才算壓力
+    2. 基準價與扣抵值：找距離現價最近的均線，取其基準價和扣抵值作為支撐/壓力
+    """
+    out: List[Gap] = []
+    ma_periods = [5, 10, 24, 72]
+    
+    # 儲存所有均線資訊
+    ma_data = {}
+    
+    for n in ma_periods:
+        try:
+            # 取得均線點位
+            ma = compute_ma_with_today(stock_id, today_date, c1, n)
+            # 取得基準價與扣抵值
+            baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
+            
+            if ma is not None:
+                # 判斷均線上彎/下彎：使用現價 c1 vs baseline
+                is_uptrending = baseline is not None and c1 > baseline
+                is_downtrending = baseline is not None and c1 < baseline
+                
+                ma_data[n] = {
+                    'ma': float(ma),
+                    'baseline': baseline,
+                    'deduction': deduction,
+                    'is_uptrending': is_uptrending,
+                    'is_downtrending': is_downtrending
+                }
+                
+                # 1. 上彎/下彎均線的支撐壓力
+                if is_uptrending and ma < c1:
+                    # 上彎且在現價下方 → 支撐
+                    out.append(Gap(
+                        timeframe="MA",
+                        gap_type=f"ma{n}_up",
+                        edge_price=float(round(ma, 3)),
+                        role="support",
+                        ka_key=f"MA{n}",
+                        kb_key=today_date,
+                        gap_low=float(round(ma, 3)),
+                        gap_high=float(round(ma, 3)),
+                        gap_width=0.0,
+                        strength="secondary"
+                    ))
+                elif is_downtrending and ma > c1:
+                    # 下彎且在現價上方 → 壓力
+                    out.append(Gap(
+                        timeframe="MA",
+                        gap_type=f"ma{n}_down",
+                        edge_price=float(round(ma, 3)),
+                        role="resistance",
+                        ka_key=f"MA{n}",
+                        kb_key=today_date,
+                        gap_low=float(round(ma, 3)),
+                        gap_high=float(round(ma, 3)),
+                        gap_width=0.0,
+                        strength="secondary"
+                    ))
+        except Exception as e:
+            print(f"處理 {n} 日均線時發生錯誤: {e}")
+            continue
+    
+    # 2. 基準價與扣抵值：找距離現價最近的均線
+    if ma_data:
+        # 計算每個均線與現價的距離
+        distances = {n: abs(data['ma'] - c1) for n, data in ma_data.items()}
+        closest_ma = min(distances.keys(), key=lambda k: distances[k])
+        closest_data = ma_data[closest_ma]
+        
+        # 基準價的支撐/壓力
+        if closest_data['baseline'] is not None:
+            baseline = float(closest_data['baseline'])
+            if baseline > c1:
+                # 基準價在現價上方 → 壓力
+                out.append(Gap(
+                    timeframe="MA",
+                    gap_type=f"baseline{closest_ma}",
+                    edge_price=float(round(baseline, 3)),
+                    role="resistance",
+                    ka_key=f"基準價MA{closest_ma}",
+                    kb_key=today_date,
+                    gap_low=float(round(baseline, 3)),
+                    gap_high=float(round(baseline, 3)),
+                    gap_width=0.0,
+                    strength="primary"  # 基準價設為一級加粗
+                ))
+            elif baseline < c1:
+                # 基準價在現價下方 → 支撐
+                out.append(Gap(
+                    timeframe="MA",
+                    gap_type=f"baseline{closest_ma}",
+                    edge_price=float(round(baseline, 3)),
+                    role="support",
+                    ka_key=f"基準價MA{closest_ma}",
+                    kb_key=today_date,
+                    gap_low=float(round(baseline, 3)),
+                    gap_high=float(round(baseline, 3)),
+                    gap_width=0.0,
+                    strength="primary"  # 基準價設為一級加粗
+                ))
+        
+        # 扣抵值的支撐/壓力
+        if closest_data['deduction'] is not None:
+            deduction = float(closest_data['deduction'])
+            if deduction > c1:
+                # 扣抵值在現價上方 → 壓力
+                out.append(Gap(
+                    timeframe="MA",
+                    gap_type=f"deduction{closest_ma}",
+                    edge_price=float(round(deduction, 3)),
+                    role="resistance",
+                    ka_key=f"扣抵值MA{closest_ma}",
+                    kb_key=today_date,
+                    gap_low=float(round(deduction, 3)),
+                    gap_high=float(round(deduction, 3)),
+                    gap_width=0.0,
+                    strength="primary"  # 扣抵值設為一級加粗
+                ))
+            elif deduction < c1:
+                # 扣抵值在現價下方 → 支撐
+                out.append(Gap(
+                    timeframe="MA",
+                    gap_type=f"deduction{closest_ma}",
+                    edge_price=float(round(deduction, 3)),
+                    role="support",
+                    ka_key=f"扣抵值MA{closest_ma}",
+                    kb_key=today_date,
+                    gap_low=float(round(deduction, 3)),
+                    gap_high=float(round(deduction, 3)),
+                    gap_width=0.0,
+                    strength="primary"  # 扣抵值設為一級加粗
+                ))
+    
+    return out
+
+
 def _fmt_key_for_tf(val, timeframe: str) -> str:
     if timeframe == "D":
         try:
@@ -358,9 +642,9 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         annotation_position="top left"
     )
 
-    zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)"}
+    zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)", "MA": "rgba(138,43,226,0.18)"}
     line_color_role = {"support": "#16a34a", "resistance": "#dc2626", "at_edge": "#737373"}
-    line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4}
+    line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4, "MA": 2.0}
     strength_mul = {"primary": 1.8, "secondary": 1.0}
     dash_role = {"support": "dot", "resistance": "solid", "at_edge": "dash"}
 
@@ -561,6 +845,7 @@ def main() -> None:
         inc_d = st.checkbox("日線 (D)", value=True)
         inc_w = st.checkbox("週線 (W)", value=True)
         inc_m = st.checkbox("月線 (M)", value=True)
+        inc_ma = st.checkbox("均線 (MA)", value=True)
 
         st.markdown("---")
         c1_override = st.text_input("c1 覆寫（通常留空；僅供測試/模擬）", value="")
@@ -692,13 +977,16 @@ def main() -> None:
             pivot_left=m_pivot_left, pivot_right=m_pivot_right, max_lookback=36, pivot_heavy_only=True
         )
 
-        # === 修改：把三個前波高的結果併進 gaps ===
-        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + d_prev + w_prev + m_prev
+        # === 新增：均線支撐壓力掃描 ===
+        ma_sr = scan_ma_sr_from_stock(stock_id, today_date or "", c1)
+
+        # === 修改：把均線支撐壓力的結果也併進 gaps ===
+        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + d_prev + w_prev + m_prev + ma_sr
 
 
         fig = make_chart(
             daily_with_today, gaps, c1, show_zones, show_labels,
-            include={"D": inc_d, "W": inc_w, "M": inc_m},
+            include={"D": inc_d, "W": inc_w, "M": inc_m, "MA": inc_ma},
             stock_id=stock_id, stock_name=stock_name
         )
 
@@ -716,7 +1004,7 @@ def main() -> None:
             df_out = df_out[df_out["gap_type"] != "hv_prev_high"].copy()
 
             role_rank = {"resistance": 0, "at_edge": 1, "support": 2}
-            tf_rank   = {"M": 0, "W": 1, "D": 2}
+            tf_rank   = {"M": 0, "W": 1, "D": 2, "MA": 3}
             df_out["role_rank"] = df_out["role"].map(role_rank)
             df_out["tf_rank"]   = df_out["timeframe"].map(tf_rank)
 
@@ -932,6 +1220,88 @@ def main() -> None:
 
                 # 顯示第二張表（高度你可再調）
                 st.dataframe(styled_prev, height=260, use_container_width=True)
+
+            # ===============================
+            # ③ 均線支撐壓力「專區」表格（獨立）
+            # ===============================
+            st.markdown("---")
+            st.subheader("均線支撐壓力（MA S/R）")
+
+            # 篩選出均線相關的 Gap
+            df_ma = df_prev_source[df_prev_source["timeframe"] == "MA"].copy()
+
+            if df_ma.empty:
+                st.info("未偵測到均線支撐壓力。")
+            else:
+                # 排序：角色 → 價位 → gap_type
+                df_ma["role_rank"] = df_ma["role"].map({"resistance": 0, "at_edge": 1, "support": 2})
+                df_ma = df_ma.sort_values(["role_rank", "edge_price"], ascending=[True, False]).reset_index(drop=True)
+                
+                # 加入現價標記
+                df_ma.insert(0, "vs_c1", np.where(df_ma["edge_price"] > c1, "▲",
+                                    np.where(df_ma["edge_price"] < c1, "▼", "●")))
+                
+                # 插入 c1 分隔列
+                marker_row_ma = {
+                    "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
+                    "ka_key":"—","kb_key":"—","gap_low":c1,"gap_high":c1,"gap_width":0.0,
+                    "vs_c1":"🔶 c1","role_rank":1
+                }
+                df_ma = pd.concat([df_ma, pd.DataFrame([marker_row_ma])], ignore_index=True)
+                df_ma = df_ma.sort_values(["role_rank","edge_price"], ascending=[True,False]).reset_index(drop=True)
+                
+                # 選擇要顯示的欄位
+                cols_order_ma = ["vs_c1","gap_type","edge_price","role","ka_key","kb_key"]
+                show_df_ma = df_ma[[c for c in cols_order_ma if c in df_ma.columns]].copy()
+                
+                # 格式化數字欄位
+                num_cols_ma = [c for c in ["edge_price"] if c in show_df_ma.columns]
+                fmt_map_ma = {c: "{:.2f}" for c in num_cols_ma}
+                
+                # 樣式設定
+                def highlight_gap_type_ma(val: str) -> str:
+                    v = str(val)
+                    if "up" in v or "baseline" in v or "deduction" in v:
+                        return "background-color: #e8f5e8; color: #2d5016;"
+                    elif "down" in v:
+                        return "background-color: #ffeaea; color: #8b0000;"
+                    return ""
+                
+                # c1 高亮
+                def highlight_c1_row_ma(row):
+                    if str(row.get("vs_c1", "")).startswith("🔶"):
+                        return ["background-color: #fff3cd; font-weight: bold;"] * len(row)
+                    return [""] * len(row)
+                
+                styled_ma = (
+                    show_df_ma
+                        .style
+                        .format(fmt_map_ma)
+                        .apply(highlight_c1_row_ma, axis=1)
+                        .map(highlight_gap_type_ma, subset=["gap_type"])
+                )
+                
+                st.dataframe(styled_ma, height=300, use_container_width=True)
+                
+                # 均線支撐壓力說明
+                with st.expander("📘 均線支撐壓力說明", expanded=False):
+                    st.markdown("""
+                    **均線支撐壓力規則：**
+                    
+                    **1. 上彎/下彎均線：**
+                    - 上彎且在現價下方的均線 → 支撐
+                    - 下彎且在現價上方的均線 → 壓力
+                    - 判斷依據：現價 vs 基準價（現價 > 基準價 = 上彎；現價 < 基準價 = 下彎）
+                    
+                    **2. 基準價與扣抵值：**
+                    - 找出距離現價最近的均線（5/10/24/72日均）
+                    - 該均線的基準價：在現價上方為壓力，在現價下方為支撐
+                    - 該均線的扣抵值：在現價上方為壓力，在現價下方為支撐
+                    
+                    **強度說明：**
+                    - 基準價、扣抵值：一級加粗（primary）
+                    - 上彎/下彎均線：二級一般（secondary）
+                    """)
 
 
         else:
