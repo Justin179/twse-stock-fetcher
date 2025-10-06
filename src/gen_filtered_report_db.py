@@ -30,7 +30,9 @@ if not input_txt:
 
 def read_stock_list(file_path: str) -> list:
     with open(file_path, "r", encoding="utf-8") as f:
-        return [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+        stock_list = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+        # 去除重複的股票代碼，保持原順序
+        return list(dict.fromkeys(stock_list))
 
 
 input_name = Path(input_txt).stem.lower()
