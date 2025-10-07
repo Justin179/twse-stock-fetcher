@@ -7,11 +7,13 @@ def check_price_vs_baseline_and_deduction(c1: float, baseline: float, deduction:
     if baseline is None or deduction is None:
         return "- **基準價 / 扣抵值**：資料不足"
 
-    # 扣抵方向判斷
+    # 扣抵方向判斷與百分比計算
     if baseline < deduction:
-        kd_status = "<span style='color:blue'><b>扣抵向上</b></span>"
+        percentage = ((deduction - baseline) / baseline) * 100
+        kd_status = f"<span style='color:blue'><b>扣抵向上 +{percentage:.2f}%</b></span>"
     elif baseline > deduction:
-        kd_status = "<span style='color:blue'><b>扣抵向下</b></span>"
+        percentage = ((baseline - deduction) / baseline) * 100
+        kd_status = f"<span style='color:blue'><b>扣抵向下 -{percentage:.2f}%</b></span>"
     else:
         kd_status = "<span style='color:blue'><b>扣抵持平</b></span>"
 
