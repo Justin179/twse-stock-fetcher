@@ -10,6 +10,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 import numpy as np  # for vs_c1 / c1 marker row
+
+# 添加父目錄到 sys.path 以便正確導入模組
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 from ui.price_break_display_module import (
     get_baseline_and_deduction,
     compute_ma_with_today,
@@ -136,148 +142,6 @@ class Gap:
     gap_high: float        # 對 heavy SR，=edge_price
     gap_width: float       # 對 heavy SR，=0.0
     strength: str = "secondary"  # "primary"=一級加粗, "secondary"=一般
-
-
-# -----------------------------
-# 新增：均線支撐壓力掃描
-# -----------------------------
-def scan_ma_sr_from_stock(stock_id: str, today_date: str, c1: float) -> List[Gap]:
-    """
-    掃描均線支撐壓力，包含：
-    1. 上彎/下彎均線：只有上彎且在現價下方的均線才算支撐，只有下彎且在現價上方的均線才算壓力
-    2. 基準價與扣抵值：找距離現價最近的均線，取其基準價和扣抵值作為支撐/壓力
-    """
-    out: List[Gap] = []
-    ma_periods = [5, 10, 24, 72]
-    
-    # 儲存所有均線資訊
-    ma_data = {}
-    
-    for n in ma_periods:
-        try:
-            # 取得均線點位
-            ma = compute_ma_with_today(stock_id, today_date, c1, n)
-            # 取得基準價與扣抵值
-            baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
-            
-            if ma is not None:
-                # 判斷均線上彎/下彎：使用現價 c1 vs baseline
-                is_uptrending = baseline is not None and c1 > baseline
-                is_downtrending = baseline is not None and c1 < baseline
-                
-                ma_data[n] = {
-                    'ma': float(ma),
-                    'baseline': baseline,
-                    'deduction': deduction,
-                    'is_uptrending': is_uptrending,
-                    'is_downtrending': is_downtrending
-                }
-                
-                # 1. 上彎/下彎均線的支撐壓力
-                if is_uptrending and ma < c1:
-                    # 上彎且在現價下方 → 支撐
-                    out.append(Gap(
-                        timeframe="MA",
-                        gap_type=f"ma{n}_up",
-                        edge_price=float(round(ma, 3)),
-                        role="support",
-                        ka_key=f"MA{n}",
-                        kb_key=today_date,
-                        gap_low=float(round(ma, 3)),
-                        gap_high=float(round(ma, 3)),
-                        gap_width=0.0,
-                        strength="secondary"
-                    ))
-                elif is_downtrending and ma > c1:
-                    # 下彎且在現價上方 → 壓力
-                    out.append(Gap(
-                        timeframe="MA",
-                        gap_type=f"ma{n}_down",
-                        edge_price=float(round(ma, 3)),
-                        role="resistance",
-                        ka_key=f"MA{n}",
-                        kb_key=today_date,
-                        gap_low=float(round(ma, 3)),
-                        gap_high=float(round(ma, 3)),
-                        gap_width=0.0,
-                        strength="secondary"
-                    ))
-        except Exception as e:
-            print(f"處理 {n} 日均線時發生錯誤: {e}")
-            continue
-    
-    # 2. 基準價與扣抵值：找距離現價最近的均線
-    if ma_data:
-        # 計算每個均線與現價的距離
-        distances = {n: abs(data['ma'] - c1) for n, data in ma_data.items()}
-        closest_ma = min(distances.keys(), key=lambda k: distances[k])
-        closest_data = ma_data[closest_ma]
-        
-        # 基準價的支撐/壓力
-        if closest_data['baseline'] is not None:
-            baseline = float(closest_data['baseline'])
-            if baseline > c1:
-                # 基準價在現價上方 → 壓力
-                out.append(Gap(
-                    timeframe="MA",
-                    gap_type=f"baseline{closest_ma}",
-                    edge_price=float(round(baseline, 3)),
-                    role="resistance",
-                    ka_key=f"基準價MA{closest_ma}",
-                    kb_key=today_date,
-                    gap_low=float(round(baseline, 3)),
-                    gap_high=float(round(baseline, 3)),
-                    gap_width=0.0,
-                    strength="primary"  # 基準價設為一級加粗
-                ))
-            elif baseline < c1:
-                # 基準價在現價下方 → 支撐
-                out.append(Gap(
-                    timeframe="MA",
-                    gap_type=f"baseline{closest_ma}",
-                    edge_price=float(round(baseline, 3)),
-                    role="support",
-                    ka_key=f"基準價MA{closest_ma}",
-                    kb_key=today_date,
-                    gap_low=float(round(baseline, 3)),
-                    gap_high=float(round(baseline, 3)),
-                    gap_width=0.0,
-                    strength="primary"  # 基準價設為一級加粗
-                ))
-        
-        # 扣抵值的支撐/壓力
-        if closest_data['deduction'] is not None:
-            deduction = float(closest_data['deduction'])
-            if deduction > c1:
-                # 扣抵值在現價上方 → 壓力
-                out.append(Gap(
-                    timeframe="MA",
-                    gap_type=f"deduction{closest_ma}",
-                    edge_price=float(round(deduction, 3)),
-                    role="resistance",
-                    ka_key=f"扣抵值MA{closest_ma}",
-                    kb_key=today_date,
-                    gap_low=float(round(deduction, 3)),
-                    gap_high=float(round(deduction, 3)),
-                    gap_width=0.0,
-                    strength="primary"  # 扣抵值設為一級加粗
-                ))
-            elif deduction < c1:
-                # 扣抵值在現價下方 → 支撐
-                out.append(Gap(
-                    timeframe="MA",
-                    gap_type=f"deduction{closest_ma}",
-                    edge_price=float(round(deduction, 3)),
-                    role="support",
-                    ka_key=f"扣抵值MA{closest_ma}",
-                    kb_key=today_date,
-                    gap_low=float(round(deduction, 3)),
-                    gap_high=float(round(deduction, 3)),
-                    gap_width=0.0,
-                    strength="primary"  # 扣抵值設為一級加粗
-                ))
-    
-    return out
 
 
 # -----------------------------
@@ -1050,25 +914,7 @@ def main() -> None:
                     return "N/A"
 
             if stock_id and today_date:
-                st.markdown("### 均線快速摘要（5 / 10 / 24 / 72）")
-                for n in (5, 10, 24, 72):
-                    ma = None
-                    try:
-                        ma = compute_ma_with_today(stock_id, today_date, c1, n)
-                    except Exception:
-                        ma = None
-
-                    baseline = deduction = None
-                    try:
-                        baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
-                    except Exception:
-                        baseline = deduction = None
-
-                    st.markdown(
-                        f"- {n}日均：點位 {_safe_fmt(ma)} ／ {_ma_slope_label(baseline, c1)} ／ 基準價 {_safe_fmt(baseline)} ／ 扣抵值 {_safe_fmt(deduction)}",
-                        unsafe_allow_html=True,
-                    )
-                st.markdown("---")
+                pass  # 均線快速摘要已移至均線支撐壓力說明下方
             # --- 新增結束 ---
 
             
@@ -1302,6 +1148,28 @@ def main() -> None:
                     - 基準價、扣抵值：一級加粗（primary）
                     - 上彎/下彎均線：二級一般（secondary）
                     """)
+
+                # 均線快速摘要區塊
+                if stock_id and today_date:
+                    st.markdown("### 均線快速摘要（5 / 10 / 24 / 72）")
+                    for n in (5, 10, 24, 72):
+                        ma = None
+                        try:
+                            ma = compute_ma_with_today(stock_id, today_date, c1, n)
+                        except Exception:
+                            ma = None
+
+                        baseline = deduction = None
+                        try:
+                            baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
+                        except Exception:
+                            baseline = deduction = None
+
+                        st.markdown(
+                            f"- {n}日均：點位 {_safe_fmt(ma)} ／ {_ma_slope_label(baseline, c1)} ／ 基準價 {_safe_fmt(baseline)} ／ 扣抵值 {_safe_fmt(deduction)}",
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown("---")
 
 
         else:
