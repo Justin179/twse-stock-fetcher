@@ -54,32 +54,36 @@ def fetch_daily_ohlcv(sdk, symbol, days=10):
         return None
 
 def fetch_intraday_quote(sdk, symbol):
-    sdk.init_realtime()
-    quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=symbol)
-    print("📦 原始即時報價 JSON：", quote)
+    try:
+        sdk.init_realtime()
+        quote = sdk.marketdata.rest_client.stock.intraday.quote(symbol=symbol)
+        print("📦 原始即時報價 JSON：", quote)
 
-    vol = (quote.get("total") or {}).get("tradeVolume")
-    if vol is None:
-        vol = quote.get("volume")  # 備援
+        vol = (quote.get("total") or {}).get("tradeVolume")
+        if vol is None:
+            vol = quote.get("volume")  # 備援
 
-    out = {
-        "date": quote.get("date"),                 # 'YYYY-MM-DD'
-        "o":    quote.get("openPrice"),
-        "h":    quote.get("highPrice"),
-        "l":    quote.get("lowPrice"),
-        "c1":   quote.get("closePrice"),
-        "c2":   quote.get("previousClose"),
-        "v":    vol,                                # ← 正確位置
-        "symbol": quote.get("symbol"),
-        "name": quote.get("name"),
-    }
+        out = {
+            "date": quote.get("date"),                 # 'YYYY-MM-DD'
+            "o":    quote.get("openPrice"),
+            "h":    quote.get("highPrice"),
+            "l":    quote.get("lowPrice"),
+            "c1":   quote.get("closePrice"),
+            "c2":   quote.get("previousClose"),
+            "v":    vol,                                # ← 正確位置
+            "symbol": quote.get("symbol"),
+            "name": quote.get("name"),
+        }
 
-    print(
-        f"🧾 {out.get('symbol')} {out.get('name','')} "
-        f"date={out['date']}, O={out['o']}, H={out['h']}, L={out['l']}, "
-        f"C1={out['c1']}, C2(昨)={out['c2']}, V={out['v']}"
-    )
-    return out
+        print(
+            f"🧾 {out.get('symbol')} {out.get('name','')} "
+            f"date={out['date']}, O={out['o']}, H={out['h']}, L={out['l']}, "
+            f"C1={out['c1']}, C2(昨)={out['c2']}, V={out['v']}"
+        )
+        return out
+    except Exception as e:
+        print(f"❌ 抓取即時報價失敗 {symbol}: {e}")
+        return None
 
 
 def main():
