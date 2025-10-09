@@ -66,7 +66,14 @@ if __name__ == "__main__":
         use_gui=use_gui, default_conditions=custom_conditions, bias_threshold=bias_threshold)
 
     db_path = str(Path(__file__).resolve().parent.parent / "data" / "institution.db")
+    
+    # 🔍 讀取原始股票清單並計算去重數量
+    with open(input_txt, "r", encoding="utf-8") as f:
+        original_stock_list = [line.strip() for line in f if line.strip() and not line.strip().startswith("#")]
+    
     stock_list = read_stock_list(input_txt)
+    duplicates_removed = len(original_stock_list) - len(stock_list)
+    
     all_report_rows = []
     missing_data_count = 0
     filtered_out_count = 0
@@ -111,7 +118,9 @@ if __name__ == "__main__":
                 print(f"❌ {stock_code} 處理失敗: {e}")
 
     print(
-        f"\n📊 總覽：載入 {len(stock_list)} 檔，"
+        f"\n📊 總覽：原始 {len(original_stock_list)} 檔，"
+        f"去重 {duplicates_removed} 檔，"
+        f"載入 {len(stock_list)} 檔，"
         f"遺失資料 {missing_data_count} 檔，"
         f"篩選排除 {filtered_out_count} 檔，"
         f"符合條件 {len(all_report_rows)} 檔"
