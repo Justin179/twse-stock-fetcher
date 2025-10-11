@@ -147,7 +147,28 @@ if __name__ == "__main__":
 
         print("\n📢 現價 過上週高 且 過上月高 或 向上趨勢（篩選後）：")
         if filtered_stocks:
+            # 對股票進行分類和排序
+            # 優先順序：1. 突破+向上趨勢  2. 向上趨勢  3. 突破
+            both_signals = []      # 突破+向上趨勢
+            uptrend_only = []      # 僅向上趨勢
+            attack_only = []       # 僅突破
+            
             for stock_id in filtered_stocks:
+                is_attack = stock_id in attack_stock_ids
+                is_uptrend = stock_id in uptrend_stock_ids
+                
+                if is_attack and is_uptrend:
+                    both_signals.append(stock_id)
+                elif is_uptrend:
+                    uptrend_only.append(stock_id)
+                elif is_attack:
+                    attack_only.append(stock_id)
+            
+            # 按優先順序合併
+            sorted_stocks = both_signals + uptrend_only + attack_only
+            
+            # 顯示排序後的結果
+            for stock_id in sorted_stocks:
                 name = id_name_map.get(stock_id, "")
                 # 判斷是來自突破還是向上趨勢
                 source = []
@@ -159,15 +180,17 @@ if __name__ == "__main__":
                 print(f"✅ {stock_id} {name} ({source_str})")
         else:
             print("ℹ️ 無符合條件的股票")
+            sorted_stocks = []
 
-        # === 將篩選後的清單加 .TW 後，寫成 籌碼集中且趨勢向上.csv ===
+        # === 將篩選後的清單加 .TW 後，寫成 籌碼集中且趨勢向上.csv（按排序後的順序） ===
         try:
-            if filtered_stocks:
+            if sorted_stocks:
                 Path("output").mkdir(parents=True, exist_ok=True)
                 out_path = Path("output") / "籌碼集中且趨勢向上.csv"
-                out_series = pd.Series([f"{sid}.TW" for sid in filtered_stocks])
+                out_series = pd.Series([f"{sid}.TW" for sid in sorted_stocks])
                 out_series.to_csv(out_path, index=False, header=False, encoding="utf-8-sig")
                 print(f"📁 已將 {len(out_series)} 檔股票清單輸出至 {out_path}")
+                print(f"   └─ 突破+向上趨勢: {len(both_signals)} 檔, 向上趨勢: {len(uptrend_only)} 檔, 突破: {len(attack_only)} 檔")
             else:
                 print("ℹ️ 篩選後清單為空，未產生輸出檔。")
         except Exception as e:
