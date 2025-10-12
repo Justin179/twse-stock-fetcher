@@ -145,6 +145,181 @@ class Gap:
 
 
 # -----------------------------
+# 新增：關鍵價位掃描（價格聚集點）
+# -----------------------------
+def scan_key_price_levels(df: pd.DataFrame, c1: float,
+                         min_high_count: int = 3,
+                         min_low_count: int = 3,
+                         price_tolerance_pct: float = 0.5,
+                         timeframe: str = "D") -> List[Gap]:
+    """
+    掃描「關鍵價位」：同一價位多次成為高點或低點的聚集區
+    
+    參數：
+    - min_high_count: 最少需要幾次成為高點才算關鍵價位（預設 3）
+    - min_low_count: 最少需要幾次成為低點才算關鍵價位（預設 3）
+    - price_tolerance_pct: 價格容差百分比（預設 0.5%，即 ±0.5%）
+    - timeframe: 時間框架 "D"=日K, "W"=週K, "M"=月K
+    
+    回傳：關鍵價位的 Gap 列表（timeframe="KEY-D" / "KEY-W" / "KEY-M"）
+    
+    邏輯：
+    - 連續多日測試同一價位 = 該價位更重要（不需要過濾）
+    - 例如：連續 3 天高點都是 100，代表 100 是非常強的壓力
+    - 高低點重疊 = 最強關鍵價位（箱型區間）
+    """
+    out: List[Gap] = []
+    if df.empty or len(df) < 3:  # 至少需要3根K棒
+        return out
+    
+    # 檢查是否有必要欄位（date 或 key 都可以）
+    has_date_col = "date" in df.columns
+    has_key_col = "key" in df.columns
+    
+    if not has_date_col and not has_key_col:
+        return out
+    
+    df = df.copy()
+    
+    # 收集所有高點和低點（K棒的 high 和 low）
+    high_prices = [float(row["high"]) for _, row in df.iterrows() if pd.notna(row.get("high"))]
+    low_prices = [float(row["low"]) for _, row in df.iterrows() if pd.notna(row.get("low"))]
+    
+    if not high_prices or not low_prices:
+        return out
+    
+    # === 找高點聚集 ===
+    high_clusters = _find_price_clusters_simple(high_prices, price_tolerance_pct, min_high_count)
+    
+    # === 找低點聚集 ===
+    low_clusters = _find_price_clusters_simple(low_prices, price_tolerance_pct, min_low_count)
+    
+    # === 檢查高低點重疊（最強關鍵價位）===
+    overlap_prices = _find_overlapping_clusters(high_clusters, low_clusters, price_tolerance_pct)
+    
+    # timeframe 標記（用於區分日/週/月）
+    tf_label = f"KEY-{timeframe}"
+    
+    # 生成 Gap 列表
+    for cluster_price, count in high_clusters:
+        role = "support" if c1 > cluster_price else "resistance" if c1 < cluster_price else "at_edge"
+        
+        # 檢查是否為高低點重疊
+        is_overlap = any(abs(cluster_price - op) / op * 100 <= price_tolerance_pct for op, _, _ in overlap_prices)
+        
+        if is_overlap:
+            # 找出對應的低點次數
+            low_count = next((lc for op, hc, lc in overlap_prices if abs(cluster_price - op) / op * 100 <= price_tolerance_pct), count)
+            gap_type = f"key_overlap_{timeframe}"
+            ka_key = f"{count}次高+{low_count}次低"
+        else:
+            gap_type = f"key_high_{timeframe}"
+            ka_key = f"{count}次高"
+        
+        out.append(Gap(
+            timeframe=tf_label,
+            gap_type=gap_type,
+            edge_price=float(round(cluster_price, 2)),
+            role=role,
+            ka_key=ka_key,
+            kb_key="",
+            gap_low=float(round(cluster_price, 2)),
+            gap_high=float(round(cluster_price, 2)),
+            gap_width=0.0,
+            strength="primary"  # 關鍵價位標為一級
+        ))
+    
+    # 只加入未重疊的低點聚集
+    for cluster_price, count in low_clusters:
+        # 檢查是否已經作為重疊點加入
+        is_overlap = any(abs(cluster_price - op) / op * 100 <= price_tolerance_pct for op, _, _ in overlap_prices)
+        
+        if not is_overlap:
+            role = "support" if c1 > cluster_price else "resistance" if c1 < cluster_price else "at_edge"
+            out.append(Gap(
+                timeframe=tf_label,
+                gap_type=f"key_low_{timeframe}",
+                edge_price=float(round(cluster_price, 2)),
+                role=role,
+                ka_key=f"{count}次低",
+                kb_key="",
+                gap_low=float(round(cluster_price, 2)),
+                gap_high=float(round(cluster_price, 2)),
+                gap_width=0.0,
+                strength="primary"
+            ))
+    
+    return out
+
+
+def _find_overlapping_clusters(high_clusters: list, low_clusters: list, tolerance_pct: float) -> list:
+    """
+    找出高點聚集與低點聚集重疊的價位
+    
+    回傳: [(overlap_price, high_count, low_count), ...]
+    """
+    overlaps = []
+    
+    for high_price, high_count in high_clusters:
+        for low_price, low_count in low_clusters:
+            # 檢查兩個價位是否在容差範圍內
+            if abs(high_price - low_price) / max(high_price, low_price) * 100 <= tolerance_pct:
+                # 取平均價格作為重疊點
+                overlap_price = (high_price + low_price) / 2
+                overlaps.append((overlap_price, high_count, low_count))
+                break  # 找到一個重疊就跳出
+    
+    return overlaps
+
+
+def _find_price_clusters_simple(prices: list, tolerance_pct: float, min_count: int) -> list:
+    """
+    找出價格聚集點（簡化版，不過濾連續K棒）
+    
+    邏輯：
+    - 連續測試同一價位 = 該價位更重要
+    - 不需要排除連續K棒，因為連續測試本身就是重要的市場行為
+    
+    prices: [price1, price2, ...]
+    回傳: [(cluster_price, count), ...]
+    """
+    if not prices:
+        return []
+    
+    # 按價格排序（保留原始索引用於debug）
+    sorted_prices = sorted(prices)
+    
+    clusters = []
+    visited = set()
+    
+    for i, price in enumerate(sorted_prices):
+        if i in visited:
+            continue
+        
+        # 找出在容差範圍內的所有價位
+        cluster_members = [price]
+        visited.add(i)
+        
+        for j in range(i + 1, len(sorted_prices)):
+            other_price = sorted_prices[j]
+            
+            # 超出容差範圍就停止
+            if other_price > price * (1 + tolerance_pct / 100):
+                break
+            
+            # 在容差範圍內，加入聚集點
+            cluster_members.append(other_price)
+            visited.add(j)
+        
+        # 如果聚集次數達標，記錄此聚集點
+        if len(cluster_members) >= min_count:
+            avg_price = sum(cluster_members) / len(cluster_members)
+            clusters.append((avg_price, len(cluster_members)))
+    
+    return clusters
+
+
+# -----------------------------
 # 新增：均線支撐壓力掃描
 # -----------------------------
 def scan_ma_sr_from_stock(stock_id: str, today_date: str, c1: float) -> List[Gap]:
@@ -506,20 +681,27 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         annotation_position="top left"
     )
 
-    zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)", "MA": "rgba(138,43,226,0.18)"}
+    zone_color = {"D": "rgba(66,135,245,0.18)", "W": "rgba(255,165,0,0.18)", "M": "rgba(46,204,113,0.18)", "MA": "rgba(138,43,226,0.18)", 
+                  "KEY-D": "rgba(255,215,0,0.25)", "KEY-W": "rgba(255,215,0,0.30)", "KEY-M": "rgba(255,215,0,0.35)"}
     line_color_role = {"support": "#16a34a", "resistance": "#dc2626", "at_edge": "#737373"}
-    line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4, "MA": 2.0}
+    line_width_tf = {"D": 1.2, "W": 1.8, "M": 2.4, "MA": 2.0, 
+                     "KEY-D": 2.5, "KEY-W": 2.8, "KEY-M": 3.2}
     strength_mul = {"primary": 1.8, "secondary": 1.0}
     dash_role = {"support": "dot", "resistance": "solid", "at_edge": "dash"}
 
     for g in gaps:
-        if not include.get(g.timeframe, True):
+        # KEY 的 checkbox 控制所有 KEY-D, KEY-W, KEY-M
+        if g.timeframe.startswith("KEY"):
+            if not include.get("KEY", True):
+                continue
+        elif not include.get(g.timeframe, True):
             continue
+            
         if show_zones and (g.gap_high > g.gap_low):
             fig.add_hrect(y0=g.gap_low, y1=g.gap_high, line_width=0,
-                          fillcolor=zone_color[g.timeframe], opacity=0.25, layer="below")
+                          fillcolor=zone_color.get(g.timeframe, "rgba(128,128,128,0.18)"), opacity=0.25, layer="below")
 
-        base_w = line_width_tf[g.timeframe]
+        base_w = line_width_tf.get(g.timeframe, 1.5)
         lw = base_w * strength_mul.get(getattr(g, "strength", "secondary"), 1.0)
 
         fig.add_hline(y=g.edge_price, line_color=line_color_role[g.role],
@@ -705,11 +887,27 @@ def main() -> None:
         m_pivot_right = st.number_input("月K pivot_right", min_value=1, max_value=10, value=1, step=1)
 
         st.markdown("---")
+        st.caption("關鍵價位參數設定（價格聚集點）")
+        st.session_state["key_min_high"] = st.number_input(
+            "高點聚集門檻（次數）", min_value=2, max_value=10, value=3, step=1,
+            help="同一價位至少需要成為幾次「高點」才算關鍵壓力（與低點分開計算）"
+        )
+        st.session_state["key_min_low"] = st.number_input(
+            "低點聚集門檻（次數）", min_value=2, max_value=10, value=3, step=1,
+            help="同一價位至少需要成為幾次「低點」才算關鍵支撐（與高點分開計算）"
+        )
+        st.session_state["key_tolerance"] = st.number_input(
+            "價格容差 (%)", min_value=0.1, max_value=2.0, value=0.5, step=0.1,
+            help="允許的價格誤差範圍（百分比）"
+        )
+
+        st.markdown("---")
         st.caption("顯示哪種時間框架的缺口")
         inc_d = st.checkbox("日線 (D)", value=True)
         inc_w = st.checkbox("週線 (W)", value=True)
         inc_m = st.checkbox("月線 (M)", value=True)
         inc_ma = st.checkbox("均線 (MA)", value=True)
+        inc_key = st.checkbox("關鍵價位 (KEY)", value=True)
 
         st.markdown("---")
         c1_override = st.text_input("c1 覆寫（通常留空；僅供測試/模擬）", value="")
@@ -844,13 +1042,36 @@ def main() -> None:
         # === 新增：均線支撐壓力掃描 ===
         ma_sr = scan_ma_sr_from_stock(stock_id, today_date or "", c1)
 
-        # === 修改：把均線支撐壓力的結果也併進 gaps ===
-        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + d_prev + w_prev + m_prev + ma_sr
+        # === 新增：關鍵價位掃描（價格聚集點）- 日/週/月K 分別掃描 ===
+        key_levels_d = scan_key_price_levels(
+            daily_with_today, c1,
+            min_high_count=st.session_state.get("key_min_high", 3),
+            min_low_count=st.session_state.get("key_min_low", 3),
+            price_tolerance_pct=st.session_state.get("key_tolerance", 0.5),
+            timeframe="D"
+        )
+        key_levels_w = scan_key_price_levels(
+            wk, c1,
+            min_high_count=st.session_state.get("key_min_high", 3),
+            min_low_count=st.session_state.get("key_min_low", 3),
+            price_tolerance_pct=st.session_state.get("key_tolerance", 0.5),
+            timeframe="W"
+        )
+        key_levels_m = scan_key_price_levels(
+            mo, c1,
+            min_high_count=st.session_state.get("key_min_high", 3),
+            min_low_count=st.session_state.get("key_min_low", 3),
+            price_tolerance_pct=st.session_state.get("key_tolerance", 0.5),
+            timeframe="M"
+        )
+
+        # === 修改：把均線支撐壓力 + 關鍵價位(日週月)的結果也併進 gaps ===
+        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + d_prev + w_prev + m_prev + ma_sr + key_levels_d + key_levels_w + key_levels_m
 
 
         fig = make_chart(
             daily_with_today, gaps, c1, show_zones, show_labels,
-            include={"D": inc_d, "W": inc_w, "M": inc_m, "MA": inc_ma},
+            include={"D": inc_d, "W": inc_w, "M": inc_m, "MA": inc_ma, "KEY": inc_key},
             stock_id=stock_id, stock_name=stock_name
         )
 
@@ -861,14 +1082,18 @@ def main() -> None:
         # ===============================
         df_out = pd.DataFrame([g.__dict__ for g in gaps])
         if not df_out.empty:
-            # ✅ 先保留一份原始（含 Pivot High）給專區用
+            # ✅ 先保留一份原始（含 Pivot High + 均線 + 關鍵價位）給專區用
             df_prev_source = df_out.copy()
 
-            # ⬇️ 缺口清單要乾淨 → 過濾掉帶量前波高
-            df_out = df_out[df_out["gap_type"] != "hv_prev_high"].copy()
+            # ⬇️ 缺口清單要乾淨 → 過濾掉帶量前波高、均線、關鍵價位（它們有各自的專區）
+            df_out = df_out[
+                (df_out["gap_type"] != "hv_prev_high") & 
+                (df_out["timeframe"] != "MA") & 
+                (~df_out["timeframe"].str.startswith("KEY"))
+            ].copy()
 
             role_rank = {"resistance": 0, "at_edge": 1, "support": 2}
-            tf_rank   = {"M": 0, "W": 1, "D": 2, "MA": 3}
+            tf_rank   = {"M": 0, "W": 1, "D": 2, "MA": 3, "KEY-M": 4, "KEY-W": 5, "KEY-D": 6}
             df_out["role_rank"] = df_out["role"].map(role_rank)
             df_out["tf_rank"]   = df_out["timeframe"].map(tf_rank)
 
@@ -1170,6 +1395,166 @@ def main() -> None:
                             unsafe_allow_html=True,
                         )
                     st.markdown("---")
+
+            # ===============================
+            # ④ 關鍵價位「專區」表格（獨立）
+            # ===============================
+            st.markdown("---")
+            st.subheader("關鍵價位（價格聚集點 Key Price Levels）")
+
+            # 篩選出關鍵價位相關的 Gap（包含 KEY-D, KEY-W, KEY-M）
+            df_key = df_prev_source[df_prev_source["timeframe"].str.startswith("KEY")].copy()
+
+            if df_key.empty:
+                st.info("未偵測到關鍵價位（可能尚未達到最小聚集次數門檻）。")
+            else:
+                # 排序：時間框架（月→週→日）→ 角色 → 價位（大→小）
+                tf_rank_key = {"KEY-M": 0, "KEY-W": 1, "KEY-D": 2}
+                df_key["tf_rank"] = df_key["timeframe"].map(tf_rank_key)
+                df_key["role_rank"] = df_key["role"].map({"resistance": 0, "at_edge": 1, "support": 2})
+                df_key = df_key.sort_values(["tf_rank", "role_rank", "edge_price"], ascending=[True, True, False]).reset_index(drop=True)
+                
+                # 加入現價標記
+                df_key.insert(0, "vs_c1", np.where(df_key["edge_price"] > c1, "▲",
+                                    np.where(df_key["edge_price"] < c1, "▼", "●")))
+                
+                # 插入 c1 分隔列
+                marker_row_key = {
+                    "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
+                    "ka_key":"—","kb_key":"—","gap_low":c1,"gap_high":c1,"gap_width":0.0,
+                    "vs_c1":"🔶 c1","role_rank":1, "tf_rank":1
+                }
+                df_key = pd.concat([df_key, pd.DataFrame([marker_row_key])], ignore_index=True)
+                df_key = df_key.sort_values(["tf_rank", "role_rank","edge_price"], ascending=[True, True, False]).reset_index(drop=True)
+                
+                # 選擇要顯示的欄位（加入 timeframe）
+                cols_order_key = ["vs_c1","timeframe","gap_type","edge_price","role","ka_key"]
+                show_df_key = df_key[[c for c in cols_order_key if c in df_key.columns]].copy()
+                
+                # 將欄位重新命名以更清楚，並美化 timeframe 顯示
+                show_df_key["timeframe"] = show_df_key["timeframe"].str.replace("KEY-", "")
+                show_df_key = show_df_key.rename(columns={"ka_key": "聚集次數", "gap_type": "類型", "timeframe": "週期"})
+                
+                # 格式化數字欄位
+                num_cols_key = [c for c in ["edge_price"] if c in show_df_key.columns]
+                fmt_map_key = {c: "{:.2f}" for c in num_cols_key}
+                
+                # 樣式設定
+                def highlight_gap_type_key(val: str) -> str:
+                    v = str(val)
+                    if "overlap" in v:
+                        return "background-color: #fff3cd; color: #d97706; font-weight: bold;"  # 重疊（最強關鍵價位）- 金黃色
+                    elif "high" in v:
+                        return "background-color: #ffeaea; color: #8b0000;"  # 高點聚集（通常是壓力）
+                    elif "low" in v:
+                        return "background-color: #e8f5e8; color: #2d5016;"  # 低點聚集（通常是支撐）
+                    return ""
+                
+                # 週期欄位樣式（月K最重要，用深色標示）
+                def highlight_timeframe(val: str) -> str:
+                    v = str(val)
+                    if v == "M":
+                        return "background-color: #d1fae5; font-weight: bold;"  # 月K - 深綠底
+                    elif v == "W":
+                        return "background-color: #fed7aa; font-weight: bold;"  # 週K - 淡橘底
+                    elif v == "D":
+                        return "background-color: #dbeafe;"  # 日K - 淡藍底
+                    return ""
+                
+                # c1 高亮
+                def highlight_c1_row_key(row):
+                    if str(row.get("vs_c1", "")).startswith("🔶"):
+                        return ["background-color: #fff3cd; font-weight: bold;"] * len(row)
+                    return [""] * len(row)
+                
+                styled_key = (
+                    show_df_key
+                        .style
+                        .format(fmt_map_key)
+                        .apply(highlight_c1_row_key, axis=1)
+                        .map(highlight_gap_type_key, subset=["類型"])
+                        .map(highlight_timeframe, subset=["週期"])
+                )
+                
+                st.dataframe(styled_key, height=300, use_container_width=True)
+                
+                # 關鍵價位說明
+                with st.expander("📘 關鍵價位說明", expanded=False):
+                    st.markdown(f"""
+                    **關鍵價位規則：**
+                    
+                    **概念：**
+                    - 同一價位多次成為高點或低點，形成價格「聚集區」
+                    - 這些點位往往是市場關注的重要價格水平
+                    - 支撐與壓力為一體兩面：原本的壓力站上後轉為支撐，原本的支撐跌破後轉為壓力
+                    
+                    **分析週期（多時間框架）：**
+                    - 🟢 **M (月K)**：最重要，長期關鍵價位，權重最高
+                    - 🟠 **W (週K)**：中期關鍵價位，參考價值次之
+                    - 🔵 **D (日K)**：短期關鍵價位，短線操作參考
+                    
+                    **三種類型（自動識別）：**
+                    
+                    1️⃣ **高點聚集** (key_high) - 紅底標示
+                       - 同一價位至少 {st.session_state.get("key_min_high", 3)} 次成為「高點」
+                       - 代表市場反覆測試的壓力位
+                       - 顯示：`X次高`
+                    
+                    2️⃣ **低點聚集** (key_low) - 綠底標示
+                       - 同一價位至少 {st.session_state.get("key_min_low", 3)} 次成為「低點」
+                       - 代表市場反覆測試的支撐位
+                       - 顯示：`X次低`
+                    
+                    3️⃣ **高低點重疊** (key_overlap) - 🌟金黃色粗體標示🌟
+                       - 同一價位既是高點聚集又是低點聚集
+                       - **最強關鍵價位**（箱型區間的關鍵價）
+                       - 顯示：`X次高+Y次低`
+                       - 突破或跌破此價位往往引發大行情！
+                    
+                    **實例說明：**
+                    ```
+                    範例 A：100元在日K出現3次高點 → key_high_D (短期壓力)
+                    範例 B：95元在週K出現3次低點 → key_low_W (中期支撐)
+                    範例 C：98元在月K出現3次高點 + 3次低點
+                            → key_overlap_M (3次高+3次低) ⭐最強⭐
+                            → 98元是長期箱型區間的關鍵價，突破看漲/跌破看跌
+                    ```
+                    
+                    **為什麼連續測試也要計入？**
+                    - 連續多日在同一價位受阻 → **更強的壓力證據**
+                    - 連續多日在同一價位獲得支撐 → **更強的支撐證據**
+                    - 例如：連續 3 天高點都是 100，代表市場反覆確認 100 是重要壓力
+                    - 市場「反覆測試」同一價位本身就是該價位重要性的體現
+                    
+                    **判斷標準（當前設定）：**
+                    - 高點聚集門檻：**{st.session_state.get("key_min_high", 3)}** 次
+                    - 低點聚集門檻：**{st.session_state.get("key_min_low", 3)}** 次
+                    - 價格容差範圍：**±{st.session_state.get("key_tolerance", 0.5)}%**
+                    - 分析週期：**日K、週K、月K** (同時掃描三種時間框架)
+                    
+                    **圖表顯示：**
+                    - 線寬：**月K(3.2) > 週K(2.8) > 日K(2.5)** (長週期更粗)
+                    - 顏色：金黃色區域標記（不透明度：月K 90% > 週K 70% > 日K 50%）
+                    - 使用單一「KEY 關鍵價位」勾選框控制顯示
+                    
+                    **實務應用：**
+                    - 高點聚集：多次測試未突破 → 強壓力
+                    - 低點聚集：多次測試未跌破 → 強支撐
+                    - **🌟高低點重疊🌟**：
+                      * 最強關鍵價位（箱型區間）
+                      * 向上突破 → 強烈看漲信號
+                      * 向下跌破 → 強烈看跌信號
+                      * 在此價位附近震盪 → 區間操作
+                    - 現價在關鍵價位上方：原壓力轉為支撐
+                    - 現價在關鍵價位下方：原支撐轉為壓力
+                    - **月K關鍵價位 > 週K > 日K**（長週期權重更高）
+                    
+                    **聚集次數的意義：**
+                    - 3次聚集：基本關鍵價位
+                    - 5次以上：非常重要的價格水平
+                    - 高低點各5次以上重疊：極度重要的箱型關鍵價
+                    - **月K級別的5次以上重疊：終極關鍵價位**
+                    """)
 
 
         else:
