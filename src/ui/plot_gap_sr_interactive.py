@@ -1384,27 +1384,26 @@ def main() -> None:
                     - 上彎/下彎均線：二級一般（secondary）
                     """)
 
-                # 均線快速摘要區塊
+                # 均線快速摘要區塊（折疊）
                 if stock_id and today_date:
-                    st.markdown("### 均線快速摘要（5 / 10 / 24 / 72）")
-                    for n in (5, 10, 24, 72):
-                        ma = None
-                        try:
-                            ma = compute_ma_with_today(stock_id, today_date, c1, n)
-                        except Exception:
+                    with st.expander("📊 均線快速摘要（5 / 10 / 24 / 72）", expanded=False):
+                        for n in (5, 10, 24, 72):
                             ma = None
+                            try:
+                                ma = compute_ma_with_today(stock_id, today_date, c1, n)
+                            except Exception:
+                                ma = None
 
-                        baseline = deduction = None
-                        try:
-                            baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
-                        except Exception:
                             baseline = deduction = None
+                            try:
+                                baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
+                            except Exception:
+                                baseline = deduction = None
 
-                        st.markdown(
-                            f"- {n}日均：點位 {_safe_fmt(ma)} ／ {_ma_slope_label(baseline, c1)} ／ 基準價 {_safe_fmt(baseline)} ／ 扣抵值 {_safe_fmt(deduction)}",
-                            unsafe_allow_html=True,
-                        )
-                    st.markdown("---")
+                            st.markdown(
+                                f"- {n}日均：點位 {_safe_fmt(ma)} ／ {_ma_slope_label(baseline, c1)} ／ 基準價 {_safe_fmt(baseline)} ／ 扣抵值 {_safe_fmt(deduction)}",
+                                unsafe_allow_html=True,
+                            )
 
             # ===============================
             # ④ 關鍵價位「專區」表格（獨立）
