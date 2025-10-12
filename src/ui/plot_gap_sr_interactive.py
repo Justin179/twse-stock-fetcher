@@ -888,13 +888,23 @@ def main() -> None:
 
         st.markdown("---")
         st.caption("關鍵價位參數設定（價格聚集點）")
+        st.markdown("**日K門檻（較高，減少線條）**")
+        st.session_state["key_min_high_d"] = st.number_input(
+            "日K-高點聚集門檻", min_value=2, max_value=10, value=4, step=1,
+            help="日K同一價位至少需要成為幾次「高點」才算關鍵壓力"
+        )
+        st.session_state["key_min_low_d"] = st.number_input(
+            "日K-低點聚集門檻", min_value=2, max_value=10, value=4, step=1,
+            help="日K同一價位至少需要成為幾次「低點」才算關鍵支撐"
+        )
+        st.markdown("**週K/月K門檻（標準）**")
         st.session_state["key_min_high"] = st.number_input(
-            "高點聚集門檻（次數）", min_value=2, max_value=10, value=3, step=1,
-            help="同一價位至少需要成為幾次「高點」才算關鍵壓力（與低點分開計算）"
+            "週月K-高點聚集門檻", min_value=2, max_value=10, value=3, step=1,
+            help="週K/月K同一價位至少需要成為幾次「高點」才算關鍵壓力"
         )
         st.session_state["key_min_low"] = st.number_input(
-            "低點聚集門檻（次數）", min_value=2, max_value=10, value=3, step=1,
-            help="同一價位至少需要成為幾次「低點」才算關鍵支撐（與高點分開計算）"
+            "週月K-低點聚集門檻", min_value=2, max_value=10, value=3, step=1,
+            help="週K/月K同一價位至少需要成為幾次「低點」才算關鍵支撐"
         )
         st.session_state["key_tolerance"] = st.number_input(
             "價格容差 (%)", min_value=0.1, max_value=2.0, value=0.5, step=0.1,
@@ -1045,22 +1055,22 @@ def main() -> None:
         # === 新增：關鍵價位掃描（價格聚集點）- 日/週/月K 分別掃描 ===
         key_levels_d = scan_key_price_levels(
             daily_with_today, c1,
-            min_high_count=st.session_state.get("key_min_high", 3),
-            min_low_count=st.session_state.get("key_min_low", 3),
+            min_high_count=st.session_state.get("key_min_high_d", 4),  # 日K使用較高門檻
+            min_low_count=st.session_state.get("key_min_low_d", 4),    # 日K使用較高門檻
             price_tolerance_pct=st.session_state.get("key_tolerance", 0.5),
             timeframe="D"
         )
         key_levels_w = scan_key_price_levels(
             wk, c1,
-            min_high_count=st.session_state.get("key_min_high", 3),
-            min_low_count=st.session_state.get("key_min_low", 3),
+            min_high_count=st.session_state.get("key_min_high", 3),  # 週K使用標準門檻
+            min_low_count=st.session_state.get("key_min_low", 3),    # 週K使用標準門檻
             price_tolerance_pct=st.session_state.get("key_tolerance", 0.5),
             timeframe="W"
         )
         key_levels_m = scan_key_price_levels(
             mo, c1,
-            min_high_count=st.session_state.get("key_min_high", 3),
-            min_low_count=st.session_state.get("key_min_low", 3),
+            min_high_count=st.session_state.get("key_min_high", 3),  # 月K使用標準門檻
+            min_low_count=st.session_state.get("key_min_low", 3),    # 月K使用標準門檻
             price_tolerance_pct=st.session_state.get("key_tolerance", 0.5),
             timeframe="M"
         )
@@ -1496,12 +1506,14 @@ def main() -> None:
                     **三種類型（自動識別）：**
                     
                     1️⃣ **高點聚集** (key_high) - 紅底標示
-                       - 同一價位至少 {st.session_state.get("key_min_high", 3)} 次成為「高點」
+                       - 日K：同一價位至少 {st.session_state.get("key_min_high_d", 4)} 次成為「高點」
+                       - 週/月K：同一價位至少 {st.session_state.get("key_min_high", 3)} 次成為「高點」
                        - 代表市場反覆測試的壓力位
                        - 顯示：`X次高`
                     
                     2️⃣ **低點聚集** (key_low) - 綠底標示
-                       - 同一價位至少 {st.session_state.get("key_min_low", 3)} 次成為「低點」
+                       - 日K：同一價位至少 {st.session_state.get("key_min_low_d", 4)} 次成為「低點」
+                       - 週/月K：同一價位至少 {st.session_state.get("key_min_low", 3)} 次成為「低點」
                        - 代表市場反覆測試的支撐位
                        - 顯示：`X次低`
                     
@@ -1513,7 +1525,7 @@ def main() -> None:
                     
                     **實例說明：**
                     ```
-                    範例 A：100元在日K出現3次高點 → key_high_D (短期壓力)
+                    範例 A：100元在日K出現4次高點 → key_high_D (短期壓力)
                     範例 B：95元在週K出現3次低點 → key_low_W (中期支撐)
                     範例 C：98元在月K出現3次高點 + 3次低點
                             → key_overlap_M (3次高+3次低) ⭐最強⭐
@@ -1527,8 +1539,10 @@ def main() -> None:
                     - 市場「反覆測試」同一價位本身就是該價位重要性的體現
                     
                     **判斷標準（當前設定）：**
-                    - 高點聚集門檻：**{st.session_state.get("key_min_high", 3)}** 次
-                    - 低點聚集門檻：**{st.session_state.get("key_min_low", 3)}** 次
+                    - 日K高點聚集門檻：**{st.session_state.get("key_min_high_d", 4)}** 次（較嚴格，減少雜訊）
+                    - 日K低點聚集門檻：**{st.session_state.get("key_min_low_d", 4)}** 次（較嚴格，減少雜訊）
+                    - 週/月K高點門檻：**{st.session_state.get("key_min_high", 3)}** 次（標準）
+                    - 週/月K低點門檻：**{st.session_state.get("key_min_low", 3)}** 次（標準）
                     - 價格容差範圍：**±{st.session_state.get("key_tolerance", 0.5)}%**
                     - 分析週期：**日K、週K、月K** (同時掃描三種時間框架)
                     
