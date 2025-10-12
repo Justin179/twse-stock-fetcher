@@ -1417,11 +1417,11 @@ def main() -> None:
             if df_key.empty:
                 st.info("未偵測到關鍵價位（可能尚未達到最小聚集次數門檻）。")
             else:
-                # 排序：時間框架（月→週→日）→ 角色 → 價位（大→小）
+                # 排序：價位（大→小）→ 時間框架（月→週→日）→ 角色
                 tf_rank_key = {"KEY-M": 0, "KEY-W": 1, "KEY-D": 2}
                 df_key["tf_rank"] = df_key["timeframe"].map(tf_rank_key)
                 df_key["role_rank"] = df_key["role"].map({"resistance": 0, "at_edge": 1, "support": 2})
-                df_key = df_key.sort_values(["tf_rank", "role_rank", "edge_price"], ascending=[True, True, False]).reset_index(drop=True)
+                df_key = df_key.sort_values(["edge_price", "tf_rank", "role_rank"], ascending=[False, True, True]).reset_index(drop=True)
                 
                 # 加入現價標記
                 df_key.insert(0, "vs_c1", np.where(df_key["edge_price"] > c1, "▲",
@@ -1434,7 +1434,7 @@ def main() -> None:
                     "vs_c1":"🔶 c1","role_rank":1, "tf_rank":1
                 }
                 df_key = pd.concat([df_key, pd.DataFrame([marker_row_key])], ignore_index=True)
-                df_key = df_key.sort_values(["tf_rank", "role_rank","edge_price"], ascending=[True, True, False]).reset_index(drop=True)
+                df_key = df_key.sort_values(["edge_price", "tf_rank", "role_rank"], ascending=[False, True, True]).reset_index(drop=True)
                 
                 # 選擇要顯示的欄位（加入 timeframe）
                 cols_order_key = ["vs_c1","timeframe","gap_type","edge_price","role","ka_key"]
