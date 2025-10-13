@@ -2,6 +2,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime
 from common.stock_loader import load_stock_list_with_names
 from ui.price_break_display_module import display_price_break_analysis
 from ui.plot_price_position_zone import plot_price_position_zone
@@ -88,6 +89,15 @@ with col1:
         db_path="data/institution.db",
         title="📄 show temp_list"
     )
+    
+    # 🔹 當前週數顯示
+    today = datetime.now()
+    year, week_num, weekday = today.isocalendar()
+    st.markdown(f"""
+    <div style='text-align: center; padding: 8px; background-color: #f0f2f6; border-radius: 5px; margin-top: 10px;'>
+        <span style='font-size: 20px; font-weight: bold; color: #1f77b4;'>📅 Week {week_num}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col2:
     if selected:
