@@ -97,7 +97,8 @@ def plot_monthly_revenue_plotly(stock_id, db_path="data/institution.db"):
         showlegend=False, height=400, hovermode="x unified", margin=dict(t=40, b=40)
     )
 
-    return fig1, fig2, fig3
+    # 返回圖表和最新的 YoY 數據（用於條件判斷）
+    return fig1, fig2, fig3, df
 
 if __name__ == "__main__":
     import plotly.io as pio

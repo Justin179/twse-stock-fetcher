@@ -149,8 +149,30 @@ with col2:
         st.plotly_chart(fig4, use_container_width=True)
         
         st.subheader("📈 營收年增率 & 月營收 & 營收月增率")
-        fig5, fig6, fig7 = plot_monthly_revenue_plotly(selected)
+        fig5, fig6, fig7, df_revenue = plot_monthly_revenue_plotly(selected)
         st.plotly_chart(fig5, use_container_width=True)
+        
+        # 🔹 營收 YoY 條件提示
+        if df_revenue is not None and not df_revenue.empty:
+            # 取得最近兩個月的 YoY（df 已經按 year_month 排序）
+            latest_yoy = df_revenue.iloc[-1]["yoy_rate"] if len(df_revenue) >= 1 else None
+            second_latest_yoy = df_revenue.iloc[-2]["yoy_rate"] if len(df_revenue) >= 2 else None
+            
+            alerts = []
+            
+            # 條件1: 最近連續兩個月 YoY > 20%
+            if latest_yoy is not None and second_latest_yoy is not None:
+                if latest_yoy > 20 and second_latest_yoy > 20:
+                    alerts.append(f"🔥 **連續兩個月 YoY > 20%** ({second_latest_yoy:.1f}% → {latest_yoy:.1f}%)")
+            
+            # 條件2: 最近單月 YoY > 30%
+            if latest_yoy is not None and latest_yoy > 30:
+                alerts.append(f"⚡ **最新單月 YoY > 30%** ({latest_yoy:.1f}%)")
+            
+            # 顯示提示
+            if alerts:
+                st.success("📊 **營收成長強勁提示：**\n" + "\n".join([f"- {alert}" for alert in alerts]))
+        
         st.plotly_chart(fig6, use_container_width=True)
         st.plotly_chart(fig7, use_container_width=True)
         
