@@ -1131,7 +1131,8 @@ def main() -> None:
         )
 
         # === 修改：把均線支撐壓力 + 關鍵價位(日週月)的結果也併進 gaps ===
-        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + d_prev + w_prev + m_prev + ma_sr + key_levels_d + key_levels_w + key_levels_m
+        # 順序：缺口 → 大量K棒 → 關鍵價位 → 帶量前波高 → 均線
+        gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + key_levels_d + key_levels_w + key_levels_m + d_prev + w_prev + m_prev + ma_sr
 
 
         fig = make_chart(
@@ -1280,188 +1281,7 @@ def main() -> None:
             st.dataframe(styled, height=360, use_container_width=True)
 
             # ===============================
-            # ② 帶量前波高「專區」表格（獨立）
-            # ===============================
-            st.markdown("---")
-            st.subheader("帶量前波高 Pivot High")
-
-            # 用 df_prev_source，而不是 df_out
-            df_prev = df_prev_source[df_prev_source["gap_type"] == "hv_prev_high"].copy()
-
-            if df_prev.empty:
-                st.info("此範圍內沒有偵測到『帶量前波高』。")
-            else:
-                # 角色與時間框架排序權重（時間框架：月→週→日）
-                role_rank_ph = {"resistance": 0, "at_edge": 1, "support": 2}
-                tf_rank_ph   = {"M": 0, "W": 1, "D": 2}
-
-                # 排序鍵：時間框架（月→週→日） → ka_key(大到小) → 角色（壓力→交界→支撐） → 價位（大→小）
-                # ka_key 都是字串（D:YYYY-MM-DD / W:YYYY-WW / M:YYYY-MM），字串倒序與時間倒序一致
-                df_prev["tf_rank_ph"]   = df_prev["timeframe"].map(tf_rank_ph)
-                df_prev["role_rank_ph"] = df_prev["role"].map(role_rank_ph)
-
-                # 先插入 c1 標記列（和第一張表一致）
-                marker_row_ph = {
-                    "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
-                    "ka_key":"—","kb_key":"—","gap_low":c1,"gap_high":c1,"gap_width":0.0,
-                    "vs_c1":"🔶 c1","tf_rank_ph":tf_rank_ph["W"],"role_rank_ph":role_rank_ph["at_edge"],
-                }
-                df_prev = pd.concat([df_prev, pd.DataFrame([marker_row_ph])], ignore_index=True)
-
-                # 方向符號：維持與主表一致；並加上 Pivot High 標記字樣
-                df_prev["vs_c1"] = np.where(df_prev["edge_price"] > c1, "▲",
-                                    np.where(df_prev["edge_price"] < c1, "▼", "●"))
-                mask_prev2 = (df_prev["gap_type"] == "hv_prev_high")
-                df_prev.loc[mask_prev2, "vs_c1"] = df_prev.loc[mask_prev2, "vs_c1"] + " Pivot High"
-
-                # 依規則排序（注意 ka_key 以字串倒序達成「大到小」）
-                df_prev = df_prev.sort_values(
-                    by=["tf_rank_ph", "ka_key", "role_rank_ph", "edge_price"],
-                    ascending=[True, False, True, False]
-                ).reset_index(drop=True)
-
-                # 欄位顯示（把 ka_key/kb_key 改名，避免誤會）
-                cols_prev = ["vs_c1","timeframe","edge_price","role","ka_key","kb_key","gap_low","gap_high","gap_width"]
-                show_prev = df_prev[[c for c in cols_prev if c in df_prev.columns]].copy()
-                show_prev = show_prev.rename(columns={"ka_key":"pivot_key", "kb_key":"trigger_key"})
-
-                # 週K鍵值美化：'YYYY-WW' -> 'YYYY-WW (MM-DD)'
-                if "pivot_key" in show_prev.columns:
-                    show_prev["pivot_key"] = show_prev["pivot_key"].apply(_augment_week_key)
-                if "trigger_key" in show_prev.columns:
-                    show_prev["trigger_key"] = show_prev["trigger_key"].apply(_augment_week_key)
-
-
-                # 樣式：c1 黃底、數字兩位小數
-                num_cols_prev = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_prev.columns]
-                fmt_map_prev = {c: "{:.2f}" for c in num_cols_prev}
-
-                def highlight_c1_row_prev(row):
-                    is_marker = (str(row.get("vs_c1","")) == "🔶 c1")
-                    same_price = False
-                    try:
-                        same_price = float(row["edge_price"]) == float(c1)
-                    except Exception:
-                        pass
-                    if is_marker or same_price:
-                        return ["background-color: #fff3cd; font-weight: bold"] * len(row)
-                    return [""] * len(row)
-
-                styled_prev = (
-                    show_prev
-                        .style
-                        .format(fmt_map_prev)
-                        .apply(highlight_c1_row_prev, axis=1)
-                )
-
-                # 顯示第二張表（高度你可再調）
-                st.dataframe(styled_prev, height=260, use_container_width=True)
-
-            # ===============================
-            # ③ 均線支撐壓力「專區」表格（獨立）
-            # ===============================
-            st.markdown("---")
-            st.subheader("均線支撐壓力（MA S/R）")
-
-            # 篩選出均線相關的 Gap
-            df_ma = df_prev_source[df_prev_source["timeframe"] == "MA"].copy()
-
-            if df_ma.empty:
-                st.info("未偵測到均線支撐壓力。")
-            else:
-                # 排序：角色 → 價位 → gap_type
-                df_ma["role_rank"] = df_ma["role"].map({"resistance": 0, "at_edge": 1, "support": 2})
-                df_ma = df_ma.sort_values(["role_rank", "edge_price"], ascending=[True, False]).reset_index(drop=True)
-                
-                # 加入現價標記
-                df_ma.insert(0, "vs_c1", np.where(df_ma["edge_price"] > c1, "▲",
-                                    np.where(df_ma["edge_price"] < c1, "▼", "●")))
-                
-                # 插入 c1 分隔列
-                marker_row_ma = {
-                    "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
-                    "ka_key":"—","kb_key":"—","gap_low":c1,"gap_high":c1,"gap_width":0.0,
-                    "vs_c1":"🔶 c1","role_rank":1
-                }
-                df_ma = pd.concat([df_ma, pd.DataFrame([marker_row_ma])], ignore_index=True)
-                df_ma = df_ma.sort_values(["role_rank","edge_price"], ascending=[True,False]).reset_index(drop=True)
-                
-                # 選擇要顯示的欄位
-                cols_order_ma = ["vs_c1","gap_type","edge_price","role","ka_key","kb_key"]
-                show_df_ma = df_ma[[c for c in cols_order_ma if c in df_ma.columns]].copy()
-                
-                # 格式化數字欄位
-                num_cols_ma = [c for c in ["edge_price"] if c in show_df_ma.columns]
-                fmt_map_ma = {c: "{:.2f}" for c in num_cols_ma}
-                
-                # 樣式設定
-                def highlight_gap_type_ma(val: str) -> str:
-                    v = str(val)
-                    if "up" in v or "baseline" in v or "deduction" in v:
-                        return "background-color: #e8f5e8; color: #2d5016;"
-                    elif "down" in v:
-                        return "background-color: #ffeaea; color: #8b0000;"
-                    return ""
-                
-                # c1 高亮
-                def highlight_c1_row_ma(row):
-                    if str(row.get("vs_c1", "")).startswith("🔶"):
-                        return ["background-color: #fff3cd; font-weight: bold;"] * len(row)
-                    return [""] * len(row)
-                
-                styled_ma = (
-                    show_df_ma
-                        .style
-                        .format(fmt_map_ma)
-                        .apply(highlight_c1_row_ma, axis=1)
-                        .map(highlight_gap_type_ma, subset=["gap_type"])
-                )
-                
-                st.dataframe(styled_ma, height=300, use_container_width=True)
-                
-                # 均線支撐壓力說明
-                with st.expander("📘 均線支撐壓力說明", expanded=False):
-                    st.markdown("""
-                    **均線支撐壓力規則：**
-                    
-                    **1. 上彎/下彎均線：**
-                    - 上彎且在現價下方的均線 → 支撐
-                    - 下彎且在現價上方的均線 → 壓力
-                    - 判斷依據：現價 vs 基準價（現價 > 基準價 = 上彎；現價 < 基準價 = 下彎）
-                    
-                    **2. 基準價與扣抵值：**
-                    - 找出距離現價最近的均線（5/10/24/72日均）
-                    - 該均線的基準價：在現價上方為壓力，在現價下方為支撐
-                    - 該均線的扣抵值：在現價上方為壓力，在現價下方為支撐
-                    
-                    **強度說明：**
-                    - 基準價、扣抵值：一級加粗（primary）
-                    - 上彎/下彎均線：二級一般（secondary）
-                    """)
-
-                # 均線快速摘要區塊（折疊）
-                if stock_id and today_date:
-                    with st.expander("📊 均線快速摘要（5 / 10 / 24 / 72）", expanded=False):
-                        for n in (5, 10, 24, 72):
-                            ma = None
-                            try:
-                                ma = compute_ma_with_today(stock_id, today_date, c1, n)
-                            except Exception:
-                                ma = None
-
-                            baseline = deduction = None
-                            try:
-                                baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
-                            except Exception:
-                                baseline = deduction = None
-
-                            st.markdown(
-                                f"- {n}日均：點位 {_safe_fmt(ma)} ／ {_ma_slope_label(baseline, c1)} ／ 基準價 {_safe_fmt(baseline)} ／ 扣抵值 {_safe_fmt(deduction)}",
-                                unsafe_allow_html=True,
-                            )
-
-            # ===============================
-            # ④ 關鍵價位「專區」表格（獨立）
+            # ② 關鍵價位「專區」表格（獨立）
             # ===============================
             st.markdown("---")
             st.subheader("關鍵價位（價格聚集點 Key Price Levels）")
@@ -1623,6 +1443,187 @@ def main() -> None:
                     - 高低點各5次以上重疊：極度重要的箱型關鍵價
                     - **月K級別的5次以上重疊：終極關鍵價位**
                     """)
+
+            # ===============================
+            # ③ 帶量前波高「專區」表格（獨立）
+            # ===============================
+            st.markdown("---")
+            st.subheader("帶量前波高 Pivot High")
+
+            # 用 df_prev_source，而不是 df_out
+            df_prev = df_prev_source[df_prev_source["gap_type"] == "hv_prev_high"].copy()
+
+            if df_prev.empty:
+                st.info("此範圍內沒有偵測到『帶量前波高』。")
+            else:
+                # 角色與時間框架排序權重（時間框架：月→週→日）
+                role_rank_ph = {"resistance": 0, "at_edge": 1, "support": 2}
+                tf_rank_ph   = {"M": 0, "W": 1, "D": 2}
+
+                # 排序鍵：時間框架（月→週→日） → ka_key(大到小) → 角色（壓力→交界→支撐） → 價位（大→小）
+                # ka_key 都是字串（D:YYYY-MM-DD / W:YYYY-WW / M:YYYY-MM），字串倒序與時間倒序一致
+                df_prev["tf_rank_ph"]   = df_prev["timeframe"].map(tf_rank_ph)
+                df_prev["role_rank_ph"] = df_prev["role"].map(role_rank_ph)
+
+                # 先插入 c1 標記列（和第一張表一致）
+                marker_row_ph = {
+                    "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
+                    "ka_key":"—","kb_key":"—","gap_low":c1,"gap_high":c1,"gap_width":0.0,
+                    "vs_c1":"🔶 c1","tf_rank_ph":tf_rank_ph["W"],"role_rank_ph":role_rank_ph["at_edge"],
+                }
+                df_prev = pd.concat([df_prev, pd.DataFrame([marker_row_ph])], ignore_index=True)
+
+                # 方向符號：維持與主表一致；並加上 Pivot High 標記字樣
+                df_prev["vs_c1"] = np.where(df_prev["edge_price"] > c1, "▲",
+                                    np.where(df_prev["edge_price"] < c1, "▼", "●"))
+                mask_prev2 = (df_prev["gap_type"] == "hv_prev_high")
+                df_prev.loc[mask_prev2, "vs_c1"] = df_prev.loc[mask_prev2, "vs_c1"] + " Pivot High"
+
+                # 依規則排序（注意 ka_key 以字串倒序達成「大到小」）
+                df_prev = df_prev.sort_values(
+                    by=["tf_rank_ph", "ka_key", "role_rank_ph", "edge_price"],
+                    ascending=[True, False, True, False]
+                ).reset_index(drop=True)
+
+                # 欄位顯示（把 ka_key/kb_key 改名，避免誤會）
+                cols_prev = ["vs_c1","timeframe","edge_price","role","ka_key","kb_key","gap_low","gap_high","gap_width"]
+                show_prev = df_prev[[c for c in cols_prev if c in df_prev.columns]].copy()
+                show_prev = show_prev.rename(columns={"ka_key":"pivot_key", "kb_key":"trigger_key"})
+
+                # 週K鍵值美化：'YYYY-WW' -> 'YYYY-WW (MM-DD)'
+                if "pivot_key" in show_prev.columns:
+                    show_prev["pivot_key"] = show_prev["pivot_key"].apply(_augment_week_key)
+                if "trigger_key" in show_prev.columns:
+                    show_prev["trigger_key"] = show_prev["trigger_key"].apply(_augment_week_key)
+
+
+                # 樣式：c1 黃底、數字兩位小數
+                num_cols_prev = [c for c in ["edge_price","gap_low","gap_high","gap_width"] if c in show_prev.columns]
+                fmt_map_prev = {c: "{:.2f}" for c in num_cols_prev}
+
+                def highlight_c1_row_prev(row):
+                    is_marker = (str(row.get("vs_c1","")) == "🔶 c1")
+                    same_price = False
+                    try:
+                        same_price = float(row["edge_price"]) == float(c1)
+                    except Exception:
+                        pass
+                    if is_marker or same_price:
+                        return ["background-color: #fff3cd; font-weight: bold"] * len(row)
+                    return [""] * len(row)
+
+                styled_prev = (
+                    show_prev
+                        .style
+                        .format(fmt_map_prev)
+                        .apply(highlight_c1_row_prev, axis=1)
+                )
+
+                # 顯示第二張表（高度你可再調）
+                st.dataframe(styled_prev, height=260, use_container_width=True)
+
+            # ===============================
+            # ④ 均線支撐壓力「專區」表格（獨立）
+            # ===============================
+            st.markdown("---")
+            st.subheader("均線支撐壓力（MA S/R）")
+
+            # 篩選出均線相關的 Gap
+            df_ma = df_prev_source[df_prev_source["timeframe"] == "MA"].copy()
+
+            if df_ma.empty:
+                st.info("未偵測到均線支撐壓力。")
+            else:
+                # 排序：角色 → 價位 → gap_type
+                df_ma["role_rank"] = df_ma["role"].map({"resistance": 0, "at_edge": 1, "support": 2})
+                df_ma = df_ma.sort_values(["role_rank", "edge_price"], ascending=[True, False]).reset_index(drop=True)
+                
+                # 加入現價標記
+                df_ma.insert(0, "vs_c1", np.where(df_ma["edge_price"] > c1, "▲",
+                                    np.where(df_ma["edge_price"] < c1, "▼", "●")))
+                
+                # 插入 c1 分隔列
+                marker_row_ma = {
+                    "timeframe":"—","gap_type":"—","edge_price":c1,"role":"at_edge",
+                    "ka_key":"—","kb_key":"—","gap_low":c1,"gap_high":c1,"gap_width":0.0,
+                    "vs_c1":"🔶 c1","role_rank":1
+                }
+                df_ma = pd.concat([df_ma, pd.DataFrame([marker_row_ma])], ignore_index=True)
+                df_ma = df_ma.sort_values(["role_rank","edge_price"], ascending=[True,False]).reset_index(drop=True)
+                
+                # 選擇要顯示的欄位
+                cols_order_ma = ["vs_c1","gap_type","edge_price","role","ka_key","kb_key"]
+                show_df_ma = df_ma[[c for c in cols_order_ma if c in df_ma.columns]].copy()
+                
+                # 格式化數字欄位
+                num_cols_ma = [c for c in ["edge_price"] if c in show_df_ma.columns]
+                fmt_map_ma = {c: "{:.2f}" for c in num_cols_ma}
+                
+                # 樣式設定
+                def highlight_gap_type_ma(val: str) -> str:
+                    v = str(val)
+                    if "up" in v or "baseline" in v or "deduction" in v:
+                        return "background-color: #e8f5e8; color: #2d5016;"
+                    elif "down" in v:
+                        return "background-color: #ffeaea; color: #8b0000;"
+                    return ""
+                
+                # c1 高亮
+                def highlight_c1_row_ma(row):
+                    if str(row.get("vs_c1", "")).startswith("🔶"):
+                        return ["background-color: #fff3cd; font-weight: bold;"] * len(row)
+                    return [""] * len(row)
+                
+                styled_ma = (
+                    show_df_ma
+                        .style
+                        .format(fmt_map_ma)
+                        .apply(highlight_c1_row_ma, axis=1)
+                        .map(highlight_gap_type_ma, subset=["gap_type"])
+                )
+                
+                st.dataframe(styled_ma, height=300, use_container_width=True)
+                
+                # 均線支撐壓力說明
+                with st.expander("📘 均線支撐壓力說明", expanded=False):
+                    st.markdown("""
+                    **均線支撐壓力規則：**
+                    
+                    **1. 上彎/下彎均線：**
+                    - 上彎且在現價下方的均線 → 支撐
+                    - 下彎且在現價上方的均線 → 壓力
+                    - 判斷依據：現價 vs 基準價（現價 > 基準價 = 上彎；現價 < 基準價 = 下彎）
+                    
+                    **2. 基準價與扣抵值：**
+                    - 找出距離現價最近的均線（5/10/24/72日均）
+                    - 該均線的基準價：在現價上方為壓力，在現價下方為支撐
+                    - 該均線的扣抵值：在現價上方為壓力，在現價下方為支撐
+                    
+                    **強度說明：**
+                    - 基準價、扣抵值：一級加粗（primary）
+                    - 上彎/下彎均線：二級一般（secondary）
+                    """)
+
+                # 均線快速摘要區塊（折疊）
+                if stock_id and today_date:
+                    with st.expander("📊 均線快速摘要（5 / 10 / 24 / 72）", expanded=False):
+                        for n in (5, 10, 24, 72):
+                            ma = None
+                            try:
+                                ma = compute_ma_with_today(stock_id, today_date, c1, n)
+                            except Exception:
+                                ma = None
+
+                            baseline = deduction = None
+                            try:
+                                baseline, deduction, *_ = get_baseline_and_deduction(stock_id, today_date, n=n)
+                            except Exception:
+                                baseline = deduction = None
+
+                            st.markdown(
+                                f"- {n}日均：點位 {_safe_fmt(ma)} ／ {_ma_slope_label(baseline, c1)} ／ 基準價 {_safe_fmt(baseline)} ／ 扣抵值 {_safe_fmt(deduction)}",
+                                unsafe_allow_html=True,
+                            )
 
 
         else:
