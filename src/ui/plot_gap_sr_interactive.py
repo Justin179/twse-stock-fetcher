@@ -145,6 +145,51 @@ class Gap:
 
 
 # -----------------------------
+# 新增：量縮標記（用於關鍵價位過濾）
+# -----------------------------
+def _mark_volume_shrinkage(df: pd.DataFrame, 
+                          ma_window: int = 20,
+                          shrink_ma_ratio: float = 0.6,
+                          shrink_vs_prev_ratio: float = 0.7,
+                          shrink_extreme_ratio: float = 0.5) -> pd.DataFrame:
+    """
+    標記量縮K棒
+    
+    量縮定義（兩個條件任一成立即為量縮）：
+    - 條件1：低於均量 + 相對前一根量縮
+      is_shrink_ma = (量 <= 近20日均量 × 0.6) AND (量 <= 前一根量 × 0.7)
+    - 條件2：極度量縮
+      is_shrink_extreme = (量 <= 前一根量 × 0.5)
+    
+    回傳：添加 is_shrink 欄位的 DataFrame
+    """
+    d = df.copy()
+    
+    # 計算均量與前一根量
+    d["v_ma20"] = d["volume"].rolling(window=ma_window, min_periods=ma_window).mean()
+    d["prev_volume"] = d["volume"].shift(1)
+    
+    # 條件1：低於均量 + 相對前一根量縮
+    is_shrink_ma = (
+        d["v_ma20"].notna() & 
+        (d["volume"] <= shrink_ma_ratio * d["v_ma20"]) &
+        d["prev_volume"].notna() &
+        (d["volume"] <= shrink_vs_prev_ratio * d["prev_volume"])
+    )
+    
+    # 條件2：極度量縮（≤ 50% 前一根）
+    is_shrink_extreme = (
+        d["prev_volume"].notna() &
+        (d["volume"] <= shrink_extreme_ratio * d["prev_volume"])
+    )
+    
+    # 量縮 = 條件1 OR 條件2
+    d["is_shrink"] = is_shrink_ma | is_shrink_extreme
+    
+    return d
+
+
+# -----------------------------
 # 新增：關鍵價位掃描（價格聚集點）
 # -----------------------------
 def scan_key_price_levels(df: pd.DataFrame, c1: float,
@@ -167,6 +212,7 @@ def scan_key_price_levels(df: pd.DataFrame, c1: float,
     - 連續多日測試同一價位 = 該價位更重要（不需要過濾）
     - 例如：連續 3 天高點都是 100，代表 100 是非常強的壓力
     - 高低點重疊 = 最強關鍵價位（箱型區間）
+    - 量縮K棒排除：排除量縮K棒的高低點，提高判斷有效性
     """
     out: List[Gap] = []
     if df.empty or len(df) < 3:  # 至少需要3根K棒
@@ -181,9 +227,18 @@ def scan_key_price_levels(df: pd.DataFrame, c1: float,
     
     df = df.copy()
     
-    # 收集所有高點和低點（K棒的 high 和 low）
-    high_prices = [float(row["high"]) for _, row in df.iterrows() if pd.notna(row.get("high"))]
-    low_prices = [float(row["low"]) for _, row in df.iterrows() if pd.notna(row.get("low"))]
+    # === 排除量縮K棒：先標記量縮，再過濾 ===
+    df = _mark_volume_shrinkage(df)
+    
+    # 只取非量縮的K棒來收集高低點
+    df_valid = df[~df["is_shrink"]].copy()
+    
+    if df_valid.empty or len(df_valid) < 3:
+        return out
+    
+    # 收集所有高點和低點（K棒的 high 和 low）- 只用非量縮K棒
+    high_prices = [float(row["high"]) for _, row in df_valid.iterrows() if pd.notna(row.get("high"))]
+    low_prices = [float(row["low"]) for _, row in df_valid.iterrows() if pd.notna(row.get("low"))]
     
     if not high_prices or not low_prices:
         return out
