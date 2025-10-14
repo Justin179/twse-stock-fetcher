@@ -170,6 +170,38 @@ def render_t2_settlement_tracker():
     
     st.markdown("---")
     
+    # === 顯示歷史記錄 ===
+    # 使用 checkbox 取代 expander（避免嵌套問題）
+    show_history = st.checkbox("📋 顯示歷史記錄 (最近3筆)", value=False, key="show_settlement_history")
+    
+    if show_history:
+        data = load_settlement_data()
+        
+        if data:
+            st.markdown("| 交易日期 | 應收付金額 | 狀態 |")
+            st.markdown("|---------|-----------|------|")
+            
+            sorted_dates = sorted(data.keys(), reverse=True)
+            for i, date in enumerate(sorted_dates):
+                amount = data[date]
+                amount_display = f"{amount:+,.0f}" if amount != 0 else "0"
+                
+                # 判斷狀態
+                if i == 0:
+                    status = "🔵 今日記錄 (T)"
+                elif i == 1:
+                    status = "🟡 在途"
+                elif i == 2:
+                    status = "🟢 已結清 (早9後)"
+                else:
+                    status = ""
+                
+                st.markdown(f"| {date} | {amount_display} 元 | {status} |")
+        else:
+            st.info("尚無歷史記錄")
+    
+    st.markdown("---")
+    
     # === 區塊2: 記錄當日應收付 ===
     st.markdown("#### 📝 區塊2: 記錄當日總應收付")
     
@@ -213,38 +245,6 @@ def render_t2_settlement_tracker():
         st.success(f"✅ 已記錄 {st.session_state.settlement_last_date} 的應收付: {st.session_state.settlement_last_value:+,.0f} 元")
         st.session_state.settlement_last_value = None  # 清除訊息標記
         st.session_state.settlement_last_date = None
-    
-    # === 顯示歷史記錄 ===
-    st.markdown("---")
-    
-    # 使用 checkbox 取代 expander（避免嵌套問題）
-    show_history = st.checkbox("📋 顯示歷史記錄 (最近3筆)", value=False, key="show_settlement_history")
-    
-    if show_history:
-        data = load_settlement_data()
-        
-        if data:
-            st.markdown("| 交易日期 | 應收付金額 | 狀態 |")
-            st.markdown("|---------|-----------|------|")
-            
-            sorted_dates = sorted(data.keys(), reverse=True)
-            for i, date in enumerate(sorted_dates):
-                amount = data[date]
-                amount_display = f"{amount:+,.0f}" if amount != 0 else "0"
-                
-                # 判斷狀態
-                if i == 0:
-                    status = "🔵 今日記錄 (T)"
-                elif i == 1:
-                    status = "🟡 在途"
-                elif i == 2:
-                    status = "🟢 已結清 (早9點後)"
-                else:
-                    status = ""
-                
-                st.markdown(f"| {date} | {amount_display} 元 | {status} |")
-        else:
-            st.info("尚無歷史記錄")
 
 if __name__ == "__main__":
     st.set_page_config(page_title="T+2 在途應收付追蹤器", layout="wide")
