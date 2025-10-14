@@ -25,6 +25,7 @@ from ui.bias_calculator import render_bias_calculator
 from ui.peg_calculator import render_peg_calculator
 from ui.volume_avg_calculator import render_volume_avg_calculator
 from common.futures_spread_helper import get_futures_spread_info, format_futures_spread_display
+from tools.t2_settlement_tracker import render_t2_settlement_tracker
 
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
@@ -98,6 +99,10 @@ with col1:
         <span style='font-size: 20px; font-weight: bold; color: #1f77b4;'>📅 Week {week_num}</span>
     </div>
     """, unsafe_allow_html=True)
+    
+    # 🔹 T+2 在途應收付追蹤器（移到 Week x 下面）
+    with st.expander("💰 T+2 在途應收付", expanded=False):
+        render_t2_settlement_tracker()
 
 with col2:
     if selected:
