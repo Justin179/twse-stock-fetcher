@@ -113,20 +113,44 @@ def render_t2_settlement_tracker():
             )
     
     with col2:
-        # 輸入帳上餘額
-        account_balance = st.number_input(
-            "帳上餘額 (手動輸入)",
-            min_value=0.0,
-            value=0.0,
-            step=1000.0,
-            format="%.0f",
-            help="輸入目前在銀行帳戶上看到的餘額",
-            key="account_balance_input"
+        # 初始化 session state
+        if 'account_balance_calculated' not in st.session_state:
+            st.session_state.account_balance_calculated = False
+        if 'account_balance_result' not in st.session_state:
+            st.session_state.account_balance_result = None
+        
+        # 使用 text_input 配合 on_change 來實現按 Enter 計算
+        def on_account_balance_change():
+            input_value = st.session_state.account_balance_text
+            if input_value:
+                try:
+                    balance = float(input_value)
+                    if balance > 0:
+                        actual_balance = balance + pending_amount
+                        st.session_state.account_balance_result = {
+                            'account_balance': balance,
+                            'pending_amount': pending_amount,
+                            'actual_balance': actual_balance
+                        }
+                        st.session_state.account_balance_calculated = True
+                except ValueError:
+                    pass
+        
+        st.text_input(
+            "帳上餘額 (按 Enter 計算)",
+            value="",
+            key="account_balance_text",
+            on_change=on_account_balance_change,
+            help="輸入目前在銀行帳戶上看到的餘額，按 Enter 計算實際餘額",
+            placeholder="輸入帳上餘額後按 Enter..."
         )
     
     # 計算並顯示實際餘額
-    if account_balance > 0:
-        actual_balance = account_balance + pending_amount
+    if st.session_state.account_balance_result is not None:
+        result = st.session_state.account_balance_result
+        account_balance = result['account_balance']
+        pending_amount_calc = result['pending_amount']
+        actual_balance = result['actual_balance']
         
         st.markdown("---")
         
@@ -139,7 +163,7 @@ def render_t2_settlement_tracker():
                 {actual_balance:,.0f} 元
             </p>
             <p style='font-size: 14px; color: #999; margin: 0;'>
-                = 帳上餘額 {account_balance:,.0f} + 在途應收付 ({pending_amount:+,.0f})
+                = 帳上餘額 {account_balance:,.0f} + 在途應收付 ({pending_amount_calc:+,.0f})
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -212,9 +236,9 @@ def render_t2_settlement_tracker():
                 if i == 0:
                     status = "🔵 今日記錄 (T)"
                 elif i == 1:
-                    status = "🟡 在途中 (T+1)"
+                    status = "🟡 在途"
                 elif i == 2:
-                    status = "🟢 即將完成 (T+2)"
+                    status = "🟢 已結清 (早9點後)"
                 else:
                     status = ""
                 
