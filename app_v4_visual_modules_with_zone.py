@@ -67,20 +67,37 @@ with col1:
     # 下拉選單區
     stock_ids, stock_display = load_stock_list_with_names(refresh=True)
     
-    # 🔹 讀取上次選擇的股票（跨應用同步）
-    last_selected = get_last_selected_or_default(default="2330")
-    # 找到對應的 display 字串
+    # 🔹 使用 session_state 來追蹤當前股票，避免被共享檔案覆蓋
+    if "current_stock_id" not in st.session_state:
+        # 首次載入：從共享檔案讀取
+        initial_stock = get_last_selected_or_default(default="2330")
+        st.session_state["current_stock_id"] = initial_stock
+    
+    # 找到當前股票在清單中的位置
+    current_stock = st.session_state["current_stock_id"]
     default_index = 0
     for idx, display in enumerate(stock_display):
-        if display.startswith(last_selected + " "):
+        if display.startswith(current_stock + " "):
             default_index = idx
             break
     
-    selected_display = st.selectbox("股票代碼", stock_display, index=default_index, key="stock_selector")
-    selected = selected_display.split()[0]
+    # 使用 on_change 回調來處理變更
+    def on_stock_change():
+        selected_display = st.session_state["stock_selector"]
+        new_stock = selected_display.split()[0]
+        # 更新 session_state
+        st.session_state["current_stock_id"] = new_stock
+        # 儲存到共享檔案
+        save_selected_stock(new_stock)
     
-    # 🔹 儲存選擇的股票（讓其他應用可以同步）
-    save_selected_stock(selected)
+    selected_display = st.selectbox(
+        "股票代碼", 
+        stock_display, 
+        index=default_index, 
+        key="stock_selector",
+        on_change=on_stock_change
+    )
+    selected = selected_display.split()[0]
     
     parts = selected_display.split()
     stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display

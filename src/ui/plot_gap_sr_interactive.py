@@ -24,7 +24,7 @@ from ui.price_break_display_module import (
 from common.stock_loader import load_stock_list_with_names
 from ui.sr_prev_high_on_heavy import scan_prev_high_on_heavy_from_df  # 或用 scan_prev_high_on_heavy_all
 from common.login_helper import init_session_login_objects
-from common.shared_stock_selector import save_selected_stock, get_last_selected_or_default
+from common.shared_stock_selector import save_selected_stock, get_last_selected_or_default, load_selected_stock
 # === 盤中取價（直接用 analyze 模組的函式） ===
 try:
     from analyze.analyze_price_break_conditions_dataloader import get_today_prices
@@ -881,17 +881,44 @@ def main() -> None:
     st.set_page_config(page_title="S/R 撐壓系統 (D/W/M)", layout="wide")
     st.title("this is money -> 支撐 x 壓力 x 成交量（D / W / M / 被動當沖）")
 
+def main() -> None:
+    st.set_page_config(page_title="S/R 撐壓系統 (D/W/M)", layout="wide")
+    st.title("this is money -> 支撐 x 壓力 x 成交量（D / W / M / 被動當沖）")
+
+    # 🔹 智慧自動刷新：偵測 app_v4 的股票變更
+    # 初始化當前股票
+    if "submitted_stock_id" not in st.session_state:
+        st.session_state["submitted_stock_id"] = get_last_selected_or_default(default="2330")
+    
+    current_stock = st.session_state.get("submitted_stock_id", "")
+    shared_stock = load_selected_stock()
+    
+    # 判斷刷新間隔
+    if shared_stock and shared_stock != current_stock:
+        # 偵測到 app_v4 有變更 → 2 秒快速刷新
+        refresh_interval = 2
+        refresh_status = f"🔄 偵測到股票變更 ({current_stock} → {shared_stock})，2秒後自動更新..."
+    else:
+        # 股票相同 → 30 秒慢速刷新（避免干擾使用）
+        refresh_interval = 30
+        refresh_status = ""
+    
     st.markdown(
-        """
+        f"""
+        <meta http-equiv="refresh" content="{refresh_interval}">
         <style>
-        [data-testid="stSidebar"][aria-expanded="true"]{
+        [data-testid="stSidebar"][aria-expanded="true"]{{
             min-width: 200px !important;
             max-width: 220px !important;
-        }
+        }}
         </style>
         """,
         unsafe_allow_html=True
     )
+    
+    # 顯示刷新狀態
+    if refresh_status:
+        st.info(refresh_status)
 
     with st.sidebar:
         st.subheader("設定")
