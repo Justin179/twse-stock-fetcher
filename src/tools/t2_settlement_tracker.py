@@ -90,60 +90,62 @@ def render_t2_settlement_tracker():
     # === 區塊1: 實際餘額計算 ===
     st.markdown("#### 📊 區塊1: 實際帳戶餘額計算")
     
-    col1, col2 = st.columns(2)
+    # 取得在途應收付
+    pending_amount, pending_date = get_pending_amount(latest_trading_date)
     
-    with col1:
-        # 取得在途應收付
-        pending_amount, pending_date = get_pending_amount(latest_trading_date)
-        
-        # 顯示在途應收付
-        if pending_date:
-            pending_display = f"{pending_amount:+,.0f}" if pending_amount != 0 else "0"
-            st.metric(
-                label=f"在途應收付 ({pending_date})",
-                value=pending_display,
-                delta=None,
-                help="前一個交易日的應收付金額（T+1），明日將從帳戶扣款/入帳"
-            )
-        else:
-            st.metric(
-                label="在途應收付",
-                value="0",
-                help="無前一交易日的記錄"
-            )
+    # 第一行：在途應收付
+    if pending_date:
+        pending_display = f"{pending_amount:+,.0f}" if pending_amount != 0 else "0"
+        st.markdown(f"""
+        <div style='padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-bottom: 10px;'>
+            <p style='font-size: 12px; color: #666; margin: 0;'>在途應收付 ({pending_date})</p>
+            <p style='font-size: 20px; font-weight: bold; color: #333; margin: 5px 0 0 0;'>
+                {pending_display} 元
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div style='padding: 10px; background-color: #f8f9fa; border-radius: 5px; margin-bottom: 10px;'>
+            <p style='font-size: 12px; color: #666; margin: 0;'>在途應收付</p>
+            <p style='font-size: 20px; font-weight: bold; color: #333; margin: 5px 0 0 0;'>
+                0 元
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
-    with col2:
-        # 初始化 session state
-        if 'account_balance_calculated' not in st.session_state:
-            st.session_state.account_balance_calculated = False
-        if 'account_balance_result' not in st.session_state:
-            st.session_state.account_balance_result = None
-        
-        # 使用 text_input 配合 on_change 來實現按 Enter 計算
-        def on_account_balance_change():
-            input_value = st.session_state.account_balance_text
-            if input_value:
-                try:
-                    balance = float(input_value)
-                    if balance > 0:
-                        actual_balance = balance + pending_amount
-                        st.session_state.account_balance_result = {
-                            'account_balance': balance,
-                            'pending_amount': pending_amount,
-                            'actual_balance': actual_balance
-                        }
-                        st.session_state.account_balance_calculated = True
-                except ValueError:
-                    pass
-        
-        st.text_input(
-            "帳上餘額 (按 Enter 計算)",
-            value="",
-            key="account_balance_text",
-            on_change=on_account_balance_change,
-            help="輸入目前在銀行帳戶上看到的餘額，按 Enter 計算實際餘額",
-            placeholder="輸入帳上餘額後按 Enter..."
-        )
+    # 第二行：帳上餘額輸入
+    # 初始化 session state
+    if 'account_balance_calculated' not in st.session_state:
+        st.session_state.account_balance_calculated = False
+    if 'account_balance_result' not in st.session_state:
+        st.session_state.account_balance_result = None
+    
+    # 使用 text_input 配合 on_change 來實現按 Enter 計算
+    def on_account_balance_change():
+        input_value = st.session_state.account_balance_text
+        if input_value:
+            try:
+                balance = float(input_value)
+                if balance > 0:
+                    actual_balance = balance + pending_amount
+                    st.session_state.account_balance_result = {
+                        'account_balance': balance,
+                        'pending_amount': pending_amount,
+                        'actual_balance': actual_balance
+                    }
+                    st.session_state.account_balance_calculated = True
+            except ValueError:
+                pass
+    
+    st.text_input(
+        "帳上餘額 (按 Enter 計算)",
+        value="",
+        key="account_balance_text",
+        on_change=on_account_balance_change,
+        help="輸入目前在銀行帳戶上看到的餘額，按 Enter 計算實際餘額",
+        placeholder="輸入帳上餘額後按 Enter..."
+    )
     
     # 計算並顯示實際餘額
     if st.session_state.account_balance_result is not None:
@@ -152,19 +154,26 @@ def render_t2_settlement_tracker():
         pending_amount_calc = result['pending_amount']
         actual_balance = result['actual_balance']
         
+        # 計算剩餘次數（每次約 45000）
+        remaining_times = int(actual_balance / 45000)
+        
         st.markdown("---")
         
-        # 使用大字體顯示實際餘額
+        # 使用縮小字體顯示實際餘額（與在途應收付字體大小一致）
         balance_color = "green" if actual_balance >= account_balance else "red"
         st.markdown(f"""
-        <div style='text-align: center; padding: 20px; background-color: #f0f2f6; border-radius: 10px; margin: 10px 0;'>
-            <p style='font-size: 18px; color: #666; margin: 0;'>實際餘額</p>
-            <p style='font-size: 36px; font-weight: bold; color: {balance_color}; margin: 10px 0;'>
+        <div style='text-align: center; padding: 15px; background-color: #f0f2f6; border-radius: 10px; margin: 10px 0;'>
+            <p style='font-size: 14px; color: #666; margin: 0;'>實際餘額</p>
+            <p style='font-size: 20px; font-weight: bold; color: {balance_color}; margin: 8px 0;'>
                 {actual_balance:,.0f} 元
             </p>
-            <p style='font-size: 14px; color: #999; margin: 0;'>
+            <p style='font-size: 11px; color: #999; margin: 0;'>
                 = 帳上餘額 {account_balance:,.0f} + 在途應收付 ({pending_amount_calc:+,.0f})
             </p>
+            <p style='font-size: 14px; color: #0066cc; font-weight: bold; margin: 8px 0 0 0;'>
+                剩 {remaining_times} 次 (÷45,000)
+            </p>
+            
         </div>
         """, unsafe_allow_html=True)
     
@@ -181,20 +190,32 @@ def render_t2_settlement_tracker():
             st.markdown("| 交易日期 | 應收付金額 | 狀態 |")
             st.markdown("|---------|-----------|------|")
             
+            # 取得今天日期
+            today_date = datetime.now().strftime('%Y-%m-%d')
+            
             sorted_dates = sorted(data.keys(), reverse=True)
-            for i, date in enumerate(sorted_dates):
+            for date in sorted_dates:
                 amount = data[date]
                 amount_display = f"{amount:+,.0f}" if amount != 0 else "0"
                 
-                # 判斷狀態
-                if i == 0:
+                # 根據日期判斷狀態
+                if date == today_date:
                     status = "🔵 今日記錄 (T)"
-                elif i == 1:
-                    status = "🟡 在途"
-                elif i == 2:
-                    status = "🟢 已結清 (早9後)"
+                elif date < today_date:
+                    # 計算天數差異
+                    from datetime import datetime as dt
+                    date_obj = dt.strptime(date, '%Y-%m-%d')
+                    today_obj = dt.strptime(today_date, '%Y-%m-%d')
+                    days_diff = (today_obj - date_obj).days
+                    
+                    if days_diff == 1:
+                        status = "🟡 在途中 (T+1)"
+                    elif days_diff == 2:
+                        status = "🟢 即將完成 (T+2)"
+                    else:
+                        status = "⚪ 已完成"
                 else:
-                    status = ""
+                    status = "🔜 未來記錄"
                 
                 st.markdown(f"| {date} | {amount_display} 元 | {status} |")
         else:
