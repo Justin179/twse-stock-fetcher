@@ -108,13 +108,14 @@ def compute_ma_with_today(stock_id: str, today_date: str, today_close: float, n:
     ma = (today_close + float(tail.sum())) / n
     return ma
 
-def is_uptrending_now(stock_id: str, today_date: str, c1, w1, m1, ma5, ma10, ma24, tol: float = 1e-6) -> bool:
+def is_uptrending_now(stock_id: str, today_date: str, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5: bool = False, tol: float = 1e-6) -> bool:
     """
     判斷「當下現價 c1」是否為【向上趨勢盤】：
       條件1：c1 > w1 且 c1 > m1
       條件2：上彎5日均 > 上彎10日均 > 上彎24日均，且三條均線皆為上彎
              （上彎沿用現有定義：c1 > N日均線的「基準價 baseline」）
       條件3：c1 > 5日均線（且 5日均線必為上彎；由條件2中的 up5 保證）
+      條件4：現價站上上彎5週均線（above_upward_wma5 == True）
     其餘則視為【盤整盤】（False）。
     """
     # 基本數據不足
@@ -150,8 +151,11 @@ def is_uptrending_now(stock_id: str, today_date: str, c1, w1, m1, ma5, ma10, ma2
 
     # 條件3：現價站上 5 日均線
     cond3 = c1 > ma5
+    
+    # 條件4：現價站上上彎5週均線
+    cond4 = above_upward_wma5
 
-    return bool(cond1 and cond2 and cond3)
+    return bool(cond1 and cond2 and cond3 and cond4)
 
 def is_downtrending_now(
     stock_id: str, today_date: str, c1, w2, m2, ma5, ma10, ma24, tol: float = 1e-6
@@ -645,7 +649,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         with col_mid:
             st.markdown("**提示訊息：**")
             # ✅ 在這裡判斷，先把詞條加到 tips
-            is_up   = is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24)
+            is_up   = is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5)
             is_down = is_downtrending_now(stock_id, today_date, c1, w2, m2, ma5, ma10, ma24)
 
             if is_up:
