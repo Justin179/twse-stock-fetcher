@@ -882,7 +882,7 @@ def main() -> None:
     st.title("this is money -> 支撐 x 壓力 x 成交量（D / W / M / 被動當沖）")
 
 def main() -> None:
-    st.set_page_config(page_title="S/R 撐壓系統 (D/W/M)", layout="wide")
+    st.set_page_config(page_title="S/R 撐壓系統 (D/W/M)", layout="wide", initial_sidebar_state="collapsed")
     st.title("this is money -> 支撐 x 壓力 x 成交量（D / W / M / 被動當沖）")
 
     # 🔹 智慧自動刷新：偵測 app_v4 的股票變更
