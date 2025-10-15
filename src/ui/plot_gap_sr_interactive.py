@@ -24,6 +24,7 @@ from ui.price_break_display_module import (
 from common.stock_loader import load_stock_list_with_names
 from ui.sr_prev_high_on_heavy import scan_prev_high_on_heavy_from_df  # 或用 scan_prev_high_on_heavy_all
 from common.login_helper import init_session_login_objects
+from common.shared_stock_selector import save_selected_stock, get_last_selected_or_default
 # === 盤中取價（直接用 analyze 模組的函式） ===
 try:
     from analyze.analyze_price_break_conditions_dataloader import get_today_prices
@@ -911,7 +912,14 @@ def main() -> None:
                     # 如果找不到對應的股票代碼，直接使用原輸入（可能是特殊代碼格式）
                     st.session_state["submitted_stock_id"] = user_input
             
+            # 🔹 儲存選擇的股票（讓其他應用可以同步）
+            save_selected_stock(st.session_state["submitted_stock_id"])
+            
             st.session_state["stock_id_input"] = ""  # 清空輸入框
+
+        # 🔹 初始化：如果還沒有 submitted_stock_id，從共享檔案讀取
+        if "submitted_stock_id" not in st.session_state or not st.session_state["submitted_stock_id"]:
+            st.session_state["submitted_stock_id"] = get_last_selected_or_default(default="2330")
 
         st.text_input(
             "股票代碼或名稱",

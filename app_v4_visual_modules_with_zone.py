@@ -18,6 +18,7 @@ from ui.plot_eps_with_close_price import plot_eps_with_close_price
 from ui.plot_profitability_ratios_final import plot_profitability_ratios_with_close_price
 from common.login_helper import init_session_login_objects
 from common.adding_new_stocks_helper import append_unique_stocks
+from common.shared_stock_selector import save_selected_stock, get_last_selected_or_default
 import subprocess
 from ui.collect_stock_button import render_collect_stock_button
 from ui.show_temp_list_expander import render_temp_list_expander
@@ -65,8 +66,22 @@ with col1:
     
     # 下拉選單區
     stock_ids, stock_display = load_stock_list_with_names(refresh=True)
-    selected_display = st.selectbox("股票代碼", stock_display)
+    
+    # 🔹 讀取上次選擇的股票（跨應用同步）
+    last_selected = get_last_selected_or_default(default="2330")
+    # 找到對應的 display 字串
+    default_index = 0
+    for idx, display in enumerate(stock_display):
+        if display.startswith(last_selected + " "):
+            default_index = idx
+            break
+    
+    selected_display = st.selectbox("股票代碼", stock_display, index=default_index, key="stock_selector")
     selected = selected_display.split()[0]
+    
+    # 🔹 儲存選擇的股票（讓其他應用可以同步）
+    save_selected_stock(selected)
+    
     parts = selected_display.split()
     stock_display_reversed = f"{parts[1]} ({parts[0]})" if len(parts) == 2 else selected_display
 
