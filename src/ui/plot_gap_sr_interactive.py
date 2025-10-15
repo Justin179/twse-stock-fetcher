@@ -890,36 +890,6 @@ def main() -> None:
     if "submitted_stock_id" not in st.session_state:
         st.session_state["submitted_stock_id"] = get_last_selected_or_default(default="2330")
     
-    current_stock = st.session_state.get("submitted_stock_id", "")
-    shared_stock = load_selected_stock()
-    
-    # 判斷刷新間隔
-    if shared_stock and shared_stock != current_stock:
-        # 偵測到 app_v4 有變更 → 2 秒快速刷新
-        refresh_interval = 2
-        refresh_status = f"🔄 偵測到股票變更 ({current_stock} → {shared_stock})，2秒後自動更新..."
-    else:
-        # 股票相同 → 30 秒慢速刷新（避免干擾使用）
-        refresh_interval = 30
-        refresh_status = ""
-    
-    st.markdown(
-        f"""
-        <meta http-equiv="refresh" content="{refresh_interval}">
-        <style>
-        [data-testid="stSidebar"][aria-expanded="true"]{{
-            min-width: 200px !important;
-            max-width: 220px !important;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    # 顯示刷新狀態
-    if refresh_status:
-        st.info(refresh_status)
-
     with st.sidebar:
         st.subheader("設定")
         # stock_id = st.text_input("股票代碼（例：2330）", value="2330")
