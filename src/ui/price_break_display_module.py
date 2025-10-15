@@ -814,7 +814,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                         unsafe_allow_html=True
                     )
                     st.markdown(
-                        f"  <span style='font-size:13px; color:#666'>前基準 {w_prev_baseline_str} → 基準 {w_baseline_str} → 扣抵 {w_deduction_str}</span>",
+                        f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-size:13px; color:#666'>前基準 {w_prev_baseline_str} → 基準 {w_baseline_str} → 扣抵 {w_deduction_str}</span>",
                         unsafe_allow_html=True
                     )
                 else:
@@ -853,7 +853,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                         unsafe_allow_html=True
                     )
                     st.markdown(
-                        f"  <span style='font-size:13px; color:#666'>前基準 {m_prev_baseline_str} → 基準 {m_baseline_str} → 扣抵 {m_deduction_str}</span>",
+                        f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-size:13px; color:#666'>前基準 {m_prev_baseline_str} → 基準 {m_baseline_str} → 扣抵 {m_deduction_str}</span>",
                         unsafe_allow_html=True
                     )
                 else:
