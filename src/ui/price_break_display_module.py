@@ -108,6 +108,139 @@ def compute_ma_with_today(stock_id: str, today_date: str, today_close: float, n:
     ma = (today_close + float(tail.sum())) / n
     return ma
 
+def get_week_month_baseline_and_deduction(stock_id: str, today_date: str, period: str = 'W', n: int = 5):
+    """
+    計算週K棒或月K棒的 N 均線基準價、扣抵值、前基準
+    
+    參數:
+        stock_id: 股票代碼
+        today_date: 今日日期字串 (YYYY-MM-DD)
+        period: 'W' 為週K棒, 'M' 為月K棒
+        n: 均線週期，預設為 5
+    
+    回傳:
+        (baseline, deduction, prev_baseline) 或 (None, None, None)
+    """
+    import sqlite3
+    from datetime import datetime
+    
+    if period == 'W':
+        # 週K棒：使用 twse_prices_weekly 資料表
+        # 直接從資料庫查詢，按時間倒序取得最近的週K資料
+        conn = sqlite3.connect('data/institution.db')
+        
+        # 取得今天的ISO週數（用於判斷是否包含當週）
+        today = pd.to_datetime(today_date)
+        today_year, today_week, _ = today.isocalendar()
+        current_year_week = f"{today_year}-{today_week:02d}"
+        
+        # 查詢足夠多的週K資料（確保能涵蓋需要的週數）
+        # 重要：只查詢 <= 當前週的資料，避免取到未來資料
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT year_week, close
+            FROM twse_prices_weekly
+            WHERE stock_id = ?
+            AND year_week <= ?
+            ORDER BY year_week DESC
+            LIMIT 20
+        """, [stock_id, current_year_week])
+        
+        all_weeks = cursor.fetchall()
+        conn.close()
+        
+        if len(all_weeks) < n + 2:
+            return None, None, None
+        
+        # 轉換為列表 [(year_week, close), ...]，已經是倒序
+        # all_weeks[0] 是最新的週K
+        
+        # 判斷最新週K是否為當週（正在進行中）
+        latest_year_week = all_weeks[0][0]
+        latest_year, latest_week = map(int, latest_year_week.split('-'))
+        
+        # 如果最新週K就是當週，則跳過它（因為尚未完成）
+        if latest_year == today_year and latest_week == today_week:
+            # 當週尚未完成，從 all_weeks[1] 開始算起
+            start_idx = 1
+        else:
+            # 當週已完成或今天不在最新週內
+            start_idx = 0
+        
+        # 從 start_idx 開始往前數 n 根，取得基準/扣抵/前基準
+        # 基準週 = start_idx + n - 1 (往前數第 n 根)
+        # 扣抵週 = start_idx + n - 2 (往前數第 n-1 根)
+        # 前基準週 = start_idx + n (往前數第 n+1 根)
+        baseline_idx = start_idx + n - 1
+        deduction_idx = start_idx + n - 2
+        prev_baseline_idx = start_idx + n
+        
+        # 確保索引不超出範圍
+        if prev_baseline_idx >= len(all_weeks):
+            return None, None, None
+        
+        baseline = all_weeks[baseline_idx][1] if baseline_idx < len(all_weeks) else None
+        deduction = all_weeks[deduction_idx][1] if deduction_idx < len(all_weeks) else None
+        prev_baseline = all_weeks[prev_baseline_idx][1] if prev_baseline_idx < len(all_weeks) else None
+        
+        return baseline, deduction, prev_baseline
+        
+    elif period == 'M':
+        # 月K棒：使用 twse_prices_monthly 資料表
+        today = pd.to_datetime(today_date)
+        year = today.year
+        current_month = today.month
+        
+        # 計算目標月份
+        baseline_month = current_month - n      # 基準月 (例: 10 - 5 = 5)
+        deduction_month = current_month - (n - 1)  # 扣抵月 (例: 10 - 4 = 6)
+        prev_baseline_month = current_month - (n + 1)  # 前基準月 (例: 10 - 6 = 4)
+        
+        # 處理跨年的情況
+        def get_year_month(y, m):
+            while m <= 0:
+                m += 12
+                y -= 1
+            while m > 12:
+                m -= 12
+                y += 1
+            return y, m
+        
+        baseline_y, baseline_m = get_year_month(year, baseline_month)
+        deduction_y, deduction_m = get_year_month(year, deduction_month)
+        prev_baseline_y, prev_baseline_m = get_year_month(year, prev_baseline_month)
+        
+        # 查詢資料庫
+        conn = sqlite3.connect('data/institution.db')
+        query = """
+        SELECT year_month, close
+        FROM twse_prices_monthly
+        WHERE stock_id = ?
+        AND year_month IN (?, ?, ?)
+        """
+        year_months = [
+            f"{prev_baseline_y}-{prev_baseline_m:02d}",
+            f"{baseline_y}-{baseline_m:02d}",
+            f"{deduction_y}-{deduction_m:02d}"
+        ]
+        
+        cursor = conn.cursor()
+        cursor.execute(query, [stock_id] + year_months)
+        results = cursor.fetchall()
+        conn.close()
+        
+        # 建立對應關係
+        month_data = {row[0]: row[1] for row in results}
+        
+        prev_baseline = month_data.get(f"{prev_baseline_y}-{prev_baseline_m:02d}")
+        baseline = month_data.get(f"{baseline_y}-{baseline_m:02d}")
+        deduction = month_data.get(f"{deduction_y}-{deduction_m:02d}")
+        
+        return baseline, deduction, prev_baseline
+    
+    else:
+        return None, None, None
+
 def is_uptrending_now(stock_id: str, today_date: str, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5: bool = False, tol: float = 1e-6) -> bool:
     """
     判斷「當下現價 c1」是否為【向上趨勢盤】：
@@ -539,6 +672,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
         # 取得基準價、扣抵值
         baseline5, deduction5, ded1_5, ded2_5, ded3_5, prev_baseline5 = get_baseline_and_deduction(stock_id, today_date)
+        
+        # 取得週K棒和月K棒的基準價、扣抵值、前基準
+        w_baseline, w_deduction, w_prev_baseline = get_week_month_baseline_and_deduction(stock_id, today_date, period='W', n=5)
+        m_baseline, m_deduction, m_prev_baseline = get_week_month_baseline_and_deduction(stock_id, today_date, period='M', n=5)
+        
         # 後面 col_mid / col_right 都可用
         ma5  = compute_ma_with_today(stock_id, today_date, c1, 5)
         ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
@@ -640,6 +778,33 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                         f"- 扣1：<b>{_fmt_str(ded1_5)}</b>　扣2：<b>{_fmt_str(ded2_5)}</b>　扣3：<b>{_fmt_str(ded3_5)}</b>",
                         unsafe_allow_html=True,
                     )
+                
+                # === 顯示週K和月K的基準價、扣抵值、前基準 ===
+                st.markdown("---")
+                
+                # 週K資訊
+                if w_baseline is not None:
+                    w_baseline_str = f"{w_baseline:.2f}"
+                    w_deduction_str = f"{w_deduction:.2f}" if w_deduction is not None else "—"
+                    w_prev_baseline_str = f"{w_prev_baseline:.2f}" if w_prev_baseline is not None else "—"
+                    st.markdown(
+                        f"- 📊 <b>週K 5週均</b>: 前基準 {w_prev_baseline_str} → 基準 {w_baseline_str} → 扣抵 {w_deduction_str}",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown("- 📊 <b>週K 5週均</b>: 資料不足", unsafe_allow_html=True)
+                
+                # 月K資訊
+                if m_baseline is not None:
+                    m_baseline_str = f"{m_baseline:.2f}"
+                    m_deduction_str = f"{m_deduction:.2f}" if m_deduction is not None else "—"
+                    m_prev_baseline_str = f"{m_prev_baseline:.2f}" if m_prev_baseline is not None else "—"
+                    st.markdown(
+                        f"- 📊 <b>月K 5月均</b>: 前基準 {m_prev_baseline_str} → 基準 {m_baseline_str} → 扣抵 {m_deduction_str}",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown("- 📊 <b>月K 5月均</b>: 資料不足", unsafe_allow_html=True)
 
 
             else:
