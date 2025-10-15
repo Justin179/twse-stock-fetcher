@@ -12,6 +12,7 @@ import pandas as pd
 
 # 新增趨勢判斷所需
 from ui.price_break_display_module import is_uptrending_now, compute_ma_with_today
+from analyze.moving_average_weekly import is_price_above_upward_wma5
 
 
 def detect_signals(file_path="my_stock_holdings.txt", sdk=None):
@@ -84,8 +85,11 @@ def detect_uptrending_stocks(file_path="shareholding_concentration_list.txt", sd
             ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
             ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
             
+            # 判斷是否站上上彎5週均線
+            above_upward_wma5 = is_price_above_upward_wma5(stock_id, today_date, c1, debug_print=False)
+            
             # 判斷是否為向上趨勢
-            if is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24):
+            if is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5):
                 uptrend_list.append((stock_id, ["向上趨勢"]))
                 print(f"📈 {stock_id} 向上趨勢訊號")
             
