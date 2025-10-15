@@ -792,9 +792,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     if w_prev_baseline is not None and w_prev_baseline != 0:
                         week_pct = (w_baseline - w_prev_baseline) / w_prev_baseline * 100
                         if week_pct > 0:
-                            week_current_pressure = f"本週壓力上升(<span style='color:red'>+{week_pct:.2f}%</span>)⚡"
+                            week_current_pressure = f"本週壓力上升📈(<span style='color:red'>+{week_pct:.2f}%</span>)⚡"
                         elif week_pct < 0:
-                            week_current_pressure = f"本週壓力下降(<span style='color:green'>{week_pct:.2f}%</span>)⚡"
+                            week_current_pressure = f"本週壓力下降📉(<span style='color:green'>{week_pct:.2f}%</span>)⚡"
                         else:
                             week_current_pressure = "本週壓力持平⚡"
                     
@@ -803,14 +803,14 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     if w_deduction is not None and w_baseline != 0:
                         week_next_pct = (w_deduction - w_baseline) / w_baseline * 100
                         if week_next_pct > 0:
-                            week_next_pressure = f" 下週壓力上升(<span style='color:red'>+{week_next_pct:.2f}%</span>)"
+                            week_next_pressure = f" 下週壓力上升📈(<span style='color:red'>+{week_next_pct:.2f}%</span>)"
                         elif week_next_pct < 0:
-                            week_next_pressure = f" 下週壓力下降(<span style='color:green'>{week_next_pct:.2f}%</span>)"
+                            week_next_pressure = f" 下週壓力下降📉(<span style='color:green'>{week_next_pct:.2f}%</span>)"
                         else:
                             week_next_pressure = " 下週壓力持平"
                     
                     st.markdown(
-                        f"- 📊 <b>5週K</b>: {week_current_pressure}{week_next_pressure}",
+                        f"- {week_current_pressure}{week_next_pressure}",
                         unsafe_allow_html=True
                     )
                     st.markdown(
@@ -831,9 +831,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     if m_prev_baseline is not None and m_prev_baseline != 0:
                         month_pct = (m_baseline - m_prev_baseline) / m_prev_baseline * 100
                         if month_pct > 0:
-                            month_current_pressure = f"本月壓力上升(<span style='color:red'>+{month_pct:.2f}%</span>)⚡"
+                            month_current_pressure = f"本月壓力上升📈(<span style='color:red'>+{month_pct:.2f}%</span>)⚡"
                         elif month_pct < 0:
-                            month_current_pressure = f"本月壓力下降(<span style='color:green'>{month_pct:.2f}%</span>)⚡"
+                            month_current_pressure = f"本月壓力下降📉(<span style='color:green'>{month_pct:.2f}%</span>)⚡"
                         else:
                             month_current_pressure = "本月壓力持平⚡"
                     
@@ -842,14 +842,14 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     if m_deduction is not None and m_baseline != 0:
                         month_next_pct = (m_deduction - m_baseline) / m_baseline * 100
                         if month_next_pct > 0:
-                            month_next_pressure = f" 下月壓力上升(<span style='color:red'>+{month_next_pct:.2f}%</span>)"
+                            month_next_pressure = f" 下月壓力上升📈(<span style='color:red'>+{month_next_pct:.2f}%</span>)"
                         elif month_next_pct < 0:
-                            month_next_pressure = f" 下月壓力下降(<span style='color:green'>{month_next_pct:.2f}%</span>)"
+                            month_next_pressure = f" 下月壓力下降📉(<span style='color:green'>{month_next_pct:.2f}%</span>)"
                         else:
                             month_next_pressure = " 下月壓力持平"
                     
                     st.markdown(
-                        f"- 📊 <b>5月K</b>: {month_current_pressure}{month_next_pressure}",
+                        f"- {month_current_pressure}{month_next_pressure}",
                         unsafe_allow_html=True
                     )
                     st.markdown(
