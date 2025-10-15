@@ -779,16 +779,42 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                         unsafe_allow_html=True,
                     )
                 
-                # === 顯示週K和月K的基準價、扣抵值、前基準 ===
-                st.markdown("---")
+                # === 顯示週K和月K的基準價、扣抵值、前基準與壓力變化 ===
                 
                 # 週K資訊
                 if w_baseline is not None:
                     w_baseline_str = f"{w_baseline:.2f}"
                     w_deduction_str = f"{w_deduction:.2f}" if w_deduction is not None else "—"
                     w_prev_baseline_str = f"{w_prev_baseline:.2f}" if w_prev_baseline is not None else "—"
+                    
+                    # 計算本週壓力變化 (基準 vs 前基準)
+                    week_current_pressure = ""
+                    if w_prev_baseline is not None and w_prev_baseline != 0:
+                        week_pct = (w_baseline - w_prev_baseline) / w_prev_baseline * 100
+                        if week_pct > 0:
+                            week_current_pressure = f"本週壓力上升(<span style='color:red'>+{week_pct:.2f}%</span>)⚡"
+                        elif week_pct < 0:
+                            week_current_pressure = f"本週壓力下降(<span style='color:green'>{week_pct:.2f}%</span>)⚡"
+                        else:
+                            week_current_pressure = "本週壓力持平⚡"
+                    
+                    # 計算下週壓力變化 (扣抵 vs 基準)
+                    week_next_pressure = ""
+                    if w_deduction is not None and w_baseline != 0:
+                        week_next_pct = (w_deduction - w_baseline) / w_baseline * 100
+                        if week_next_pct > 0:
+                            week_next_pressure = f" 下週壓力上升(<span style='color:red'>+{week_next_pct:.2f}%</span>)"
+                        elif week_next_pct < 0:
+                            week_next_pressure = f" 下週壓力下降(<span style='color:green'>{week_next_pct:.2f}%</span>)"
+                        else:
+                            week_next_pressure = " 下週壓力持平"
+                    
                     st.markdown(
-                        f"- 📊 <b>週K 5週均</b>: 前基準 {w_prev_baseline_str} → 基準 {w_baseline_str} → 扣抵 {w_deduction_str}",
+                        f"- 📊 <b>5週K</b>: {week_current_pressure}{week_next_pressure}",
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(
+                        f"  <span style='font-size:13px; color:#666'>前基準 {w_prev_baseline_str} → 基準 {w_baseline_str} → 扣抵 {w_deduction_str}</span>",
                         unsafe_allow_html=True
                     )
                 else:
@@ -799,8 +825,35 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     m_baseline_str = f"{m_baseline:.2f}"
                     m_deduction_str = f"{m_deduction:.2f}" if m_deduction is not None else "—"
                     m_prev_baseline_str = f"{m_prev_baseline:.2f}" if m_prev_baseline is not None else "—"
+                    
+                    # 計算本月壓力變化 (基準 vs 前基準)
+                    month_current_pressure = ""
+                    if m_prev_baseline is not None and m_prev_baseline != 0:
+                        month_pct = (m_baseline - m_prev_baseline) / m_prev_baseline * 100
+                        if month_pct > 0:
+                            month_current_pressure = f"本月壓力上升(<span style='color:red'>+{month_pct:.2f}%</span>)⚡"
+                        elif month_pct < 0:
+                            month_current_pressure = f"本月壓力下降(<span style='color:green'>{month_pct:.2f}%</span>)⚡"
+                        else:
+                            month_current_pressure = "本月壓力持平⚡"
+                    
+                    # 計算下月壓力變化 (扣抵 vs 基準)
+                    month_next_pressure = ""
+                    if m_deduction is not None and m_baseline != 0:
+                        month_next_pct = (m_deduction - m_baseline) / m_baseline * 100
+                        if month_next_pct > 0:
+                            month_next_pressure = f" 下月壓力上升(<span style='color:red'>+{month_next_pct:.2f}%</span>)"
+                        elif month_next_pct < 0:
+                            month_next_pressure = f" 下月壓力下降(<span style='color:green'>{month_next_pct:.2f}%</span>)"
+                        else:
+                            month_next_pressure = " 下月壓力持平"
+                    
                     st.markdown(
-                        f"- 📊 <b>月K 5月均</b>: 前基準 {m_prev_baseline_str} → 基準 {m_baseline_str} → 扣抵 {m_deduction_str}",
+                        f"- 📊 <b>5月K</b>: {month_current_pressure}{month_next_pressure}",
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(
+                        f"  <span style='font-size:13px; color:#666'>前基準 {m_prev_baseline_str} → 基準 {m_baseline_str} → 扣抵 {m_deduction_str}</span>",
                         unsafe_allow_html=True
                     )
                 else:
