@@ -686,7 +686,6 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
         with col_left:
             st.markdown(f"- {format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
-            st.markdown(f"- <span style='color:orange'>昨收：<b>{c2}</b></span> -> 今開(<span style='color:red'>{today_date[5:]}</span>)：<b>{o}</b>", unsafe_allow_html=True)
             extra_info = get_price_change_and_kbar(c1, c2, o)
             st.markdown(
                 f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價**"

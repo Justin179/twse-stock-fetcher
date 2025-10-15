@@ -208,17 +208,17 @@ def analyze_stock(stock_id, dl=None, sdk=None):
 
         # 優先判斷過昨高/破昨低
         if is_break_yesterday_high:
-            signals.append("今開盤 過昨高")
+            signals.append(f"今開盤({o}) 過昨高")
         elif is_break_yesterday_low:
-            signals.append("今開盤 破昨低")
+            signals.append(f"今開盤({o}) 破昨低")
         else:
             # 若沒過昨高也沒破昨低，才檢查開高/平/低
             if o > c2:
-                signals.append("今開盤 開高")
+                signals.append(f"今開盤({o}) 開高")
             elif o == c2:
-                signals.append("今開盤 開平盤")
+                signals.append(f"今開盤({o}) 開平盤")
             elif o < c2:
-                signals.append("今開盤 開低")
+                signals.append(f"今開盤({o}) 開低")
 
 
     # 今天盤中
@@ -242,30 +242,30 @@ def analyze_stock(stock_id, dl=None, sdk=None):
         # 上週高點
         if w1 and c2 > w1:
             if v1 and v2 and v1 > v2:
-                signals.append("昨收盤 帶量過上週高點")
+                signals.append(f"昨收盤({c2}) 帶量過上週高點")
             else:
-                signals.append("昨收盤 過上週高點")
+                signals.append(f"昨收盤({c2}) 過上週高點")
 
         # 上月高點
         if m1 and c2 > m1:
             if v1 and v2 and v1 > v2:
-                signals.append("昨收盤 帶量過上月高點")
+                signals.append(f"昨收盤({c2}) 帶量過上月高點")
             else:
-                signals.append("昨收盤 過上月高點")
+                signals.append(f"昨收盤({c2}) 過上月高點")
 
         # 上週低點
         if w2 and c2 < w2:
             if v1 and v2 and v1 > v2:
-                signals.append("昨收盤 帶量破上週低點")
+                signals.append(f"昨收盤({c2}) 帶量破上週低點")
             else:
-                signals.append("昨收盤 破上週低點")
+                signals.append(f"昨收盤({c2}) 破上週低點")
 
         # 上月低點
         if m2 and c2 < m2:
             if v1 and v2 and v1 > v2:
-                signals.append("昨收盤 帶量破上月低點")
+                signals.append(f"昨收盤({c2}) 帶量破上月低點")
             else:
-                signals.append("昨收盤 破上月低點")
+                signals.append(f"昨收盤({c2}) 破上月低點")
 
 
     return signals
