@@ -91,9 +91,13 @@ def get_tx_near_month_price_on(the_date: date,
 
     row = df.loc[df["contract_date_parsed"].idxmin()]  # 近月
     price = None
-    for col in ("settlement_price", "close", "close_price", "end_price"):
+    # 🔧 修改：優先取 close，因為 FinMind 的 position 時段 settlement_price 可能是 0
+    for col in ("close", "close_price", "settlement_price", "end_price"):
         if col in df.columns and pd.notna(row.get(col)):
-            price = float(row[col]); break
+            val = float(row[col])
+            if val > 0:  # 確保價格有效（> 0）
+                price = val
+                break
     if price is None:
         raise RuntimeError("找不到價格欄位（settlement/close）")
 
