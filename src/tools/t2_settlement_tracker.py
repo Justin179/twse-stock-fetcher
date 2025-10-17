@@ -211,7 +211,7 @@ def render_t2_settlement_tracker():
                     if days_diff == 1:
                         status = "🟡 在途中 (T+1)"
                     elif days_diff == 2:
-                        status = "🟢 即將完成 (T+2)"
+                        status = "🟢 已結清 (早9點前)"
                     else:
                         status = "⚪ 已完成"
                 else:
