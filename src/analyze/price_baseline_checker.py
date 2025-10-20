@@ -19,7 +19,7 @@ def check_price_vs_baseline_and_deduction(c1: float, baseline: float, deduction:
 
 
     # 組共同的字串（baseline / deduction 加粗）
-    ref_text = f"(基: **{baseline:.2f}** -> 扣: **{deduction:.2f}** {kd_status})"
+    ref_text = f"(基 {baseline:.2f} 扣 {deduction:.2f} {kd_status})"
 
     if c1 > baseline and c1 > deduction:
         return f"- ✅ **現價站上基準價與扣抵值** {ref_text}"
