@@ -809,11 +809,15 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                             week_next_pressure = " 下週壓力持平"
                     
                     st.markdown(
-                        f"- {week_current_pressure}{week_next_pressure}",
-                        unsafe_allow_html=True
-                    )
-                    st.markdown(
-                        f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-size:13px; color:#666'>前基準 {w_prev_baseline_str} → 基準 {w_baseline_str} → 扣抵 {w_deduction_str}</span>",
+                        f"""
+                        - {week_current_pressure}{week_next_pressure}
+                          <details style='margin-left: 20px;'>
+                            <summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
+                            <div style='font-size:13px; color:#666; padding: 5px 0 0 20px;'>
+                                前基準 {w_prev_baseline_str} → 基準 {w_baseline_str} → 扣抵 {w_deduction_str}
+                            </div>
+                          </details>
+                        """,
                         unsafe_allow_html=True
                     )
                 else:
@@ -848,11 +852,15 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                             month_next_pressure = " 下月壓力持平"
                     
                     st.markdown(
-                        f"- {month_current_pressure}{month_next_pressure}",
-                        unsafe_allow_html=True
-                    )
-                    st.markdown(
-                        f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-size:13px; color:#666'>前基準 {m_prev_baseline_str} → 基準 {m_baseline_str} → 扣抵 {m_deduction_str}</span>",
+                        f"""
+                        - {month_current_pressure}{month_next_pressure}
+                          <details style='margin-left: 20px;'>
+                            <summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
+                            <div style='font-size:13px; color:#666; padding: 5px 0 0 20px;'>
+                                前基準 {m_prev_baseline_str} → 基準 {m_baseline_str} → 扣抵 {m_deduction_str}
+                            </div>
+                          </details>
+                        """,
                         unsafe_allow_html=True
                     )
                 else:
