@@ -1,4 +1,4 @@
-"""
+﻿"""
 T+2 交易在途應收付追蹤器
 追蹤台股 T+2 制度下的在途應收付金額，計算真實帳戶餘額
 """
@@ -39,6 +39,42 @@ def get_latest_trading_date():
         st.error(f"查詢最新交易日時發生錯誤: {e}")
         return None
 
+def get_trading_days_diff(date1, date2):
+    """
+    計算兩個日期之間的交易日差異（使用台積電 2330 的交易記錄）
+    
+    Args:
+        date1: 較早的日期 (str, 格式: 'YYYY-MM-DD')
+        date2: 較晚的日期 (str, 格式: 'YYYY-MM-DD')
+    
+    Returns:
+        int: 交易日差異（date2 比 date1 晚幾個交易日）
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # 查詢 date1 和 date2 之間的所有交易日（包含 date1，不包含 date2）
+        query = """
+        SELECT COUNT(*) 
+        FROM twse_prices 
+        WHERE stock_id = '2330' 
+        AND date > ? 
+        AND date <= ?
+        """
+        
+        cursor.execute(query, (date1, date2))
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            return result[0]
+        else:
+            return 0
+    except Exception as e:
+        st.error(f"查詢交易日差異時發生錯誤: {e}")
+        return 0
+
 def load_settlement_data():
     """載入在途應收付資料"""
     if DATA_FILE.exists():
@@ -58,12 +94,71 @@ def save_settlement_data(data):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(filtered_data, f, ensure_ascii=False, indent=2)
 
+def get_previous_trading_date(reference_date):
+    """
+    從資料庫查詢指定日期的上一個交易日
+    
+    Args:
+        reference_date: 參考日期 (str, 格式: 'YYYY-MM-DD')
+    
+    Returns:
+        str: 上一個交易日的日期，如果沒有則返回 None
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        query = """
+        SELECT date 
+        FROM twse_prices 
+        WHERE stock_id = '2330' 
+        AND date < ?
+        ORDER BY date DESC 
+        LIMIT 1
+        """
+        
+        cursor.execute(query, (reference_date,))
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            return result[0]
+        else:
+            return None
+    except Exception as e:
+        st.error(f"查詢上一個交易日時發生錯誤: {e}")
+        return None
+
 def get_pending_amount(latest_trading_date):
-    """取得在途應收付金額（前一個交易日的金額）"""
+    """
+    取得在途應收付金額（上一個交易日的金額）
+    
+    邏輯說明：
+    情況 A（通常）：資料庫最新交易日 < 今天
+        - 最新交易日就是「上一個交易日」
+        - 例如：今天 10-20，最新交易日 10-17 → 在途金額 = 10-17
+    
+    情況 B（傍晚後）：資料庫最新交易日 = 今天
+        - 需要往前找一個交易日
+        - 例如：今天 10-20，最新交易日 10-20 → 往前找 → 在途金額 = 10-17
+    """
     data = load_settlement_data()
     
-    if latest_trading_date in data:
-        return data[latest_trading_date], latest_trading_date
+    if not data:
+        return 0, None
+    
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    
+    # 判斷最新交易日是否等於今天
+    if latest_trading_date == today_date:
+        # 情況 B：資料庫已更新今天的資料，往前找上一個交易日
+        previous_date = get_previous_trading_date(latest_trading_date)
+        if previous_date and previous_date in data:
+            return data[previous_date], previous_date
+    else:
+        # 情況 A：資料庫還沒更新今天的資料，最新交易日就是在途
+        if latest_trading_date in data:
+            return data[latest_trading_date], latest_trading_date
     
     return 0, None
 
@@ -171,7 +266,7 @@ def render_t2_settlement_tracker():
                 = 帳上餘額 {account_balance:,.0f} + 在途應收付 ({pending_amount_calc:+,.0f})
             </p>
             <p style='font-size: 14px; color: #0066cc; font-weight: bold; margin: 8px 0 0 0;'>
-                剩 {remaining_times} 次 (÷45,000)
+                剩 {remaining_times} 次 (45,000)
             </p>
             
         </div>
@@ -190,32 +285,33 @@ def render_t2_settlement_tracker():
             st.markdown("| 交易日期 | 應收付金額 | 狀態 |")
             st.markdown("|---------|-----------|------|")
             
-            # 取得今天日期
-            today_date = datetime.now().strftime('%Y-%m-%d')
+            # 使用「最新交易日」作為參考點
+            reference_date = latest_trading_date
             
             sorted_dates = sorted(data.keys(), reverse=True)
             for date in sorted_dates:
                 amount = data[date]
                 amount_display = f"{amount:+,.0f}" if amount != 0 else "0"
                 
-                # 根據日期判斷狀態
-                if date == today_date:
+                # 判斷記錄日期與最新交易日的關係
+                if date > reference_date:
+                    # 記錄日期晚於資料庫最新交易日（例如：今天記錄但資料庫還沒更新）
+                    # 這是「今日記錄」，要到 T+2 才結算
                     status = "🔵 今日記錄 (T)"
-                elif date < today_date:
-                    # 計算天數差異
-                    from datetime import datetime as dt
-                    date_obj = dt.strptime(date, '%Y-%m-%d')
-                    today_obj = dt.strptime(today_date, '%Y-%m-%d')
-                    days_diff = (today_obj - date_obj).days
-                    
-                    if days_diff == 1:
-                        status = "🟡 在途中 (T+1)"
-                    elif days_diff == 2:
-                        status = "🟢 已結清 (早9點前)"
-                    else:
-                        status = "⚪ 已完成"
                 else:
-                    status = "🔜 未來記錄"
+                    # 記錄日期 <= 資料庫最新交易日
+                    # 計算交易日差異
+                    trading_days_diff = get_trading_days_diff(date, reference_date)
+                    
+                    # 根據交易日差異判斷狀態
+                    if trading_days_diff == 0:
+                        status = "🟡 在途中 (明早9點前結算)"
+                    elif trading_days_diff == 1:
+                        status = "🟢 已結清 (今早9點前已結算)"
+                    elif trading_days_diff >= 2:
+                        status = "⚪ 已完成"
+                    else:
+                        status = "🔜 未來記錄"
                 
                 st.markdown(f"| {date} | {amount_display} 元 | {status} |")
         else:
