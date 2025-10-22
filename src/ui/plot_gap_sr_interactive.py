@@ -711,6 +711,16 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                stock_id: str = "", stock_name: str = "") -> go.Figure:
     fig = go.Figure()
 
+    # 添加股票代碼和名稱的標記（不可見，只為了在圖例中顯示）
+    fig.add_trace(go.Scatter(
+        x=[None], y=[None],
+        mode='markers',
+        marker=dict(size=0, color='rgba(0,0,0,0)'),
+        name=f"{stock_id} {stock_name}",
+        showlegend=True,
+        hoverinfo='skip'
+    ))
+
     fig.add_trace(go.Candlestick(
         x=daily["date_label"],
         open=daily["open"], high=daily["high"],
@@ -779,7 +789,7 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         xaxis_rangeslider_visible=True,
         margin=dict(l=40, r=40, t=40, b=40),
         height=820,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(size=14))
     )
     return fig
 
