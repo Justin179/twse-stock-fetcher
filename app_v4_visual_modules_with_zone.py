@@ -170,12 +170,8 @@ with col2:
         fig_price = plot_price_interactive(selected)
         st.plotly_chart(fig_price, use_container_width=True)
         
-        st.subheader("📊 法人買賣超 & 持股比率 (日)")
-        fig1, fig2 = plot_institution_combo_plotly(selected)
-        st.plotly_chart(fig1, use_container_width=True)
-        st.plotly_chart(fig2, use_container_width=True)
-        
-        st.subheader("📈 主力買賣超 & 買賣家數差 (日)")
+
+        st.subheader("📈 主力 買賣超 & 買賣家數差 (日)")
         
         # 🔹 添加更新按鈕（與訊息在同一行）
         col_title, col_btn, col_msg = st.columns([3, 1, 4])
@@ -225,6 +221,13 @@ with col2:
         st.plotly_chart(fig_main1, use_container_width=True)
         st.plotly_chart(fig_main2, use_container_width=True)
         
+
+        st.subheader("📊 外資、投信 買賣超 & 持股比率 (日)")
+        fig1, fig2 = plot_institution_combo_plotly(selected)
+        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig2, use_container_width=True)
+
+
         st.subheader("📈 籌碼集中度 & 千張大戶持股比率 (週)")
         fig3, fig4 = plot_holder_concentration_plotly(selected)
         st.plotly_chart(fig3, use_container_width=True)
