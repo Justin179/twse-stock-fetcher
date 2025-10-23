@@ -189,8 +189,8 @@ def render_volume_forecast(current_volume: float, yesterday_volume: float):
                 icon = "📉"
             
             st.markdown(
-                f"- {icon} **方式1 預估量**: <span style='color:{color}; font-weight:bold'>{pct:.0f}%</span> "
-                f"（預估收盤: {forecast1['forecast_volume']:.0f}張）",
+                f"- {icon} **分均預估量**: <span style='color:{color}; font-weight:bold'>{pct:.0f}%</span> "
+                f"（預估收: {forecast1['forecast_volume']:.0f}張）",
                 unsafe_allow_html=True
             )
     
@@ -217,18 +217,15 @@ def render_volume_forecast(current_volume: float, yesterday_volume: float):
             pct_display = f"{forecast2['diff_pct']:+.0f}%"
         
         st.markdown(
-            f"- {icon} **方式2 時間切割法**: <span style='color:{color}; font-weight:bold'>{status_text}</span> "
-            f"<span style='color:{color}'>({pct_display})</span>",
+            f"""- {icon} **5分間隔預估量**: <span style='color:{color}; font-weight:bold'>{status_text}</span> 
+            <span style='color:{color}'>({pct_display})</span>
+              <details style='margin-left: 20px;'>
+                <summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
+                <div style='font-size:13px; color:#666; padding: 5px 0 0 20px;'>
+                    已交易時間 {forecast2['elapsed_minutes']} 分鐘 → 第 {forecast2['current_segment']}/{54} 段 → 每段應達 {forecast2['volume_per_segment']:.1f} 張<br>
+                    前段目標 {forecast2['prev_target']:.1f} → 目前量 {current_volume:.0f} → 後段目標 {forecast2['next_target']:.1f}
+                </div>
+              </details>
+            """,
             unsafe_allow_html=True
         )
-        
-        # 顯示詳細資訊（可摺疊）
-        with st.expander("📊 詳細數據", expanded=False):
-            st.markdown(f"""
-            - 已交易時間: {forecast2['elapsed_minutes']} 分鐘
-            - 當前時間段: 第 {forecast2['current_segment']} 個 (共54個)
-            - 每5分鐘應達: {forecast2['volume_per_segment']:.1f} 張
-            - 前段目標: {forecast2['prev_target']:.1f} 張
-            - 後段目標: {forecast2['next_target']:.1f} 張
-            - 目前成交量: {current_volume:.0f} 張
-            """)
