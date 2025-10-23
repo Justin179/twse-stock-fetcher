@@ -571,7 +571,8 @@ def compute_week_month_volume_achievement(
 def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[float]) -> str:
     """
     回傳一條已排版好的文字，用於顯示：
-       今日/昨日成交量：ooo / xxx（達成率：YY%）（富邦api）
+       比昨量已達成: XX% (富邦api)
+       詳細數據：今量 XXX張 / 昨量 XXX張
     - today_info.get('v') 單位：張
     - y_volume_in_shares  單位：股（DB 取出的 yesterday volume）→ 會自動轉張
     - 若今日或昨日任一缺資料，達成率顯示為 '--'
@@ -589,21 +590,26 @@ def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[floa
         if y_vol is not None:
             y_vol = y_vol / 1000.0
 
-    # 顯示文字
-    today_str = f"{today_v:,.0f} 張" if today_v is not None else "查無資料"
-    yest_str  = f"{y_vol:,.0f} 張"  if y_vol  is not None else "查無資料"
-
     # 達成率
     if (today_v is not None) and (y_vol is not None) and (y_vol > 0):
         rate_pct = today_v / y_vol * 100.0
         rate_str = f"<span style='color:#ef4444'>{rate_pct:.0f}%</span>"
+        today_str = f"{today_v:,.0f}張"
+        yest_str = f"{y_vol:,.0f}張"
     else:
         rate_str = "--"
+        today_str = "查無資料"
+        yest_str = "查無資料"
 
     return (
-        f"今/昨 <span style='color:blue; font-weight:bold'>成交量</span>："
-        f"{today_str} / {yest_str}"
-        f"（<span style='color:blue; font-weight:bold'>達成:</span> {rate_str}, 富邦api）"
+        f"""比昨量已達成: {rate_str} (富邦api)
+          <details style='margin-left: 20px;'>
+            <summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
+            <div style='font-size:13px; color:#666; padding: 5px 0 0 20px;'>
+                今量 {today_str} / 昨量 {yest_str}
+            </div>
+          </details>
+        """
     )
 
 def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
