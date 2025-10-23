@@ -602,13 +602,14 @@ def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[floa
         yest_str = "查無資料"
 
     return (
-        f"""比昨量已達成: {rate_str} (富邦api)
-<details style='margin-left: 20px; margin-top: 0; margin-bottom: 0;'>
-<summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
-<div style='font-size:13px; color:#666; padding: 5px 0 0 20px;'>
-今量 {today_str} / 昨量 {yest_str}
-</div>
-</details>"""
+        f"""- 比昨量已達成: {rate_str} (富邦api)
+          <details style='margin-left: 20px;'>
+            <summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
+            <div style='font-size:13px; color:#666; padding: 5px 0 0 20px;'>
+                今量 {today_str} / 昨量 {yest_str}
+            </div>
+          </details>
+        """
     )
 
 def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
