@@ -754,11 +754,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                                 pct_suffix = f" ({float(prev_pct_rounded):+.2f}%)"
 
                             if pb_dec < b_dec:
-                                prefix = f"<b>今壓</b>上升📈{pct_suffix} "
+                                prefix = f"<b style='color:blue'>今壓上升</b>📈<span style='color:blue'>{pct_suffix}</span> "
                             elif pb_dec > b_dec:
-                                prefix = f"<b>今壓</b>下降📉{pct_suffix} "
+                                prefix = f"<b style='color:blue'>今壓下降</b>📉<span style='color:blue'>{pct_suffix}</span> "
                             else:
-                                prefix = f"<b>今壓</b>持平➖{pct_suffix} "
+                                prefix = f"<b style='color:blue'>今壓持平</b>➖<span style='color:blue'>{pct_suffix}</span> "
                     except Exception:
                         prefix = ""
 
