@@ -613,6 +613,8 @@ def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     四捨五入使用 Decimal ROUND_HALF_UP 到小數後兩位。
     """
     pct_html = ""
+    pct_color = "black"  # 預設顏色
+    
     try:
         if (c2 is not None) and (c1 is not None) and float(c2) != 0:
             # 使用 Decimal 以確保穩定的四捨五入（half-up）
@@ -620,20 +622,29 @@ def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
             d_c2 = Decimal(str(c2))
             pct = (d_c1 - d_c2) / d_c2 * Decimal("100")
             pct_display = pct.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            pct_html = f" <span style='color:black; font-weight:normal'>{pct_display:+.2f}%</span>"
+            
+            # 根據漲跌決定顏色
+            if d_c1 > d_c2:
+                pct_color = "#ef4444"  # 紅色
+            elif d_c1 < d_c2:
+                pct_color = "#16a34a"  # 綠色
+            else:
+                pct_color = "black"    # 黑色
+            
+            pct_html = f" <span style='color:{pct_color}; font-weight:normal'>{pct_display:+.2f}%</span>"
     except Exception:
         pct_html = ""
 
-    # 漲跌（藍色粗體，保留）
+    # 漲跌（漲紅跌綠平黑）
     try:
         if c1 > c2:
-            change_str = "<span style='color:blue; font-weight:bold'>價漲</span>"
+            change_str = "<span style='color:#ef4444; font-weight:bold'>價漲</span>"
         elif c1 < c2:
-            change_str = "<span style='color:blue; font-weight:bold'>價跌</span>"
+            change_str = "<span style='color:#16a34a; font-weight:bold'>價跌</span>"
         else:
-            change_str = "<span style='color:blue; font-weight:bold'>價平</span>"
+            change_str = "<span style='color:black; font-weight:bold'>價平</span>"
     except Exception:
-        change_str = "<span style='color:blue; font-weight:bold'>價平</span>"
+        change_str = "<span style='color:black; font-weight:bold'>價平</span>"
 
     # K棒色
     try:
