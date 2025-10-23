@@ -189,7 +189,7 @@ def render_volume_forecast(current_volume: float, yesterday_volume: float):
                 icon = "📉"
             
             st.markdown(
-                f"- {icon} **分均預估量**: <span style='color:{color}; font-weight:bold'>{pct:.0f}%</span> "
+                f"{icon} 分均預估量: <span style='color:{color}; font-weight:bold'>{pct:.0f}%</span> "
                 f"（預估收: {forecast1['forecast_volume']:.0f}張）",
                 unsafe_allow_html=True
             )
@@ -217,7 +217,7 @@ def render_volume_forecast(current_volume: float, yesterday_volume: float):
             pct_display = f"{forecast2['diff_pct']:+.0f}%"
         
         st.markdown(
-            f"""- {icon} **5分間隔預估量**: <span style='color:{color}; font-weight:bold'>{status_text}</span> 
+            f"""{icon} 5分間隔預估量: <span style='color:{color}; font-weight:bold'>{status_text}</span> 
             <span style='color:{color}'>({pct_display})</span>
               <details style='margin-left: 20px;'>
                 <summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
