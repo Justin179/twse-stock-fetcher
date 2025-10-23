@@ -949,6 +949,14 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             render_bias_line("24日均線乖離", ma24, c1, stock_id=stock_id, today_date=today_date)
             render_bias_line("10 → 5 均線開口",  ma10, ma5)    # 開口不需判斷彎向
             render_bias_line("24 → 10 均線開口", ma24, ma10)  # 開口不需判斷彎向
+            
+            # 🔹 加入成交量預估
+            from ui.volume_forecast import render_volume_forecast
+            # 取得今日和昨日的成交量（張）
+            today_vol = today.get('v', None)  # 富邦API回傳的是張
+            yest_vol = v1 / 1000.0 if v1 is not None else None  # DB的是股，轉為張
+            if today_vol is not None and yest_vol is not None:
+                render_volume_forecast(float(today_vol), float(yest_vol))
 
 
         return today_date, c1, o, c2, h, l, w1, w2, m1, m2
