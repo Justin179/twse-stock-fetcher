@@ -603,13 +603,12 @@ def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[floa
 
     return (
         f"""比昨量已達成: {rate_str} (富邦api)
-          <details style='margin-left: 20px;'>
-            <summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
-            <div style='font-size:13px; color:#666; padding: 5px 0 0 20px;'>
-                今量 {today_str} / 昨量 {yest_str}
-            </div>
-          </details>
-        """
+<details style='margin-left: 20px; margin-top: 0; margin-bottom: 0;'>
+<summary style='cursor: pointer; font-size:12px; color:#999; list-style: none;'>📊 詳細數據</summary>
+<div style='font-size:13px; color:#666; padding: 5px 0 0 20px;'>
+今量 {today_str} / 昨量 {yest_str}
+</div>
+</details>"""
     )
 
 def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
@@ -975,7 +974,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 render_volume_forecast(float(today_vol), float(yest_vol))
             
             # 🔹 今/昨 成交量（移到預估量下方）
-            st.markdown(f"- {format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
+            st.markdown(f"{format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
 
 
         return today_date, c1, o, c2, h, l, w1, w2, m1, m2
