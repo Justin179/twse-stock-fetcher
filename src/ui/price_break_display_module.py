@@ -696,7 +696,6 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
         with col_left:
-            st.markdown(f"- {format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
             extra_info = get_price_change_and_kbar(c1, c2, o)
             st.markdown(
                 f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價**"
@@ -968,6 +967,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             yest_vol = v1 / 1000.0 if v1 is not None else None  # DB的是股，轉為張
             if today_vol is not None and yest_vol is not None:
                 render_volume_forecast(float(today_vol), float(yest_vol))
+            
+            # 🔹 今/昨 成交量（移到預估量下方）
+            st.markdown(f"- {format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
 
 
         return today_date, c1, o, c2, h, l, w1, w2, m1, m2
