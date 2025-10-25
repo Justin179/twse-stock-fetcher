@@ -379,17 +379,42 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
 
     # ===== 既有：圖示前綴（優先權維持不變） =====
     icon_prefix = ""
-    if (title == "24日均線乖離" and val > 15) or \
-       ("均線開口" in title and val > 10) or \
-       (title == "5日均線乖離" and val > 10):
-        icon_prefix = "⚠️ "
-    elif title == "5日均線乖離":
-        if 0 < val < 0.5:
+    
+    # 5日均線乖離
+    if title == "5日均線乖離":
+        if 0 <= val <= 1:
             icon_prefix = "✅ "
-        elif 0.5 <= val < 1:
+        elif 1 < val <= 2:
             icon_prefix = "✔️ "
-    elif "均線開口" in title and 0 < val < 0.5:
-        icon_prefix = "✔️ "
+        elif val > 10:
+            icon_prefix = "⚠️ "
+    
+    # 10日均線乖離
+    elif title == "10日均線乖離":
+        if 0 <= val <= 2:
+            icon_prefix = "✅ "
+        elif 2 < val <= 4:
+            icon_prefix = "✔️ "
+        elif val > 20:
+            icon_prefix = "⚠️ "
+    
+    # 24日均線乖離
+    elif title == "24日均線乖離":
+        if 0 <= val <= 4:
+            icon_prefix = "✅ "
+        elif 4 < val <= 8:
+            icon_prefix = "✔️ "
+        elif val > 40:
+            icon_prefix = "⚠️ "
+    
+    # 均線開口（10 → 5 或 24 → 10）
+    elif "均線開口" in title:
+        if 0 < val <= 1.8:
+            icon_prefix = "✅ "
+        elif 1.8 < val <= 3.6:
+            icon_prefix = "✔️ "
+        elif val > 20:
+            icon_prefix = "⚠️ "
 
     # ===== 組合顯示的 title（先彎向，再原 title）=====
     display_title = f"{slope_prefix}{title}" if slope_prefix else title
