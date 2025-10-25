@@ -18,7 +18,7 @@ from datetime import datetime
 from ui.bias_calculator import render_bias_calculator
 import re
 from math import isclose
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 from decimal import Decimal, ROUND_HALF_UP
 
 def get_baseline_and_deduction(stock_id: str, today_date: str, n: int = 5):
@@ -637,6 +637,150 @@ def format_daily_volume_line(today_info: dict, y_volume_in_shares: Optional[floa
         """
     )
 
+def get_volume_status(today_info: dict, y_volume_in_shares: Optional[float], stock_id: str, db_path: str = "data/institution.db") -> str:
+    """
+    判斷量增或量縮
+    優先級：
+    1. 交易時間內：使用成交量預估模組判斷
+    2. 非交易時間：比對今量vs昨量
+    3. 今昨量無資料：查詢DB最近兩筆成交量
+    
+    Returns:
+        "量增" or "量縮"
+    """
+    from ui.volume_forecast import get_trading_minutes_elapsed, forecast_by_avg_rate, forecast_by_time_segment
+    
+    # 1. 交易時間內：使用預估模組
+    elapsed = get_trading_minutes_elapsed()
+    if elapsed is not None and elapsed > 0 and elapsed < 270:
+        today_v = _safe_float(today_info.get('v'))
+        y_vol = None
+        if y_volume_in_shares is not None:
+            y_vol = _safe_float(y_volume_in_shares)
+            if y_vol is not None:
+                y_vol = y_vol / 1000.0  # 股 -> 張
+        
+        if today_v is not None and y_vol is not None and y_vol > 0:
+            # 方式1：每分鐘平均預估
+            forecast1 = forecast_by_avg_rate(today_v, y_vol)
+            # 方式2：5分鐘區間
+            forecast2 = forecast_by_time_segment(today_v, y_vol)
+            
+            if forecast1 and forecast2:
+                method1_increase = forecast1['forecast_pct'] >= 100
+                method2_increase = forecast2['status'] == 'ahead'
+                
+                # 如果兩者一致，直接判斷
+                if method1_increase == method2_increase:
+                    return "量增" if method1_increase else "量縮"
+                else:
+                    # 不一致時以方式1為準
+                    return "量增" if method1_increase else "量縮"
+    
+    # 2. 非交易時間：比對今量vs昨量
+    today_v = _safe_float(today_info.get('v'))
+    y_vol = None
+    if y_volume_in_shares is not None:
+        y_vol = _safe_float(y_volume_in_shares)
+        if y_vol is not None:
+            y_vol = y_vol / 1000.0  # 股 -> 張
+    
+    if today_v is not None and y_vol is not None:
+        return "量增" if today_v >= y_vol else "量縮"
+    
+    # 3. 今昨量無資料：查詢DB最近兩筆
+    try:
+        import sqlite3
+        sql = """
+            SELECT date, volume
+            FROM twse_prices
+            WHERE stock_id = ?
+            ORDER BY date DESC
+            LIMIT 2
+        """
+        with sqlite3.connect(db_path) as conn:
+            df = pd.read_sql_query(sql, conn, params=[stock_id])
+        
+        if len(df) >= 2:
+            recent_vol = float(df.iloc[0]['volume'])
+            prev_vol = float(df.iloc[1]['volume'])
+            return "量增" if recent_vol >= prev_vol else "量縮"
+    except Exception:
+        pass
+    
+    return "量縮"  # 預設
+
+
+def generate_quick_summary(price_status: str,
+                           baseline_pressure_status: str, deduction_direction_status: str,
+                           today_info: dict, y_volume_in_shares: Optional[float], stock_id: str) -> Tuple[str, str]:
+    """
+    生成快速摘要的兩個詞條
+    
+    Args:
+        price_status: 價格狀態 ("漲", "跌", "平")
+        baseline_pressure_status: 今壓狀態 ("上升", "下降", "持平")
+        deduction_direction_status: 扣抵方向狀態 ("向上", "向下", "持平")
+        today_info: 今日資訊
+        y_volume_in_shares: 昨日成交量（股）
+        stock_id: 股票代號
+    
+    Returns:
+        (詞條1_今壓, 詞條2_扣抵)
+    """
+    # 判斷量增/量縮
+    volume_status = get_volume_status(today_info, y_volume_in_shares, stock_id)
+    
+    # 根據表格判斷詞條1（今壓）
+    # 今壓上升 + 價漲量增 = ✅ 今天強勢
+    # 今壓上升 + 價漲量縮 = ✔️ 今天微強
+    # 今壓下降 + 價跌量縮 = ⚠️ 今天稍弱
+    # 今壓下降 + 價跌量增 = ❌ 今天弱勢
+    if baseline_pressure_status == "持平":
+        term1 = "今壓持平"
+    elif baseline_pressure_status == "上升":  # 今壓上升
+        if price_status == "漲" and volume_status == "量增":
+            term1 = "✅ 今天強勢"
+        elif price_status == "漲" and volume_status == "量縮":
+            term1 = "✔️ 今天微強"
+        else:
+            term1 = "➖"
+    elif baseline_pressure_status == "下降":  # 今壓下降
+        if price_status == "跌" and volume_status == "量縮":
+            term1 = "⚠️ 今天稍弱"
+        elif price_status == "跌" and volume_status == "量增":
+            term1 = "❌ 今天弱勢"
+        else:
+            term1 = "➖"
+    else:
+        term1 = "➖"
+    
+    # 根據表格判斷詞條2（扣抵）
+    # 扣抵向上 + 價漲量增 = ✅ 強勢股
+    # 扣抵向上 + 價漲量縮 = ✔️ 微強股
+    # 扣抵向下 + 價跌量縮 = ⚠️ 稍弱股
+    # 扣抵向下 + 價跌量增 = ❌ 弱勢股
+    if deduction_direction_status == "持平":
+        term2 = "扣抵持平"
+    elif deduction_direction_status == "向上":  # 扣抵向上
+        if price_status == "漲" and volume_status == "量增":
+            term2 = "✅ 強勢股"
+        elif price_status == "漲" and volume_status == "量縮":
+            term2 = "✔️ 微強股"
+        else:
+            term2 = "➖"
+    elif deduction_direction_status == "向下":  # 扣抵向下
+        if price_status == "跌" and volume_status == "量縮":
+            term2 = "⚠️ 稍弱股"
+        elif price_status == "跌" and volume_status == "量增":
+            term2 = "❌ 弱勢股"
+        else:
+            term2 = "➖"
+    else:
+        term2 = "➖"
+
+    return term1, term2
+
 def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     """
     判斷現價 vs 昨收、今開，回傳字串 "(漲跌 / K棒色)"。
@@ -1002,8 +1146,50 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             # 🔹 今/昨 成交量（移到預估量下方）
             st.markdown(f"{format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
 
+        # 🔹 計算價格狀態（直接使用畫面上的計算邏輯）
+        price_status = "平"
+        if c1 > c2:
+            price_status = "漲"
+        elif c1 < c2:
+            price_status = "跌"
+        
+        # 🔹 計算今壓狀態和扣抵狀態，準備傳給 Quick Summary
+        # 今壓狀態：比較 prev_baseline5 與 baseline5
+        baseline_pressure_status = "持平"
+        if (prev_baseline5 is not None) and (baseline5 is not None):
+            pb_dec = Decimal(str(prev_baseline5))
+            b_dec = Decimal(str(baseline5))
+            if pb_dec < b_dec:
+                baseline_pressure_status = "上升"
+            elif pb_dec > b_dec:
+                baseline_pressure_status = "下降"
+            else:
+                baseline_pressure_status = "持平"
+        
+        # 扣抵狀態：比較 deduction5 與 baseline5（未來壓力方向）
+        deduction_direction_status = "持平"
+        if (deduction5 is not None) and (baseline5 is not None):
+            ded_vals_raw = [deduction5, ded1_5, ded2_5, ded3_5]
+            ded_vals = [float(x) for x in ded_vals_raw if x is not None]
+            if ded_vals and float(baseline5) != 0:
+                avg_dec = sum(Decimal(str(x)) for x in ded_vals) / Decimal(len(ded_vals))
+                base_dec = Decimal(str(baseline5))
+                if avg_dec > base_dec:
+                    deduction_direction_status = "向上"
+                elif avg_dec < base_dec:
+                    deduction_direction_status = "向下"
+                else:
+                    deduction_direction_status = "持平"
+        
+        # 🔹 生成 Quick Summary
+        summary_term1, summary_term2 = generate_quick_summary(
+            price_status,
+            baseline_pressure_status, 
+            deduction_direction_status, 
+            today, v1, stock_id
+        )
 
-        return today_date, c1, o, c2, h, l, w1, w2, m1, m2
+        return today_date, c1, o, c2, h, l, w1, w2, m1, m2, summary_term1, summary_term2
 
     except Exception as e:
         st.warning(f"⚠️ 無法取得關鍵價位分析資料：{e}")

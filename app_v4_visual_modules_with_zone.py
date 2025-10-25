@@ -154,7 +154,14 @@ with col2:
         st.subheader("📌 關鍵價位分析")
         result = display_price_break_analysis(selected, dl=dl, sdk=sdk)
         if result:
-            today_date, c1, o, c2, h, l, w1, w2, m1, m2 = result
+            today_date, c1, o, c2, h, l, w1, w2, m1, m2, summary_term1, summary_term2 = result
+            
+            # 🔹 Quick Summary 詞條顯示
+            col_sum1, col_sum2 = st.columns(2)
+            with col_sum1:
+                st.markdown(f"### {summary_term1}")
+            with col_sum2:
+                st.markdown(f"### {summary_term2}")
         
         st.subheader("📌 現價與區間關係視覺化")
         fig_zone = plot_price_position_zone(stock_display_reversed, today_date, c1, o, c2, h, l, w1, w2, m1, m2)
