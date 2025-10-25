@@ -781,6 +781,82 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
                                showarrow=False, font=dict(size=10, color=line_color_role[g.role]),
                                bgcolor="rgba(255,255,255,0.6)", bordercolor="rgba(0,0,0,0.2)")
 
+    # === 新增：標註最靠近現價的支撐與壓力 ===
+    # 過濾出有效的支撐與壓力
+    supports = [g for g in gaps if g.role == "support" and (
+        not g.timeframe.startswith("KEY") and include.get(g.timeframe, True) or
+        g.timeframe.startswith("KEY") and include.get("KEY", True)
+    )]
+    resistances = [g for g in gaps if g.role == "resistance" and (
+        not g.timeframe.startswith("KEY") and include.get(g.timeframe, True) or
+        g.timeframe.startswith("KEY") and include.get("KEY", True)
+    )]
+    
+    # 找最靠近現價的支撐（在現價下方，取最大值）
+    if supports:
+        nearest_support = max(supports, key=lambda g: g.edge_price)
+        
+        # 檢查是否有重疊的支撐（價格在容差範圍內的，不論來源）
+        # 這會包含：缺口、大量K棒、關鍵價位、均線等所有類型的支撐
+        overlapping_supports = [g for g in supports if abs(g.edge_price - nearest_support.edge_price) / nearest_support.edge_price * 100 <= 0.3]
+        
+        # 標註文字：顯示重複次數
+        overlap_count = len(overlapping_supports)
+        if overlap_count > 1:
+            label_text = f"{nearest_support.edge_price:.2f} ({overlap_count})"  # 顯示重複次數
+            font_size = 18
+        else:
+            label_text = f"{nearest_support.edge_price:.2f}"
+            font_size = 16
+        
+        # 在圖上標註（綠色支撐在現價下方）
+        fig.add_annotation(
+            xref="paper",
+            x=0.98,
+            xanchor="right",
+            y=nearest_support.edge_price,
+            yanchor="top",  # 標註框的上邊對齊價位線
+            text=label_text,
+            showarrow=False,  # 移除箭頭
+            font=dict(size=font_size, color='white', family='Arial Black'),
+            bgcolor='rgba(22, 163, 74, 0.85)',
+            bordercolor='#16a34a',
+            borderwidth=3,
+            borderpad=6
+        )
+    
+    # 找最靠近現價的壓力（在現價上方，取最小值）
+    if resistances:
+        nearest_resistance = min(resistances, key=lambda g: g.edge_price)
+        
+        # 檢查是否有重疊的壓力（價格在容差範圍內的，不論來源）
+        overlapping_resistances = [g for g in resistances if abs(g.edge_price - nearest_resistance.edge_price) / nearest_resistance.edge_price * 100 <= 0.3]
+        
+        # 標註文字：顯示重複次數
+        overlap_count = len(overlapping_resistances)
+        if overlap_count > 1:
+            label_text = f"{nearest_resistance.edge_price:.2f} ({overlap_count})"  # 顯示重複次數
+            font_size = 18
+        else:
+            label_text = f"{nearest_resistance.edge_price:.2f}"
+            font_size = 16
+        
+        # 在圖上標註（紅色壓力在現價上方）
+        fig.add_annotation(
+            xref="paper",
+            x=0.98,
+            xanchor="right",
+            y=nearest_resistance.edge_price,
+            yanchor="bottom",  # 標註框的下邊對齊價位線
+            text=label_text,
+            showarrow=False,  # 移除箭頭
+            font=dict(size=font_size, color='white', family='Arial Black'),
+            bgcolor='rgba(220, 38, 38, 0.85)',
+            bordercolor='#dc2626',
+            borderwidth=3,
+            borderpad=6
+        )
+
     fig.update_xaxes(type="category")
     fig.update_layout(
         xaxis=dict(domain=[0, 1]),
