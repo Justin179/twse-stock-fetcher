@@ -268,6 +268,51 @@ with col2:
         
 
         st.subheader("📊 外資、投信 買賣超 & 持股比率 (日)")
+        
+        # 🔹 添加更新按鈕（與訊息在同一行）
+        col_title2, col_btn2, col_msg2 = st.columns([3, 1, 4])
+        
+        with col_btn2:
+            if st.button("🔄 更新", key=f"update_institutional_{selected}", help="背景更新此股票的外資、投信買賣超與持股比率資料"):
+                # 背景執行更新程式
+                cmd = f'start /min python src\\tools\\update_single_stock_institutional.py {selected}'
+                subprocess.Popen(cmd, shell=True)
+                st.session_state[f'show_update_msg_inst_{selected}'] = True
+        
+        with col_msg2:
+            # 顯示背景執行提示（3秒後自動淡出）
+            if st.session_state.get(f'show_update_msg_inst_{selected}', False):
+                st.markdown("""
+                <div id="update-msg-inst" style="
+                    padding: 0.5rem 1rem;
+                    background-color: #d1ecf1;
+                    border: 1px solid #bee5eb;
+                    border-radius: 0.25rem;
+                    color: #0c5460;
+                    animation: fadeOut 0.5s ease-in-out 2.5s forwards;
+                ">
+                    ℹ️ ⏳ 背景更新中...完成後會有提示音
+                </div>
+                <style>
+                    @keyframes fadeOut {
+                        from { opacity: 1; }
+                        to { opacity: 0; visibility: hidden; }
+                    }
+                </style>
+                <script>
+                    setTimeout(function() {
+                        var msg = document.getElementById('update-msg-inst');
+                        if (msg) {
+                            setTimeout(function() {
+                                msg.style.display = 'none';
+                            }, 3000);
+                        }
+                    }, 100);
+                </script>
+                """, unsafe_allow_html=True)
+                # 重置狀態（避免訊息一直顯示）
+                st.session_state[f'show_update_msg_inst_{selected}'] = False
+        
         fig1, fig2 = plot_institution_combo_plotly(selected)
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
