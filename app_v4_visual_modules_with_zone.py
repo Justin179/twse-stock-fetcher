@@ -34,7 +34,45 @@ plt.rcParams['axes.unicode_minus'] = False
 
 # --- Streamlit ---
 st.set_page_config(page_title="強勢 x 籌碼 x 扣抵", layout="wide")
+
+# 🔹 在頁面最頂部放一個錨點
+st.markdown('<div id="top"></div>', unsafe_allow_html=True)
+
 st.markdown("#### 📈 技術線型(找已吃貨且還沒噴的) & 籌碼(守與拉的動機) & 買強勢股")
+
+# 🔹 加入「回到頂部」浮動按鈕 - 使用 HTML anchor 方式
+st.markdown("""
+<style>
+    .back-to-top {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 9999;
+        background-color: #E8E8E8;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        font-weight: bold;
+        text-decoration: none;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        transition: all 0.3s ease;
+        border: 3px solid #1f77b4;
+        color: #1f77b4;
+    }
+    .back-to-top:hover {
+        background-color: #D0D0D0;
+        transform: scale(1.15);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        color: #0d5a8f;
+    }
+</style>
+<a href="#top" class="back-to-top" title="回到頂部">⬆</a>
+""", unsafe_allow_html=True)
+
 with st.expander("📘 說明：這是什麼？"):
     st.markdown("""
     - **工作流程: 紅字加碼/鎖利-> 分析匯集精選股-> 高分贏勢股 + 其他**
