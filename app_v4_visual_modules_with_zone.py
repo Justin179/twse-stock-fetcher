@@ -38,8 +38,6 @@ st.set_page_config(page_title="強勢 x 籌碼 x 扣抵", layout="wide")
 # 🔹 在頁面最頂部放一個錨點
 st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 
-st.markdown("#### 📈 技術線型(找已吃貨且還沒噴的) & 籌碼(守與拉的動機) & 買強勢股")
-
 # 🔹 加入「回到頂部」浮動按鈕 - 使用 HTML anchor 方式
 st.markdown("""
 <style>
@@ -75,7 +73,8 @@ st.markdown("""
 
 with st.expander("📘 說明：這是什麼？"):
     st.markdown("""
-    - **工作流程: 紅字加碼/鎖利-> 分析匯集精選股-> 高分贏勢股 + 其他**
+    - **📈 技術線型(找已吃貨且還沒噴的) & 籌碼(守與拉的動機) & 買強勢股**
+    - 工作流程: 紅字加碼/鎖利-> 分析匯集精選股-> 高分贏勢股 + 其他股
     - 股票代碼清單來自 `my_stock_holdings.txt`
     - 自動更新資料至 `institution.db`
     - **向上趨勢盤:** (1) 現價 過週高與月高  (2) 5_10_24均線上彎且多頭排列  (3) 現價站上5日均; 向下趨勢盤 (4) 現價站上上彎5週均線: 反向推論
