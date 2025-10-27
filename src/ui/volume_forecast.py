@@ -189,8 +189,8 @@ def render_volume_forecast(current_volume: float, yesterday_volume: float):
                 icon = "📉"
             
             st.markdown(
-                f"{icon} 分均預估量: <span style='color:{color}; font-weight:bold'>{pct:.0f}%</span> "
-                f"（預估收: {forecast1['forecast_volume']:.0f}張）",
+                f"- {icon} 分均預估量: <span style='color:{color}; font-weight:bold'>{pct:.0f}%</span> "
+                f"(預估: {forecast1['forecast_volume']:.0f}張)",
                 unsafe_allow_html=True
             )
     
