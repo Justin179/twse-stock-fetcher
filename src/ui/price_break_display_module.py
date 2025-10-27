@@ -888,20 +888,19 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             else:
                 baseline_pressure_status = "持平"
         
-        # 扣抵狀態：比較 deduction5 與 baseline5（未來壓力方向）
+        # 扣抵狀態：直接比較 baseline5 與 deduction5（未來壓力方向）
+        # 扣抵向上 = baseline5 < deduction5（未來壓力會增加）
+        # 扣抵向下 = baseline5 > deduction5（未來壓力會減輕）
         deduction_direction_status = "持平"
         if (deduction5 is not None) and (baseline5 is not None):
-            ded_vals_raw = [deduction5, ded1_5, ded2_5, ded3_5]
-            ded_vals = [float(x) for x in ded_vals_raw if x is not None]
-            if ded_vals and float(baseline5) != 0:
-                avg_dec = sum(Decimal(str(x)) for x in ded_vals) / Decimal(len(ded_vals))
-                base_dec = Decimal(str(baseline5))
-                if avg_dec > base_dec:
-                    deduction_direction_status = "向上"
-                elif avg_dec < base_dec:
-                    deduction_direction_status = "向下"
-                else:
-                    deduction_direction_status = "持平"
+            base_dec = Decimal(str(baseline5))
+            ded_dec = Decimal(str(deduction5))
+            if base_dec < ded_dec:
+                deduction_direction_status = "向上"
+            elif base_dec > ded_dec:
+                deduction_direction_status = "向下"
+            else:
+                deduction_direction_status = "持平"
         
         # 🔹 生成並顯示 Quick Summary（在所有其他內容之前）
         summary_term1, summary_term2 = generate_quick_summary(
