@@ -868,6 +868,50 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
         ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
 
+        # 🔹 先計算 Quick Summary 所需的狀態變數
+        # 價格狀態
+        price_status = "平"
+        if c1 > c2:
+            price_status = "漲"
+        elif c1 < c2:
+            price_status = "跌"
+        
+        # 今壓狀態：比較 prev_baseline5 與 baseline5
+        baseline_pressure_status = "持平"
+        if (prev_baseline5 is not None) and (baseline5 is not None):
+            pb_dec = Decimal(str(prev_baseline5))
+            b_dec = Decimal(str(baseline5))
+            if pb_dec < b_dec:
+                baseline_pressure_status = "上升"
+            elif pb_dec > b_dec:
+                baseline_pressure_status = "下降"
+            else:
+                baseline_pressure_status = "持平"
+        
+        # 扣抵狀態：比較 deduction5 與 baseline5（未來壓力方向）
+        deduction_direction_status = "持平"
+        if (deduction5 is not None) and (baseline5 is not None):
+            ded_vals_raw = [deduction5, ded1_5, ded2_5, ded3_5]
+            ded_vals = [float(x) for x in ded_vals_raw if x is not None]
+            if ded_vals and float(baseline5) != 0:
+                avg_dec = sum(Decimal(str(x)) for x in ded_vals) / Decimal(len(ded_vals))
+                base_dec = Decimal(str(baseline5))
+                if avg_dec > base_dec:
+                    deduction_direction_status = "向上"
+                elif avg_dec < base_dec:
+                    deduction_direction_status = "向下"
+                else:
+                    deduction_direction_status = "持平"
+        
+        # 🔹 生成並顯示 Quick Summary（在所有其他內容之前）
+        summary_term1, summary_term2 = generate_quick_summary(
+            price_status,
+            baseline_pressure_status, 
+            deduction_direction_status, 
+            today, v1, stock_id
+        )
+        st.markdown(f"### {summary_term1} ▹ {summary_term2}")
+
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
         with col_left:
@@ -1146,49 +1190,6 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             
             # 🔹 今/昨 成交量（移到預估量下方）
             st.markdown(f"{format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
-
-        # 🔹 計算價格狀態（直接使用畫面上的計算邏輯）
-        price_status = "平"
-        if c1 > c2:
-            price_status = "漲"
-        elif c1 < c2:
-            price_status = "跌"
-        
-        # 🔹 計算今壓狀態和扣抵狀態，準備傳給 Quick Summary
-        # 今壓狀態：比較 prev_baseline5 與 baseline5
-        baseline_pressure_status = "持平"
-        if (prev_baseline5 is not None) and (baseline5 is not None):
-            pb_dec = Decimal(str(prev_baseline5))
-            b_dec = Decimal(str(baseline5))
-            if pb_dec < b_dec:
-                baseline_pressure_status = "上升"
-            elif pb_dec > b_dec:
-                baseline_pressure_status = "下降"
-            else:
-                baseline_pressure_status = "持平"
-        
-        # 扣抵狀態：比較 deduction5 與 baseline5（未來壓力方向）
-        deduction_direction_status = "持平"
-        if (deduction5 is not None) and (baseline5 is not None):
-            ded_vals_raw = [deduction5, ded1_5, ded2_5, ded3_5]
-            ded_vals = [float(x) for x in ded_vals_raw if x is not None]
-            if ded_vals and float(baseline5) != 0:
-                avg_dec = sum(Decimal(str(x)) for x in ded_vals) / Decimal(len(ded_vals))
-                base_dec = Decimal(str(baseline5))
-                if avg_dec > base_dec:
-                    deduction_direction_status = "向上"
-                elif avg_dec < base_dec:
-                    deduction_direction_status = "向下"
-                else:
-                    deduction_direction_status = "持平"
-        
-        # 🔹 生成 Quick Summary
-        summary_term1, summary_term2 = generate_quick_summary(
-            price_status,
-            baseline_pressure_status, 
-            deduction_direction_status, 
-            today, v1, stock_id
-        )
 
         return today_date, c1, o, c2, h, l, w1, w2, m1, m2, summary_term1, summary_term2
 
