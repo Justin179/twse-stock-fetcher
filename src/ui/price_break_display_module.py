@@ -713,20 +713,22 @@ def get_volume_status(today_info: dict, y_volume_in_shares: Optional[float], sto
 
 def generate_quick_summary(price_status: str,
                            baseline_pressure_status: str, deduction_direction_status: str,
-                           today_info: dict, y_volume_in_shares: Optional[float], stock_id: str) -> Tuple[str, str]:
+                           future_pressure_status: str,
+                           today_info: dict, y_volume_in_shares: Optional[float], stock_id: str) -> Tuple[str, str, str]:
     """
-    生成快速摘要的兩個詞條
+    生成快速摘要的三個詞條
     
     Args:
         price_status: 價格狀態 ("漲", "跌", "平")
         baseline_pressure_status: 今壓狀態 ("上升", "下降", "持平")
         deduction_direction_status: 扣抵方向狀態 ("向上", "向下", "持平")
+        future_pressure_status: 未來壓力狀態 ("升高", "下降", "持平")
         today_info: 今日資訊
         y_volume_in_shares: 昨日成交量（股）
         stock_id: 股票代號
     
     Returns:
-        (詞條1_今壓, 詞條2_扣抵)
+        (詞條1_今壓, 詞條2_扣抵, 詞條3_未來壓力)
     """
     # 判斷量增/量縮
     volume_status = get_volume_status(today_info, y_volume_in_shares, stock_id)
@@ -778,8 +780,18 @@ def generate_quick_summary(price_status: str,
             term2 = "➖"
     else:
         term2 = "➖"
+    
+    # 詞條3（未來壓力）
+    if future_pressure_status == "升高":
+        term3 = "⚠️ 未來壓力升高"
+    elif future_pressure_status == "下降":
+        term3 = "✔️ 未來壓力下降"
+    elif future_pressure_status == "持平":
+        term3 = "➖ 未來壓力持平"
+    else:
+        term3 = "➖"
 
-    return term1, term2
+    return term1, term2, term3
 
 def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     """
@@ -902,14 +914,30 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             else:
                 deduction_direction_status = "持平"
         
+        # 🔹 計算未來壓力狀態（平均扣抵 vs 基準）
+        future_pressure_status = "持平"
+        if (baseline5 is not None) and (deduction5 is not None):
+            ded_vals_raw = [deduction5, ded1_5, ded2_5, ded3_5]
+            ded_vals = [float(x) for x in ded_vals_raw if x is not None]
+            if ded_vals and float(baseline5) != 0:
+                avg_dec = sum(Decimal(str(x)) for x in ded_vals) / Decimal(len(ded_vals))
+                base_dec = Decimal(str(baseline5))
+                if avg_dec > base_dec:
+                    future_pressure_status = "升高"
+                elif avg_dec < base_dec:
+                    future_pressure_status = "下降"
+                else:
+                    future_pressure_status = "持平"
+        
         # 🔹 生成並顯示 Quick Summary（在所有其他內容之前）
-        summary_term1, summary_term2 = generate_quick_summary(
+        summary_term1, summary_term2, summary_term3 = generate_quick_summary(
             price_status,
             baseline_pressure_status, 
-            deduction_direction_status, 
+            deduction_direction_status,
+            future_pressure_status,
             today, v1, stock_id
         )
-        st.markdown(f"### {summary_term1} ▹ {summary_term2}")
+        st.markdown(f"### {summary_term1} ▹ {summary_term2} ▹ {summary_term3}")
 
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
@@ -1190,7 +1218,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             # 🔹 今/昨 成交量（移到預估量下方）
             st.markdown(f"{format_daily_volume_line(today, v1)}", unsafe_allow_html=True)
 
-        return today_date, c1, o, c2, h, l, w1, w2, m1, m2, summary_term1, summary_term2
+        return today_date, c1, o, c2, h, l, w1, w2, m1, m2, summary_term1, summary_term2, summary_term3
 
     except Exception as e:
         st.warning(f"⚠️ 無法取得關鍵價位分析資料：{e}")

@@ -190,7 +190,7 @@ with col2:
 
         result = display_price_break_analysis(selected, dl=dl, sdk=sdk)
         if result:
-            today_date, c1, o, c2, h, l, w1, w2, m1, m2, summary_term1, summary_term2 = result
+            today_date, c1, o, c2, h, l, w1, w2, m1, m2, summary_term1, summary_term2, summary_term3 = result
         else:
             # 如果沒有結果，設定預設值避免後續錯誤
             today_date = c1 = o = c2 = h = l = w1 = w2 = m1 = m2 = None
