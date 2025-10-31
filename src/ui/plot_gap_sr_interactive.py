@@ -1275,18 +1275,7 @@ def main() -> None:
         # 順序：缺口 → 大量K棒 → 關鍵價位 → 帶量前波高 → 均線
         gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + key_levels_d + key_levels_w + key_levels_m + d_prev + w_prev + m_prev + ma_sr
 
-        # === 調試：顯示現價附近的關鍵點位數量 ===
         include_dict = {"D": inc_d, "W": inc_w, "M": inc_m, "MA": inc_ma, "KEY": inc_key}
-        all_gaps_at_c1_debug = [
-            g for g in gaps 
-            if abs(g.edge_price - c1) / c1 * 100 <= 0.3 and
-            (
-                (not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True)) or
-                (g.timeframe.startswith("KEY") and include_dict.get("KEY", True))
-            )
-        ]
-        if len(all_gaps_at_c1_debug) >= 2:
-            st.info(f"🎯 現價 {c1:.2f} 附近有 **{len(all_gaps_at_c1_debug)}** 個關鍵點位匯集")
 
         fig = make_chart(
             daily_with_today, gaps, c1, show_zones, show_labels,
@@ -1361,6 +1350,45 @@ def main() -> None:
                 pass  # 均線快速摘要已移至均線支撐壓力說明下方
             # --- 新增結束 ---
 
+            # === 顯示現價附近的關鍵點位數量（移到這裡，在「提示/規則說明」上方）===
+            all_gaps_at_c1_debug = [
+                g for g in gaps 
+                if abs(g.edge_price - c1) / c1 * 100 <= 0.3 and
+                (
+                    (not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True)) or
+                    (g.timeframe.startswith("KEY") and include_dict.get("KEY", True))
+                )
+            ]
+            if len(all_gaps_at_c1_debug) >= 2:
+                st.info(f"🎯 現價 {c1:.2f} 附近有 **{len(all_gaps_at_c1_debug)}** 個關鍵點位匯集")
+                
+                # 顯示這些關鍵點位的詳細資訊
+                confluence_data = []
+                for g in all_gaps_at_c1_debug:
+                    # 判斷來源表格
+                    if g.gap_type == "hv_prev_high":
+                        source_table = "帶量前波高 Pivot High"
+                    elif g.timeframe.startswith("KEY"):
+                        source_table = "關鍵價位（價格聚集點）"
+                    elif g.timeframe == "MA":
+                        source_table = "均線支撐壓力 (MA S/R)"
+                    elif g.gap_type.startswith("hv_"):
+                        source_table = "缺口 & 大量K棒 S/R"
+                    else:
+                        source_table = "缺口 & 大量K棒 S/R"
+                    
+                    confluence_data.append({
+                        "來源表格": source_table,
+                        "時間框架": g.timeframe,
+                        "類型": g.gap_type,
+                        "價位": f"{g.edge_price:.2f}",
+                        "角色": g.role,
+                        "ka_key": g.ka_key if hasattr(g, 'ka_key') else "—",
+                        "kb_key": g.kb_key if hasattr(g, 'kb_key') else "—"
+                    })
+                
+                df_confluence = pd.DataFrame(confluence_data)
+                st.dataframe(df_confluence, use_container_width=True, hide_index=True)
             
             # ⬇️ 新增：把所有提示收納進 expander
             with st.expander("📌 提示 / 規則說明", expanded=False):
