@@ -871,39 +871,38 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         )
     ]
     
-    # 只要現價位置有關鍵點位匯集（>= 1個），就標註出來
-    if len(all_gaps_at_c1) >= 1:
-        confluence_count = len(all_gaps_at_c1)
-        
-        # 標註文字：顯示匯集次數（與支撐/壓力標註格式一致）
-        if confluence_count > 1:
-            label_text = f"{c1:.2f} ({confluence_count})"
-        else:
-            label_text = f"{c1:.2f}"
-        
-        # 根據匯集次數調整字體大小（匯集越多，字體越大）
-        if confluence_count >= 5:
-            font_size = 20  # 5個以上：特大
-        elif confluence_count >= 3:
-            font_size = 19  # 3-4個：大
-        else:
-            font_size = 18  # 1-2個：標準（與支撐/壓力一致）
-        
-        # 在圖上標註（灰黑色標註，放在左側，樣式與右側紅綠標註一致）
-        fig.add_annotation(
-            xref="paper",
-            x=0.01,  # 靠近圖表左邊緣
-            xanchor="left",
-            y=c1,
-            yanchor="middle",  # 標註框垂直置中對齊價位線
-            text=label_text,
-            showarrow=False,
-            font=dict(size=font_size, color='white', family='Arial Black'),
-            bgcolor='rgba(80, 80, 80, 0.9)',  # 更亮的灰色背景，更明顯
-            bordercolor='#606060',  # 更亮的灰色邊框
-            borderwidth=3,
-            borderpad=6
-        )
+    # === 新增：現價標註（總是顯示，根據匯集數量調整字體大小）===
+    confluence_count = len(all_gaps_at_c1)
+    
+    # 標註文字：顯示匯集次數（與支撐/壓力標註格式一致）
+    if confluence_count > 1:
+        label_text = f"{c1:.2f} ({confluence_count})"
+    else:
+        label_text = f"{c1:.2f}"
+    
+    # 根據匯集次數調整字體大小（即使沒有匯集，也要足夠大）
+    if confluence_count >= 5:
+        font_size = 20  # 5個以上：特大
+    elif confluence_count >= 3:
+        font_size = 19  # 3-4個：大
+    else:
+        font_size = 18  # 0-2個：標準（與支撐/壓力一致）
+    
+    # 在圖上標註（灰黑色標註，放在左側，樣式與右側紅綠標註一致）
+    fig.add_annotation(
+        xref="paper",
+        x=0.01,  # 靠近圖表左邊緣
+        xanchor="left",
+        y=c1,
+        yanchor="middle",  # 標註框垂直置中對齊價位線
+        text=label_text,
+        showarrow=False,
+        font=dict(size=font_size, color='white', family='Arial Black'),
+        bgcolor='rgba(80, 80, 80, 0.9)',  # 更亮的灰色背景，更明顯
+        bordercolor='#606060',  # 更亮的灰色邊框
+        borderwidth=3,
+        borderpad=6
+    )
 
     fig.update_xaxes(type="category")
     fig.update_layout(
