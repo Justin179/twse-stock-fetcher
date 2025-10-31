@@ -886,10 +886,8 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
             font_size = 20  # 5個以上：特大
         elif confluence_count >= 3:
             font_size = 19  # 3-4個：大
-        elif confluence_count >= 2:
-            font_size = 18  # 2個：標準
         else:
-            font_size = 16  # 1個：小
+            font_size = 18  # 1-2個：標準（與支撐/壓力一致）
         
         # 在圖上標註（灰黑色標註，放在左側，樣式與右側紅綠標註一致）
         fig.add_annotation(
