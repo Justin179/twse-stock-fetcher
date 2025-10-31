@@ -1285,7 +1285,7 @@ def main() -> None:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # === 新增：顯示最近支撐和壓力的來源表格 ===
+        # === 新增：顯示最近支撐和壓力的來源表格（排序：壓力 → 現價 → 支撐）===
         # 計算最近的支撐和壓力（與圖表標註邏輯一致）
         supports = [g for g in gaps if g.role == "support" and (
             not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True) or
@@ -1320,18 +1320,7 @@ def main() -> None:
                 "kb_key": g.kb_key if hasattr(g, 'kb_key') else "—"
             }
 
-        # 顯示最近支撐的來源
-        if supports:
-            nearest_support = max(supports, key=lambda g: g.edge_price)
-            overlapping_supports = [g for g in supports if abs(g.edge_price - nearest_support.edge_price) / nearest_support.edge_price * 100 <= 0.3]
-            
-            if len(overlapping_supports) > 1:
-                st.success(f"✅ 最近支撐 {nearest_support.edge_price:.2f} 有 **{len(overlapping_supports)}** 個關鍵點位匯集")
-                support_data = [gap_to_table_data(g) for g in overlapping_supports]
-                df_support = pd.DataFrame(support_data)
-                st.dataframe(df_support, use_container_width=True, hide_index=True)
-
-        # 顯示最近壓力的來源
+        # 1️⃣ 先顯示最近壓力的來源（紅色，在最上方）
         if resistances:
             nearest_resistance = min(resistances, key=lambda g: g.edge_price)
             overlapping_resistances = [g for g in resistances if abs(g.edge_price - nearest_resistance.edge_price) / nearest_resistance.edge_price * 100 <= 0.3]
@@ -1341,6 +1330,39 @@ def main() -> None:
                 resistance_data = [gap_to_table_data(g) for g in overlapping_resistances]
                 df_resistance = pd.DataFrame(resistance_data)
                 st.dataframe(df_resistance, use_container_width=True, hide_index=True)
+
+        # 2️⃣ 再顯示現價附近的關鍵點位（灰黑色，在中間）
+        all_gaps_at_c1 = [
+            g for g in gaps 
+            if abs(g.edge_price - c1) / c1 * 100 <= 0.3 and
+            (
+                (not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True)) or
+                (g.timeframe.startswith("KEY") and include_dict.get("KEY", True))
+            )
+        ]
+        if len(all_gaps_at_c1) >= 2:
+            # 使用 markdown 自訂底色（淺灰黑色）
+            st.markdown(f"""
+            <div style="background-color: rgba(80, 80, 80, 0.2); padding: 10px; border-radius: 5px; border-left: 4px solid #606060;">
+                <span style="font-size: 16px;">⚫ <strong>現價 {c1:.2f} 附近有 {len(all_gaps_at_c1)} 個關鍵點位匯集</strong></span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 顯示這些關鍵點位的詳細資訊
+            confluence_data = [gap_to_table_data(g) for g in all_gaps_at_c1]
+            df_confluence = pd.DataFrame(confluence_data)
+            st.dataframe(df_confluence, use_container_width=True, hide_index=True)
+
+        # 3️⃣ 最後顯示最近支撐的來源（綠色，在最下方）
+        if supports:
+            nearest_support = max(supports, key=lambda g: g.edge_price)
+            overlapping_supports = [g for g in supports if abs(g.edge_price - nearest_support.edge_price) / nearest_support.edge_price * 100 <= 0.3]
+            
+            if len(overlapping_supports) > 1:
+                st.success(f"✅ 最近支撐 {nearest_support.edge_price:.2f} 有 **{len(overlapping_supports)}** 個關鍵點位匯集")
+                support_data = [gap_to_table_data(g) for g in overlapping_supports]
+                df_support = pd.DataFrame(support_data)
+                st.dataframe(df_support, use_container_width=True, hide_index=True)
 
         # ===============================
         # 缺口 / 大量 SR 清單 + 排序提示
@@ -1407,46 +1429,6 @@ def main() -> None:
                 pass  # 均線快速摘要已移至均線支撐壓力說明下方
             # --- 新增結束 ---
 
-            # === 顯示現價附近的關鍵點位數量（移到這裡，在「提示/規則說明」上方）===
-            all_gaps_at_c1_debug = [
-                g for g in gaps 
-                if abs(g.edge_price - c1) / c1 * 100 <= 0.3 and
-                (
-                    (not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True)) or
-                    (g.timeframe.startswith("KEY") and include_dict.get("KEY", True))
-                )
-            ]
-            if len(all_gaps_at_c1_debug) >= 2:
-                st.info(f"🎯 現價 {c1:.2f} 附近有 **{len(all_gaps_at_c1_debug)}** 個關鍵點位匯集")
-                
-                # 顯示這些關鍵點位的詳細資訊
-                confluence_data = []
-                for g in all_gaps_at_c1_debug:
-                    # 判斷來源表格
-                    if g.gap_type == "hv_prev_high":
-                        source_table = "帶量前波高 Pivot High"
-                    elif g.timeframe.startswith("KEY"):
-                        source_table = "關鍵價位（價格聚集點）"
-                    elif g.timeframe == "MA":
-                        source_table = "均線支撐壓力 (MA S/R)"
-                    elif g.gap_type.startswith("hv_"):
-                        source_table = "缺口 & 大量K棒 S/R"
-                    else:
-                        source_table = "缺口 & 大量K棒 S/R"
-                    
-                    confluence_data.append({
-                        "來源表格": source_table,
-                        "時間框架": g.timeframe,
-                        "類型": g.gap_type,
-                        "價位": f"{g.edge_price:.2f}",
-                        "角色": g.role,
-                        "ka_key": g.ka_key if hasattr(g, 'ka_key') else "—",
-                        "kb_key": g.kb_key if hasattr(g, 'kb_key') else "—"
-                    })
-                
-                df_confluence = pd.DataFrame(confluence_data)
-                st.dataframe(df_confluence, use_container_width=True, hide_index=True)
-            
             # ⬇️ 新增：把所有提示收納進 expander
             with st.expander("📌 提示 / 規則說明", expanded=False):
                 st.markdown(f"""
