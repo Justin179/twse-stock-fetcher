@@ -1285,6 +1285,63 @@ def main() -> None:
 
         st.plotly_chart(fig, use_container_width=True)
 
+        # === 新增：顯示最近支撐和壓力的來源表格 ===
+        # 計算最近的支撐和壓力（與圖表標註邏輯一致）
+        supports = [g for g in gaps if g.role == "support" and (
+            not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True) or
+            g.timeframe.startswith("KEY") and include_dict.get("KEY", True)
+        )]
+        resistances = [g for g in gaps if g.role == "resistance" and (
+            not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True) or
+            g.timeframe.startswith("KEY") and include_dict.get("KEY", True)
+        )]
+
+        # 函數：將 Gap 轉換為表格資料
+        def gap_to_table_data(g):
+            # 判斷來源表格
+            if g.gap_type == "hv_prev_high":
+                source_table = "帶量前波高 Pivot High"
+            elif g.timeframe.startswith("KEY"):
+                source_table = "關鍵價位（價格聚集點）"
+            elif g.timeframe == "MA":
+                source_table = "均線支撐壓力 (MA S/R)"
+            elif g.gap_type.startswith("hv_"):
+                source_table = "缺口 & 大量K棒 S/R"
+            else:
+                source_table = "缺口 & 大量K棒 S/R"
+            
+            return {
+                "來源表格": source_table,
+                "時間框架": g.timeframe,
+                "類型": g.gap_type,
+                "價位": f"{g.edge_price:.2f}",
+                "角色": g.role,
+                "ka_key": g.ka_key if hasattr(g, 'ka_key') else "—",
+                "kb_key": g.kb_key if hasattr(g, 'kb_key') else "—"
+            }
+
+        # 顯示最近支撐的來源
+        if supports:
+            nearest_support = max(supports, key=lambda g: g.edge_price)
+            overlapping_supports = [g for g in supports if abs(g.edge_price - nearest_support.edge_price) / nearest_support.edge_price * 100 <= 0.3]
+            
+            if len(overlapping_supports) > 1:
+                st.success(f"✅ 最近支撐 {nearest_support.edge_price:.2f} 有 **{len(overlapping_supports)}** 個關鍵點位匯集")
+                support_data = [gap_to_table_data(g) for g in overlapping_supports]
+                df_support = pd.DataFrame(support_data)
+                st.dataframe(df_support, use_container_width=True, hide_index=True)
+
+        # 顯示最近壓力的來源
+        if resistances:
+            nearest_resistance = min(resistances, key=lambda g: g.edge_price)
+            overlapping_resistances = [g for g in resistances if abs(g.edge_price - nearest_resistance.edge_price) / nearest_resistance.edge_price * 100 <= 0.3]
+            
+            if len(overlapping_resistances) > 1:
+                st.error(f"🔴 最近壓力 {nearest_resistance.edge_price:.2f} 有 **{len(overlapping_resistances)}** 個關鍵點位匯集")
+                resistance_data = [gap_to_table_data(g) for g in overlapping_resistances]
+                df_resistance = pd.DataFrame(resistance_data)
+                st.dataframe(df_resistance, use_container_width=True, hide_index=True)
+
         # ===============================
         # 缺口 / 大量 SR 清單 + 排序提示
         # ===============================
