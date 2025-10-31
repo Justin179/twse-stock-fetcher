@@ -798,7 +798,7 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         
         # 檢查是否有重疊的支撐（價格在容差範圍內的，不論來源）
         # 這會包含：缺口、大量K棒、關鍵價位、均線等所有類型的支撐
-        overlapping_supports = [g for g in supports if abs(g.edge_price - nearest_support.edge_price) / nearest_support.edge_price * 100 <= 0.3]
+        overlapping_supports = [g for g in supports if abs(g.edge_price - nearest_support.edge_price) / nearest_support.edge_price * 100 <= 0.2]
         
         # 標註文字：顯示重複次數
         overlap_count = len(overlapping_supports)
@@ -830,7 +830,7 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
         nearest_resistance = min(resistances, key=lambda g: g.edge_price)
         
         # 檢查是否有重疊的壓力（價格在容差範圍內的，不論來源）
-        overlapping_resistances = [g for g in resistances if abs(g.edge_price - nearest_resistance.edge_price) / nearest_resistance.edge_price * 100 <= 0.3]
+        overlapping_resistances = [g for g in resistances if abs(g.edge_price - nearest_resistance.edge_price) / nearest_resistance.edge_price * 100 <= 0.2]
         
         # 標註文字：顯示重複次數
         overlap_count = len(overlapping_resistances)
@@ -862,7 +862,7 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
     # 不分支撐/壓力/at_edge，只要價格在容差範圍內就計入
     all_gaps_at_c1 = [
         g for g in gaps 
-        if abs(g.edge_price - c1) / c1 * 100 <= 0.3 and  # 價格容差 0.3%（與支撐/壓力重疊計算一致）
+        if abs(g.edge_price - c1) / c1 * 100 <= 0.2 and  # 價格容差 0.2%（與支撐/壓力重疊計算一致）
         (
             # 一般時間框架（D/W/M/MA）：檢查 checkbox 是否勾選
             (not g.timeframe.startswith("KEY") and include.get(g.timeframe, True)) or
@@ -1323,10 +1323,16 @@ def main() -> None:
         # 1️⃣ 先顯示最近壓力的來源（紅色，在最上方）
         if resistances:
             nearest_resistance = min(resistances, key=lambda g: g.edge_price)
-            overlapping_resistances = [g for g in resistances if abs(g.edge_price - nearest_resistance.edge_price) / nearest_resistance.edge_price * 100 <= 0.3]
+            overlapping_resistances = [g for g in resistances if abs(g.edge_price - nearest_resistance.edge_price) / nearest_resistance.edge_price * 100 <= 0.2]
             
             if len(overlapping_resistances) > 1:
-                st.error(f"🔴 最近壓力 {nearest_resistance.edge_price:.2f} 有 **{len(overlapping_resistances)}** 個關鍵點位匯集")
+                # 計算容差範圍
+                tolerance_pct = 0.2
+                tolerance_value = nearest_resistance.edge_price * tolerance_pct / 100
+                range_low = nearest_resistance.edge_price - tolerance_value
+                range_high = nearest_resistance.edge_price + tolerance_value
+                
+                st.error(f"🔴 最近壓力 {nearest_resistance.edge_price:.2f} 有 **{len(overlapping_resistances)}** 個關鍵點位匯集　({tolerance_pct}% 容差: {range_low:.2f} 到 {range_high:.2f})")
                 resistance_data = [gap_to_table_data(g) for g in overlapping_resistances]
                 df_resistance = pd.DataFrame(resistance_data)
                 st.dataframe(df_resistance, use_container_width=True, hide_index=True)
@@ -1334,17 +1340,23 @@ def main() -> None:
         # 2️⃣ 再顯示現價附近的關鍵點位（灰黑色，在中間）
         all_gaps_at_c1 = [
             g for g in gaps 
-            if abs(g.edge_price - c1) / c1 * 100 <= 0.3 and
+            if abs(g.edge_price - c1) / c1 * 100 <= 0.2 and
             (
                 (not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True)) or
                 (g.timeframe.startswith("KEY") and include_dict.get("KEY", True))
             )
         ]
         if len(all_gaps_at_c1) >= 2:
+            # 計算容差範圍
+            tolerance_pct = 0.2
+            tolerance_value = c1 * tolerance_pct / 100
+            range_low = c1 - tolerance_value
+            range_high = c1 + tolerance_value
+            
             # 使用 markdown 自訂底色（淺灰黑色）
             st.markdown(f"""
             <div style="background-color: rgba(80, 80, 80, 0.2); padding: 10px; border-radius: 5px; border-left: 4px solid #606060;">
-                <span style="font-size: 16px;">⚫ <strong>現價 {c1:.2f} 附近有 {len(all_gaps_at_c1)} 個關鍵點位匯集</strong></span>
+                <span style="font-size: 16px;">⚫ <strong>現價 {c1:.2f} 附近有 {len(all_gaps_at_c1)} 個關鍵點位匯集　({tolerance_pct}% 容差: {range_low:.2f} 到 {range_high:.2f})</strong></span>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1356,10 +1368,16 @@ def main() -> None:
         # 3️⃣ 最後顯示最近支撐的來源（綠色，在最下方）
         if supports:
             nearest_support = max(supports, key=lambda g: g.edge_price)
-            overlapping_supports = [g for g in supports if abs(g.edge_price - nearest_support.edge_price) / nearest_support.edge_price * 100 <= 0.3]
+            overlapping_supports = [g for g in supports if abs(g.edge_price - nearest_support.edge_price) / nearest_support.edge_price * 100 <= 0.2]
             
             if len(overlapping_supports) > 1:
-                st.success(f"✅ 最近支撐 {nearest_support.edge_price:.2f} 有 **{len(overlapping_supports)}** 個關鍵點位匯集")
+                # 計算容差範圍
+                tolerance_pct = 0.2
+                tolerance_value = nearest_support.edge_price * tolerance_pct / 100
+                range_low = nearest_support.edge_price - tolerance_value
+                range_high = nearest_support.edge_price + tolerance_value
+                
+                st.success(f"✅ 最近支撐 {nearest_support.edge_price:.2f} 有 **{len(overlapping_supports)}** 個關鍵點位匯集　({tolerance_pct}% 容差: {range_low:.2f} 到 {range_high:.2f})")
                 support_data = [gap_to_table_data(g) for g in overlapping_supports]
                 df_support = pd.DataFrame(support_data)
                 st.dataframe(df_support, use_container_width=True, hide_index=True)
