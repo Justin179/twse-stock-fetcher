@@ -856,6 +856,56 @@ def make_chart(daily: pd.DataFrame, gaps: List[Gap], c1: float,
             borderwidth=3,
             borderpad=6
         )
+    
+    # === 新增：檢查現價是否為多個關鍵點位的交會處 ===
+    # 收集所有在現價附近的關鍵點位（包含所有類型：缺口、大量K棒、關鍵價位、帶量前波高、均線）
+    # 不分支撐/壓力/at_edge，只要價格在容差範圍內就計入
+    all_gaps_at_c1 = [
+        g for g in gaps 
+        if abs(g.edge_price - c1) / c1 * 100 <= 0.3 and  # 價格容差 0.3%（與支撐/壓力重疊計算一致）
+        (
+            # 一般時間框架（D/W/M/MA）：檢查 checkbox 是否勾選
+            (not g.timeframe.startswith("KEY") and include.get(g.timeframe, True)) or
+            # 關鍵價位（KEY-D/KEY-W/KEY-M）：統一由 KEY checkbox 控制
+            (g.timeframe.startswith("KEY") and include.get("KEY", True))
+        )
+    ]
+    
+    # 只要現價位置有關鍵點位匯集（>= 1個），就標註出來
+    if len(all_gaps_at_c1) >= 1:
+        confluence_count = len(all_gaps_at_c1)
+        
+        # 標註文字：顯示匯集次數（與支撐/壓力標註格式一致）
+        if confluence_count > 1:
+            label_text = f"{c1:.2f} ({confluence_count})"
+        else:
+            label_text = f"{c1:.2f}"
+        
+        # 根據匯集次數調整字體大小（匯集越多，字體越大）
+        if confluence_count >= 5:
+            font_size = 20  # 5個以上：特大
+        elif confluence_count >= 3:
+            font_size = 19  # 3-4個：大
+        elif confluence_count >= 2:
+            font_size = 18  # 2個：標準
+        else:
+            font_size = 16  # 1個：小
+        
+        # 在圖上標註（灰黑色標註，放在左側，樣式與右側紅綠標註一致）
+        fig.add_annotation(
+            xref="paper",
+            x=0.01,  # 靠近圖表左邊緣
+            xanchor="left",
+            y=c1,
+            yanchor="middle",  # 標註框垂直置中對齊價位線
+            text=label_text,
+            showarrow=False,
+            font=dict(size=font_size, color='white', family='Arial Black'),
+            bgcolor='rgba(80, 80, 80, 0.9)',  # 更亮的灰色背景，更明顯
+            bordercolor='#606060',  # 更亮的灰色邊框
+            borderwidth=3,
+            borderpad=6
+        )
 
     fig.update_xaxes(type="category")
     fig.update_layout(
@@ -1225,10 +1275,22 @@ def main() -> None:
         # 順序：缺口 → 大量K棒 → 關鍵價位 → 帶量前波高 → 均線
         gaps = d_gaps + w_gaps + m_gaps + d_hv + w_hv + m_hv + key_levels_d + key_levels_w + key_levels_m + d_prev + w_prev + m_prev + ma_sr
 
+        # === 調試：顯示現價附近的關鍵點位數量 ===
+        include_dict = {"D": inc_d, "W": inc_w, "M": inc_m, "MA": inc_ma, "KEY": inc_key}
+        all_gaps_at_c1_debug = [
+            g for g in gaps 
+            if abs(g.edge_price - c1) / c1 * 100 <= 0.3 and
+            (
+                (not g.timeframe.startswith("KEY") and include_dict.get(g.timeframe, True)) or
+                (g.timeframe.startswith("KEY") and include_dict.get("KEY", True))
+            )
+        ]
+        if len(all_gaps_at_c1_debug) >= 2:
+            st.info(f"🎯 現價 {c1:.2f} 附近有 **{len(all_gaps_at_c1_debug)}** 個關鍵點位匯集")
 
         fig = make_chart(
             daily_with_today, gaps, c1, show_zones, show_labels,
-            include={"D": inc_d, "W": inc_w, "M": inc_m, "MA": inc_ma, "KEY": inc_key},
+            include=include_dict,
             stock_id=stock_id, stock_name=stock_name
         )
 
