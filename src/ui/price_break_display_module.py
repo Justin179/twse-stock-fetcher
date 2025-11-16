@@ -1019,8 +1019,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     except Exception:
                         prefix = ""
 
+                    # 計算未來壓力百分比的顏色（正數紅色，負數綠色）
+                    pct_color = "red" if pct_dec >= 0 else "green"
+                    
                     st.markdown(
-                        f"- {prefix} ⚡ 未來{days_label}天的<b>壓力</b>({float(avg_rounded):.2f}) {arrow} <b>{float(pct_rounded):+.2f}%</b>",
+                        f"- {prefix} ⚡ 未來{days_label}天的<b>壓力</b>({float(avg_rounded):.2f}) {arrow} <b><span style='color:{pct_color}'>{float(pct_rounded):+.2f}%</span></b>",
                         unsafe_allow_html=True,
                     )
                 else:
