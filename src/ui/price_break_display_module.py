@@ -352,6 +352,83 @@ def calc_bias(a, b):
         return None
 
 
+def evaluate_ma_trend_and_bias(stock_id: str,
+                               today_date: str,
+                               c1: float,
+                               ma5: float,
+                               ma10: float,
+                               ma24: float) -> str:
+    """判斷三條均線的排列 / 彎向 / 乖離，回傳 summary_term4 字串。
+
+    第一個條件：
+      - 多頭排列：ma5 >= ma10 且 ma10 >= ma24
+      - 且三條均線皆為上彎：c1 > baseline_N（日線基準價），沿用 is_uptrending_now 的定義
+
+    第二個條件（在第一個條件成立時才檢查）：
+      - 乖1：ma5 -> c1 的乖離在 [0, 1]
+      - 乖2：ma10 -> ma5 的乖離在 [0, 1.8]
+      - 乖3：ma24 -> ma10 的乖離在 [0, 1.8]
+
+    回傳：
+      - ""：任一必要資料缺失時
+      - ""：第一個條件不成立時
+      - "✔️ 均線上彎且多頭排列"：僅第一個條件成立
+      - "✅ 均線上彎且多頭排列 且 乖離小"：第一、二條件皆成立
+    """
+
+    # 基本資料不足，直接不顯示詞條
+    if any(x is None for x in [stock_id, today_date, c1, ma5, ma10, ma24]):
+        return ""
+
+    try:
+        c1 = float(c1); ma5 = float(ma5); ma10 = float(ma10); ma24 = float(ma24)
+    except Exception:
+        return ""
+
+    # 先檢查多頭排列（允許相等）
+    bull_stack = (ma5 >= ma10 >= ma24)
+    if not bull_stack:
+        return ""  # 直接不顯示任何東西
+
+    # 取得各 N 日均線 baseline，用於判斷是否上彎
+    b5,  *_ = get_baseline_and_deduction(stock_id, today_date, n=5) or (None,)
+    b10, *_ = get_baseline_and_deduction(stock_id, today_date, n=10) or (None,)
+    b24, *_ = get_baseline_and_deduction(stock_id, today_date, n=24) or (None,)
+
+    if any(b is None for b in [b5, b10, b24]):
+        return ""
+
+    tol = 1e-6
+    up5  = c1 > float(b5)  + tol
+    up10 = c1 > float(b10) + tol
+    up24 = c1 > float(b24) + tol
+
+    first_cond = bull_stack and up5 and up10 and up24
+    if not first_cond:
+        return ""  # 沒有達到第一個條件就不顯示
+
+    # ===== 乖離判斷（第二個條件，只在第一個條件成立時檢查） =====
+    bias1 = calc_bias(ma5,  c1)   # ma5 -> 現價
+    bias2 = calc_bias(ma10, ma5)  # ma10 -> ma5
+    bias3 = calc_bias(ma24, ma10) # ma24 -> ma10
+
+    def _is_small(v: Optional[float], lo: float, hi: float) -> bool:
+        if v is None:
+            return False
+        return (v >= lo) and (v <= hi)
+
+    small1 = _is_small(bias1, 0.0, 1.0)
+    small2 = _is_small(bias2, 0.0, 1.8)
+    small3 = _is_small(bias3, 0.0, 1.8)
+
+    second_cond = small1 and small2 and small3
+
+    if second_cond:
+        return "✅ 均線上彎且多頭排列 且 乖離小"
+    else:
+        return "✔️ 均線上彎且多頭排列"
+
+
 def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str = None):
     """在畫面印出一行乖離率；正值紅、負值綠，並附上 (A→B) 數字。
        若 title 為「N日均線乖離」，會自動判斷該 N 日均線的「上彎/持平/下彎」並加為前綴。"""
@@ -929,7 +1006,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 else:
                     future_pressure_status = "持平"
         
-        # 🔹 生成並顯示 Quick Summary（在所有其他內容之前）
+        # 🔹 先根據價格 / 壓力 / 扣抵生成前三個 Summary 詞條
         summary_term1, summary_term2, summary_term3 = generate_quick_summary(
             price_status,
             baseline_pressure_status, 
@@ -937,7 +1014,13 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             future_pressure_status,
             today, v1, stock_id
         )
-        st.markdown(f"### {summary_term1} ▹ {summary_term2} ▹ {summary_term3}")
+        # 🔹 第四個 Summary：均線排列 + 上彎 + 乖離
+        summary_term4 = evaluate_ma_trend_and_bias(stock_id, today_date, c1, ma5, ma10, ma24)
+
+        if summary_term4:
+            st.markdown(f"### {summary_term1} ▹ {summary_term2} ▹ {summary_term3} ▹ {summary_term4}")
+        else:
+            st.markdown(f"### {summary_term1} ▹ {summary_term2} ▹ {summary_term3}")
 
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
