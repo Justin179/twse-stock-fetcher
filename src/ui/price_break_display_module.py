@@ -494,7 +494,9 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
             icon_prefix = "⚠️ "
 
     # ===== 組合顯示的 title（先彎向，再原 title）=====
-    display_title = f"{slope_prefix}{title}" if slope_prefix else title
+    # 特殊需求：5日均線乖離 要粗體
+    display_text = f"**{title}**" if title == "5日均線乖離" else title
+    display_title = f"{slope_prefix}{display_text}" if slope_prefix else display_text
 
     st.markdown(
         f"{icon_prefix}{display_title}：<span style='color:{color}; font-weight:700'>{val:+.2f}%</span> ",
