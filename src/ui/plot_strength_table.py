@@ -32,24 +32,7 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
     df["High10_prev"] = df["Close"].shift(1).rolling(window=10).max()
 
 
-    # KD
-    low9 = df["Close"].rolling(window=9).min()
-    high9 = df["Close"].rolling(window=9).max()
-    rsv = (df["Close"] - low9) / (high9 - low9) * 100
-    df["K"] = rsv.ewm(com=2).mean()
-    df["D"] = df["K"].ewm(com=2).mean()
-    df["K_prev"] = df["K"].shift(1)
-    df["D_prev"] = df["D"].shift(1)
-
-    # RSI
-    delta = df["Close"].diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
-    avg_gain = gain.rolling(window=14).mean()
-    avg_loss = loss.rolling(window=14).mean()
-    rs = avg_gain / avg_loss
-    df["RSI"] = 100 - (100 / (1 + rs))
-    df["RSI_Yesterday"] = df["RSI"].shift(1)
+    # KD / RSI 指標已移除（保留空區塊供未來擴充）
 
     # 條件分析
     analysis_days = df.tail(10).copy()
@@ -68,9 +51,6 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
         c5 = row["MA5"] > row["MA10"] > row["MA24"]
         c6 = row["Close"] > row["Close_5days_ago"] and row["Close"] > row["Close_10days_ago"] and row["Close"] > row["Close_24days_ago"]
         c7 = row["Close_4days_ago"] > row["Close_5days_ago"] and row["Close"] > row["Close_Yesterday"] and row["Volume"] > row["Volume_Yesterday"]
-        c8 = row["K"] > row["D"] and row["K_prev"] < row["D_prev"] and row["K"] < 50
-        c9 = row["RSI"] > row["RSI_Yesterday"] and row["RSI_Yesterday"] < 45 and row["RSI"] > 30
-
         results.append({
             "日期": date,
             "價量同步": check(c1),
@@ -80,9 +60,7 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
             "站上扣抵值(>)": check(c10),
             "創10日收盤新高(>)": check(c4),
             "短中均線(5 10 24)多頭排列": check(c5),
-            "短中均線(5 10 24)皆上彎": check(c6),
-            "KD 金叉（低檔）": check(c8),
-            "RSI 低檔翻揚": check(c9)
+            "短中均線(5 10 24)皆上彎": check(c6)
         })
 
     # 建立表格
