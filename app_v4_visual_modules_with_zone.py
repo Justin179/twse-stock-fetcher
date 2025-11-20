@@ -197,12 +197,12 @@ with col2:
         
         # 只有在有結果時才顯示區間視覺化
         if result:
-            st.subheader("📌 現價與區間關係視覺化")
+            st.subheader("📌 接近高點(有機會過高，但高點本身也是壓力)、過高(強勢股)")
             fig_zone = plot_price_position_zone(stock_display_reversed, today_date, c1, o, c2, h, l, w1, w2, m1, m2)
             st.plotly_chart(fig_zone, use_container_width=True)
         
         st.markdown(f"""
-        <span style='font-size:20px'>📈 強勢股，應在上漲過程中 守住基準價與扣抵值 (近10日)</span>
+        <span style='font-size:20px'>📈 強勢股，應在上漲過程中，守住基準價與扣抵值 與5日均 (近10日)</span>
         <span style='font-size:16px; color:gray'>　{selected_display}</span>
         """, unsafe_allow_html=True)
         fig_strength = analyze_10day_strength(selected)
