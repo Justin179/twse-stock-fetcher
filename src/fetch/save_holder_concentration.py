@@ -65,46 +65,75 @@ if __name__ == "__main__":
 
     db_path = Path("data/institution.db")
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS holder_concentration (
-            stock_id TEXT,
-            date TEXT,
-            avg_shares REAL,
-            ratio_1000 REAL,
-            close_price REAL,
-            PRIMARY KEY (stock_id, date)
-        )
-    """)
-
-    with open(input_file, "r", encoding="utf-8") as f:
-        stock_list = [line.strip() for line in f if line.strip()]
-
-    for stock_id in stock_list:
-        print(f"\n🔍 正在處理股票: {stock_id}...")
-        try:
-            records = fetch_holder_concentration_selenium(stock_id)
-        except Exception as e:
-            print(f"❌ 發生錯誤: {e}")
-            continue
-
-        success = 0
-        for row in records:
+    def execute_with_retry(cursor, sql, params, retries: int = 3, delay: float = 1.5):
+        for attempt in range(retries):
             try:
-                cursor.execute("""
-                    INSERT OR IGNORE INTO holder_concentration 
-                    (stock_id, date, avg_shares, ratio_1000, close_price)
-                    VALUES (?, ?, ?, ?, ?)
-                """, row)
-                if cursor.rowcount > 0:
-                    success += 1
+                cursor.execute(sql, params)
+                return
+            except sqlite3.OperationalError as e:
+                if "locked" in str(e).lower() and attempt < retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise
+
+    def commit_with_retry(conn, retries: int = 3, delay: float = 1.5):
+        for attempt in range(retries):
+            try:
+                conn.commit()
+                return
+            except sqlite3.OperationalError as e:
+                if "locked" in str(e).lower() and attempt < retries - 1:
+                    time.sleep(delay)
+                else:
+                    raise
+
+    with sqlite3.connect(db_path, timeout=30) as conn:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout = 30000;")
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS holder_concentration (
+                stock_id TEXT,
+                date TEXT,
+                avg_shares REAL,
+                ratio_1000 REAL,
+                close_price REAL,
+                PRIMARY KEY (stock_id, date)
+            )
+        """)
+
+        with open(input_file, "r", encoding="utf-8") as f:
+            stock_list = [line.strip() for line in f if line.strip()]
+
+        for stock_id in stock_list:
+            print(f"\n🔍 正在處理股票: {stock_id}...")
+            try:
+                records = fetch_holder_concentration_selenium(stock_id)
             except Exception as e:
-                print(f"❌ insert error: {e}")
+                print(f"❌ 發生錯誤: {e}")
+                continue
 
-        conn.commit()
-        print(f"✅ 新增 {success} 筆資料")
+            success = 0
+            for row in records:
+                try:
+                    execute_with_retry(cursor, """
+                        INSERT OR IGNORE INTO holder_concentration 
+                        (stock_id, date, avg_shares, ratio_1000, close_price)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, row)
+                    if cursor.rowcount > 0:
+                        success += 1
+                except Exception as e:
+                    print(f"❌ insert error: {e}")
 
-    conn.close()
+            try:
+                commit_with_retry(conn)
+            except Exception as e:
+                print(f"❌ commit error: {e}")
+                continue
+
+            print(f"✅ 新增 {success} 筆資料")
+
     print("\n🎉 全部完成")

@@ -40,6 +40,8 @@ data/raw/*.csv
 output/
 data/*.db
 data/*.sql
+data/institution.db-wal
+data/institution.db-shm
 data/futures_spread_cache.json
 data/t2_settlement.json
 
