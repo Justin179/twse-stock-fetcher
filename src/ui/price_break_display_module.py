@@ -875,7 +875,7 @@ def generate_quick_summary(price_status: str,
 def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     """
     判斷現價 vs 昨收、今開，回傳字串 "(漲跌 / K棒色)"。
-    同時附加昨收 -> 現價 的漲跌百分比（黑色、非粗體），若無法計算則不顯示百分比。
+    同時附加昨收 -> 現價 的漲跌百分比（依漲跌決定顏色；漲幅達門檻時加強顯示），若無法計算則不顯示百分比。
     四捨五入使用 Decimal ROUND_HALF_UP 到小數後兩位。
     """
     pct_html = ""
@@ -896,8 +896,22 @@ def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
                 pct_color = "#16a34a"  # 綠色
             else:
                 pct_color = "black"    # 黑色
-            
-            pct_html = f" <span style='color:{pct_color}; font-weight:normal'>{pct_display:+.2f}%</span>"
+
+            # 視覺強調（只針對『漲幅』做三級）：
+            # L1: >=3% <6% ；L2: >=6% <9% ；L3: >=9%
+            pct_style = "font-weight:normal"
+            if d_c1 > d_c2:
+                if pct_display >= Decimal("9"):
+                    # 第三級：深紅底 + 白字
+                    pct_style = "font-weight:900; text-decoration:underline; padding:0 4px; border-radius:4px; background:rgba(239,68,68,0.85); color:#ffffff"
+                elif pct_display >= Decimal("6"):
+                    # 第二級：淡紅底
+                    pct_style = "font-weight:800; text-decoration:underline; padding:0 4px; border-radius:4px; background:rgba(239,68,68,0.14)"
+                elif pct_display >= Decimal("3"):
+                    # 第一級：底線 + 字重
+                    pct_style = "font-weight:700; text-decoration:underline"
+
+            pct_html = f" <span style='color:{pct_color}; {pct_style}'>{pct_display:+.2f}%</span>"
     except Exception:
         pct_html = ""
 
