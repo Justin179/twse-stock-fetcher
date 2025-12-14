@@ -541,6 +541,73 @@ def _safe_float(v) -> Optional[float]:
         return None
 
 
+def _count_consecutive_positive(values) -> int:
+    """從最新值開始往回數『連續 > 0』的次數；遇到 <=0 或無效值即停止。"""
+    cnt = 0
+    for v in values:
+        try:
+            x = float(v)
+        except Exception:
+            break
+        if x > 0:
+            cnt += 1
+        else:
+            break
+    return cnt
+
+
+def compute_recent_netbuy_streaks(stock_id: str, db_path: str = "data/institution.db", limit: int = 60) -> Tuple[int, int, int]:
+    """計算主力/外資/投信從『最新交易日』往回的連續買超天數。
+
+    - 主力：main_force_trading.net_buy_sell
+    - 外資/投信：institutional_netbuy_holding.foreign_netbuy / trust_netbuy
+    """
+    main_vals = []
+    foreign_vals = []
+    trust_vals = []
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT net_buy_sell
+                    FROM main_force_trading
+                    WHERE stock_id = ?
+                    ORDER BY date DESC
+                    LIMIT ?
+                    """,
+                    (stock_id, int(limit)),
+                ).fetchall()
+                main_vals = [r[0] for r in rows]
+            except Exception:
+                main_vals = []
+
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT foreign_netbuy, trust_netbuy
+                    FROM institutional_netbuy_holding
+                    WHERE stock_id = ?
+                    ORDER BY date DESC
+                    LIMIT ?
+                    """,
+                    (stock_id, int(limit)),
+                ).fetchall()
+                foreign_vals = [r[0] for r in rows]
+                trust_vals = [r[1] for r in rows]
+            except Exception:
+                foreign_vals, trust_vals = [], []
+    except Exception:
+        pass
+
+    main_streak = _count_consecutive_positive(main_vals) if main_vals else 0
+    foreign_streak = _count_consecutive_positive(foreign_vals) if foreign_vals else 0
+    trust_streak = _count_consecutive_positive(trust_vals) if trust_vals else 0
+
+    return main_streak, foreign_streak, trust_streak
+
+
 
 def _load_recent_daily_volumes(db_path: str, stock_id: str, last_n: int = 300) -> pd.DataFrame:
     """
@@ -1264,6 +1331,14 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             wk_rate = wm_rate.get("week", None)
             mo_rate = wm_rate.get("month", None)
 
+            # ⭐ 主力/外資/投信：連續買超天數（從最新交易日往回數）
+            mf_streak, foreign_streak, trust_streak = compute_recent_netbuy_streaks(
+                stock_id,
+                db_path="data/institution.db",
+                limit=60,
+            )
+            streak_term = f"連續買超 {mf_streak} {foreign_streak} {trust_streak} (主力 外資 投信)"
+
             for idx, tip in enumerate(tips):
                 if (tip.startswith("今收盤(現價) 過昨高")
                     or tip.startswith("今收盤(現價) 過上週高點")
@@ -1292,6 +1367,9 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
                 # ⭐ 只在「趨勢盤」這一行印完後，馬上加上上週／上月詞條
                 if idx == 0:
+                    # 需求：放在『提示訊息』第二個詞條位置（介於趨勢盤與週/月詞條之間）
+                    st.markdown(f"🔗 {streak_term}", unsafe_allow_html=True)
+
                     wk_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['week'], wk_rate))
                     mo_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['month'], mo_rate))
 
