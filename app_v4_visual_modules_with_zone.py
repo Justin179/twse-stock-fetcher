@@ -33,7 +33,7 @@ plt.rcParams['font.family'] = 'Microsoft JhengHei'
 plt.rcParams['axes.unicode_minus'] = False
 
 # --- Streamlit ---
-st.set_page_config(page_title="強勢 x 籌碼 x 扣抵", layout="wide")
+st.set_page_config(page_title="天時 地利 人和 基本", layout="wide")
 
 # 🔹 在頁面最頂部放一個錨點
 st.markdown('<div id="top"></div>', unsafe_allow_html=True)
