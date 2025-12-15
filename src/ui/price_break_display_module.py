@@ -621,6 +621,25 @@ def _fmt_streak_num(v: int) -> str:
     return str(n)
 
 
+def _fmt_streak_label(label: str, v: int) -> str:
+    """格式化連續買超對應標籤（主力/外資/投信）。
+
+    規則與 _fmt_streak_num 一致：
+    - 3 或 4：紅字加粗體
+    - >= 5 ：紅字加粗體 + 底色 background:rgba(239,68,68,0.14)
+    """
+    try:
+        n = int(v)
+    except Exception:
+        return str(label)
+
+    if n >= 5:
+        return f"<span style='color:#ef4444; font-weight:700; background:rgba(239,68,68,0.14)'>{label}</span>"
+    if n in (3, 4):
+        return f"<span style='color:#ef4444; font-weight:700'>{label}</span>"
+    return str(label)
+
+
 def compute_recent_netbuy_buyday_counts(
     stock_id: str,
     db_path: str = "data/institution.db",
@@ -1514,7 +1533,13 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             mf_streak_s = _fmt_streak_num(mf_streak)
             foreign_streak_s = _fmt_streak_num(foreign_streak)
             trust_streak_s = _fmt_streak_num(trust_streak)
-            streak_term = f"連續買超 {mf_streak_s} {foreign_streak_s} {trust_streak_s} (主力 外資 投信)"
+            mf_label = _fmt_streak_label("主力", mf_streak)
+            foreign_label = _fmt_streak_label("外資", foreign_streak)
+            trust_label = _fmt_streak_label("投信", trust_streak)
+            streak_term = (
+                f"連續買超 {mf_streak_s} {foreign_streak_s} {trust_streak_s} "
+                f"({mf_label} {foreign_label} {trust_label})"
+            )
 
             for idx, tip in enumerate(tips):
                 if (tip.startswith("今收盤(現價) 過昨高")
