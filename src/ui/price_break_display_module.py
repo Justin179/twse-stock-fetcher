@@ -556,13 +556,13 @@ def _count_consecutive_positive(values) -> int:
     return cnt
 
 
-def _calc_buyday_pct(values, window: int = 10) -> int:
-    """近 N 個交易日中，買超天數佔比（>0 視為買超）。
+def _count_buy_days(values, window: int = 10) -> int:
+    """近 N 個交易日中，買超天數（>0 視為買超）。
 
     - values: 由新到舊（date DESC）的一串買賣超值
     - window: 取最近幾筆（預設 10）
 
-    回傳 0-100 的整數百分比；資料不足時以可用筆數為分母。
+    回傳買超天數；資料不足時以可用筆數計算。
     """
     if not values:
         return 0
@@ -578,24 +578,15 @@ def _calc_buyday_pct(values, window: int = 10) -> int:
         return 0
 
     take = parsed[: max(1, int(window))]
-    denom = len(take)
-    if denom <= 0:
-        return 0
-
-    buy_days = sum(1 for x in take if x > 0)
-    pct = (Decimal(buy_days) * Decimal(100) / Decimal(denom)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-    try:
-        return int(pct)
-    except Exception:
-        return int(round(buy_days * 100.0 / denom))
+    return int(sum(1 for x in take if x > 0))
 
 
-def compute_recent_netbuy_buyday_rates(
+def compute_recent_netbuy_buyday_counts(
     stock_id: str,
     db_path: str = "data/institution.db",
     window: int = 10,
 ) -> Tuple[int, int, int]:
-    """計算主力/外資/投信近 N 個交易日的買超率（買超天數 / N）。
+    """計算主力/外資/投信近 N 個交易日的買超天數（>0 視為買超）。
 
     - 主力：main_force_trading.net_buy_sell
     - 外資/投信：institutional_netbuy_holding.foreign_netbuy / trust_netbuy
@@ -639,10 +630,10 @@ def compute_recent_netbuy_buyday_rates(
     except Exception:
         pass
 
-    main_pct = _calc_buyday_pct(main_vals, window=window)
-    foreign_pct = _calc_buyday_pct(foreign_vals, window=window)
-    trust_pct = _calc_buyday_pct(trust_vals, window=window)
-    return main_pct, foreign_pct, trust_pct
+    main_days = _count_buy_days(main_vals, window=window)
+    foreign_days = _count_buy_days(foreign_vals, window=window)
+    trust_days = _count_buy_days(trust_vals, window=window)
+    return main_days, foreign_days, trust_days
 
 
 def _get_latest_trade_day_numbers(
@@ -1514,7 +1505,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     st.markdown(f"🔗 {streak_term}", unsafe_allow_html=True)
 
                     # ⭐ 主力/外資/投信：近10個交易日買超率（買超天數 / 10）
-                    mf_buy_pct, foreign_buy_pct, trust_buy_pct = compute_recent_netbuy_buyday_rates(
+                    mf_buy_days, foreign_buy_days, trust_buy_days = compute_recent_netbuy_buyday_counts(
                         stock_id,
                         db_path="data/institution.db",
                         window=10,
@@ -1522,8 +1513,8 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     mf_day, inst_day = _get_latest_trade_day_numbers(stock_id, db_path="data/institution.db")
                     mf_day_s = "-" if mf_day is None else str(mf_day)
                     inst_day_s = "-" if inst_day is None else str(inst_day)
-                    buy_rate_term = f"近10日買超 {mf_buy_pct}% {foreign_buy_pct}% {trust_buy_pct}% ({mf_day_s} {inst_day_s})"
-                    st.markdown(buy_rate_term, unsafe_allow_html=True)
+                    buy_days_term = f"近10日買超天數 {mf_buy_days} {foreign_buy_days} {trust_buy_days} ({mf_day_s} {inst_day_s})"
+                    st.markdown(buy_days_term, unsafe_allow_html=True)
 
                     wk_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['week'], wk_rate))
                     mo_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['month'], mo_rate))
