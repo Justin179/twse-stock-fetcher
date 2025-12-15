@@ -593,6 +593,24 @@ def _fmt_buy_days_num(v: int, highlight_at: int = 7) -> str:
     return str(n)
 
 
+def _fmt_streak_num(v: int) -> str:
+    """格式化連續買超天數。
+
+    - 3 或 4：紅字加粗體
+    - >= 5 ：紅字加粗體 + 底色 background:rgba(239,68,68,0.14)
+    """
+    try:
+        n = int(v)
+    except Exception:
+        return str(v)
+
+    if n >= 5:
+        return "<span style='color:#ef4444; font-weight:700; background:rgba(239,68,68,0.14)'>" + str(n) + "</span>"
+    if n in (3, 4):
+        return f"<span style='color:#ef4444; font-weight:700'>{n}</span>"
+    return str(n)
+
+
 def compute_recent_netbuy_buyday_counts(
     stock_id: str,
     db_path: str = "data/institution.db",
@@ -1483,7 +1501,10 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 db_path="data/institution.db",
                 limit=60,
             )
-            streak_term = f"連續買超 {mf_streak} {foreign_streak} {trust_streak} (主力 外資 投信)"
+            mf_streak_s = _fmt_streak_num(mf_streak)
+            foreign_streak_s = _fmt_streak_num(foreign_streak)
+            trust_streak_s = _fmt_streak_num(trust_streak)
+            streak_term = f"連續買超 {mf_streak_s} {foreign_streak_s} {trust_streak_s} (主力 外資 投信)"
 
             for idx, tip in enumerate(tips):
                 if (tip.startswith("今收盤(現價) 過昨高")
