@@ -1513,7 +1513,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     mf_day, inst_day = _get_latest_trade_day_numbers(stock_id, db_path="data/institution.db")
                     mf_day_s = "-" if mf_day is None else str(mf_day)
                     inst_day_s = "-" if inst_day is None else str(inst_day)
-                    buy_days_term = f"近10日買超天數 {mf_buy_days} {foreign_buy_days} {trust_buy_days} ({mf_day_s} {inst_day_s})"
+                    buy_days_term = f"🔗 買超天數 {mf_buy_days} {foreign_buy_days} {trust_buy_days} (近10日) (主{mf_day_s} 外{inst_day_s})"
                     st.markdown(buy_days_term, unsafe_allow_html=True)
 
                     wk_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['week'], wk_rate))
