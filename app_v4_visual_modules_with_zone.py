@@ -134,13 +134,6 @@ with col1:
         msg = append_unique_stocks()
         st.success(msg)
         st.rerun()  # 🔁 直接重新跑整頁
-
-    # …按鈕下面加一行：
-    render_temp_list_expander(
-        temp_txt="temp_list.txt",
-        db_path="data/institution.db",
-        title="📄 show temp_list"
-    )
     
     # 🔹 當前週數顯示
     today = datetime.now()
@@ -154,6 +147,13 @@ with col1:
     # 🔹 T+2 在途應收付追蹤器（移到 Week x 下面）
     with st.expander("💰 T+2 在途應收付", expanded=False):
         render_t2_settlement_tracker()
+
+    # 🔹 移到左側最底部：temp_list 快速檢視
+    render_temp_list_expander(
+        temp_txt="temp_list.txt",
+        db_path="data/institution.db",
+        title="📄 show temp_list"
+    )
 
 with col2:
     if selected:
