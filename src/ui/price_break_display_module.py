@@ -556,6 +556,95 @@ def _count_consecutive_positive(values) -> int:
     return cnt
 
 
+def _calc_buyday_pct(values, window: int = 10) -> int:
+    """近 N 個交易日中，買超天數佔比（>0 視為買超）。
+
+    - values: 由新到舊（date DESC）的一串買賣超值
+    - window: 取最近幾筆（預設 10）
+
+    回傳 0-100 的整數百分比；資料不足時以可用筆數為分母。
+    """
+    if not values:
+        return 0
+
+    parsed = []
+    for v in values:
+        try:
+            parsed.append(float(v))
+        except Exception:
+            continue
+
+    if not parsed:
+        return 0
+
+    take = parsed[: max(1, int(window))]
+    denom = len(take)
+    if denom <= 0:
+        return 0
+
+    buy_days = sum(1 for x in take if x > 0)
+    pct = (Decimal(buy_days) * Decimal(100) / Decimal(denom)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+    try:
+        return int(pct)
+    except Exception:
+        return int(round(buy_days * 100.0 / denom))
+
+
+def compute_recent_netbuy_buyday_rates(
+    stock_id: str,
+    db_path: str = "data/institution.db",
+    window: int = 10,
+) -> Tuple[int, int, int]:
+    """計算主力/外資/投信近 N 個交易日的買超率（買超天數 / N）。
+
+    - 主力：main_force_trading.net_buy_sell
+    - 外資/投信：institutional_netbuy_holding.foreign_netbuy / trust_netbuy
+    """
+    main_vals = []
+    foreign_vals = []
+    trust_vals = []
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT net_buy_sell
+                    FROM main_force_trading
+                    WHERE stock_id = ?
+                    ORDER BY date DESC
+                    LIMIT ?
+                    """,
+                    (stock_id, int(window)),
+                ).fetchall()
+                main_vals = [r[0] for r in rows]
+            except Exception:
+                main_vals = []
+
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT foreign_netbuy, trust_netbuy
+                    FROM institutional_netbuy_holding
+                    WHERE stock_id = ?
+                    ORDER BY date DESC
+                    LIMIT ?
+                    """,
+                    (stock_id, int(window)),
+                ).fetchall()
+                foreign_vals = [r[0] for r in rows]
+                trust_vals = [r[1] for r in rows]
+            except Exception:
+                foreign_vals, trust_vals = [], []
+    except Exception:
+        pass
+
+    main_pct = _calc_buyday_pct(main_vals, window=window)
+    foreign_pct = _calc_buyday_pct(foreign_vals, window=window)
+    trust_pct = _calc_buyday_pct(trust_vals, window=window)
+    return main_pct, foreign_pct, trust_pct
+
+
 def compute_recent_netbuy_streaks(stock_id: str, db_path: str = "data/institution.db", limit: int = 60) -> Tuple[int, int, int]:
     """計算主力/外資/投信從『最新交易日』往回的連續買超天數。
 
@@ -1369,6 +1458,15 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 if idx == 0:
                     # 需求：放在『提示訊息』第二個詞條位置（介於趨勢盤與週/月詞條之間）
                     st.markdown(f"🔗 {streak_term}", unsafe_allow_html=True)
+
+                    # ⭐ 主力/外資/投信：近10個交易日買超率（買超天數 / 10）
+                    mf_buy_pct, foreign_buy_pct, trust_buy_pct = compute_recent_netbuy_buyday_rates(
+                        stock_id,
+                        db_path="data/institution.db",
+                        window=10,
+                    )
+                    buy_rate_term = f"近10日買超 {mf_buy_pct}% {foreign_buy_pct}% {trust_buy_pct}%"
+                    st.markdown(buy_rate_term, unsafe_allow_html=True)
 
                     wk_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['week'], wk_rate))
                     mo_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['month'], mo_rate))
