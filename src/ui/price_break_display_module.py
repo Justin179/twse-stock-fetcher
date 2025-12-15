@@ -582,13 +582,23 @@ def _count_buy_days(values, window: int = 10) -> int:
 
 
 def _fmt_buy_days_num(v: int, highlight_at: int = 7) -> str:
-    """格式化買超天數；>= highlight_at 時以紅色粗體顯示。"""
+    """格式化買超天數。
+
+    規則（近10日買超天數）：
+    - 7、8：紅字 + 粗體
+    - 9、10（以及更大）：紅字 + 粗體 + 底色 background:rgba(239,68,68,0.14)
+    """
     try:
         n = int(v)
     except Exception:
         return str(v)
 
-    if n >= int(highlight_at):
+    # 9、10（保守起見：>=9 都用更強烈樣式）
+    if n >= 9:
+        return f"<span style='color:#ef4444; font-weight:700; background:rgba(239,68,68,0.14)'>{n}</span>"
+
+    # 7、8
+    if n in (7, 8):
         return f"<span style='color:#ef4444; font-weight:700'>{n}</span>"
     return str(n)
 
