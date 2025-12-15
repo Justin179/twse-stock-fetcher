@@ -581,6 +581,18 @@ def _count_buy_days(values, window: int = 10) -> int:
     return int(sum(1 for x in take if x > 0))
 
 
+def _fmt_buy_days_num(v: int, highlight_at: int = 7) -> str:
+    """格式化買超天數；>= highlight_at 時以紅色粗體顯示。"""
+    try:
+        n = int(v)
+    except Exception:
+        return str(v)
+
+    if n >= int(highlight_at):
+        return f"<span style='color:#ef4444; font-weight:700'>{n}</span>"
+    return str(n)
+
+
 def compute_recent_netbuy_buyday_counts(
     stock_id: str,
     db_path: str = "data/institution.db",
@@ -1513,7 +1525,15 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     mf_day, inst_day = _get_latest_trade_day_numbers(stock_id, db_path="data/institution.db")
                     mf_day_s = "-" if mf_day is None else str(mf_day)
                     inst_day_s = "-" if inst_day is None else str(inst_day)
-                    buy_days_term = f"🔗 買超天數 {mf_buy_days} {foreign_buy_days} {trust_buy_days} (近10日) (主{mf_day_s} 外{inst_day_s})"
+
+                    mf_buy_days_s = _fmt_buy_days_num(mf_buy_days)
+                    foreign_buy_days_s = _fmt_buy_days_num(foreign_buy_days)
+                    trust_buy_days_s = _fmt_buy_days_num(trust_buy_days)
+
+                    buy_days_term = (
+                        f"🔗 買超天數 {mf_buy_days_s} {foreign_buy_days_s} {trust_buy_days_s} "
+                        f"(近10日) (主{mf_day_s} 外{inst_day_s})"
+                    )
                     st.markdown(buy_days_term, unsafe_allow_html=True)
 
                     wk_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['week'], wk_rate))
