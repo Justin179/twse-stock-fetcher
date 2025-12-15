@@ -1535,7 +1535,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 # ⭐ 只在「趨勢盤」這一行印完後，馬上加上上週／上月詞條
                 if idx == 0:
                     # 需求：放在『提示訊息』第二個詞條位置（介於趨勢盤與週/月詞條之間）
-                    st.markdown(f"🔗 {streak_term}", unsafe_allow_html=True)
+                    st.markdown(f"💰 {streak_term}", unsafe_allow_html=True)
 
                     # ⭐ 主力/外資/投信：近10個交易日買超率（買超天數 / 10）
                     mf_buy_days, foreign_buy_days, trust_buy_days = compute_recent_netbuy_buyday_counts(
@@ -1552,7 +1552,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     trust_buy_days_s = _fmt_buy_days_num(trust_buy_days)
 
                     buy_days_term = (
-                        f"🔗 買超天數 {mf_buy_days_s} {foreign_buy_days_s} {trust_buy_days_s} "
+                        f"💲 買超天數 {mf_buy_days_s} {foreign_buy_days_s} {trust_buy_days_s} "
                         f"(近10日) (主{mf_day_s} 外{inst_day_s})"
                     )
                     st.markdown(buy_days_term, unsafe_allow_html=True)
