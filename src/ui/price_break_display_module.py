@@ -645,6 +645,60 @@ def compute_recent_netbuy_buyday_rates(
     return main_pct, foreign_pct, trust_pct
 
 
+def _get_latest_trade_day_numbers(
+    stock_id: str,
+    db_path: str = "data/institution.db",
+) -> Tuple[Optional[int], Optional[int]]:
+    """回傳 (主力最新交易日的日, 外資/投信表最新交易日的日)。
+
+    只取「日(號)」不含月份，用於檢查資料表是否更新到最新交易日。
+    """
+    main_day: Optional[int] = None
+    inst_day: Optional[int] = None
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            try:
+                row = conn.execute(
+                    """
+                    SELECT date
+                    FROM main_force_trading
+                    WHERE stock_id = ?
+                    ORDER BY date DESC
+                    LIMIT 1
+                    """,
+                    (stock_id,),
+                ).fetchone()
+                if row and row[0]:
+                    dt = pd.to_datetime(str(row[0]), errors="coerce")
+                    if pd.notna(dt):
+                        main_day = int(dt.day)
+            except Exception:
+                main_day = None
+
+            try:
+                row = conn.execute(
+                    """
+                    SELECT date
+                    FROM institutional_netbuy_holding
+                    WHERE stock_id = ?
+                    ORDER BY date DESC
+                    LIMIT 1
+                    """,
+                    (stock_id,),
+                ).fetchone()
+                if row and row[0]:
+                    dt = pd.to_datetime(str(row[0]), errors="coerce")
+                    if pd.notna(dt):
+                        inst_day = int(dt.day)
+            except Exception:
+                inst_day = None
+    except Exception:
+        return None, None
+
+    return main_day, inst_day
+
+
 def compute_recent_netbuy_streaks(stock_id: str, db_path: str = "data/institution.db", limit: int = 60) -> Tuple[int, int, int]:
     """計算主力/外資/投信從『最新交易日』往回的連續買超天數。
 
@@ -1465,7 +1519,10 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                         db_path="data/institution.db",
                         window=10,
                     )
-                    buy_rate_term = f"近10日買超 {mf_buy_pct}% {foreign_buy_pct}% {trust_buy_pct}%"
+                    mf_day, inst_day = _get_latest_trade_day_numbers(stock_id, db_path="data/institution.db")
+                    mf_day_s = "-" if mf_day is None else str(mf_day)
+                    inst_day_s = "-" if inst_day is None else str(inst_day)
+                    buy_rate_term = f"近10日買超 {mf_buy_pct}% {foreign_buy_pct}% {trust_buy_pct}% ({mf_day_s} {inst_day_s})"
                     st.markdown(buy_rate_term, unsafe_allow_html=True)
 
                     wk_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['week'], wk_rate))
