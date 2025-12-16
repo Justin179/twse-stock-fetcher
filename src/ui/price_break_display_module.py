@@ -1582,13 +1582,27 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     mf_day_s = "-" if mf_day is None else str(mf_day)
                     inst_day_s = "-" if inst_day is None else str(inst_day)
 
+                    # 若主/外「最近交易日序號」不同：整段加淡藍底，且數字(僅數字)變藍色粗體
+                    day_mismatch = mf_day_s != inst_day_s
+                    if day_mismatch:
+                        days_badge_html = (
+                            "<span style='background-color:#e6f3ff; padding:0 4px; border-radius:4px;'>"
+                            f"主<span style='color:blue; font-weight:bold'>{mf_day_s}</span> "
+                            f"外<span style='color:blue; font-weight:bold'>{inst_day_s}</span>"
+                            "</span>"
+                        )
+                    else:
+                        days_badge_html = (
+                            f"主{mf_day_s} 外{inst_day_s}"
+                        )
+
                     mf_buy_days_s = _fmt_buy_days_num(mf_buy_days)
                     foreign_buy_days_s = _fmt_buy_days_num(foreign_buy_days)
                     trust_buy_days_s = _fmt_buy_days_num(trust_buy_days)
 
                     buy_days_term = (
                         f"💲 買超天數 {mf_buy_days_s} {foreign_buy_days_s} {trust_buy_days_s} "
-                        f"(近10日) (主{mf_day_s} 外{inst_day_s})"
+                        f"(近10日) ({days_badge_html})"
                     )
                     st.markdown(buy_days_term, unsafe_allow_html=True)
 
