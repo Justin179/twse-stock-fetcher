@@ -1626,8 +1626,26 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
                     buy_days_term = (
                         f"💲 買超天數 {mf_buy_days_s} {foreign_buy_days_s} {trust_buy_days_s} "
-                        f"({days_badge_html}) (近10日)"
+                        f"({days_badge_html})"
                     )
+
+                    trust_mid = ""
+                    try:
+                        trust_n = int(trust_buy_days)
+                    except Exception:
+                        trust_n = None
+
+                    # 第三個數字（投信買超天數）若為 7/8 或 >=9：在兩個括號中間插入「投」
+                    if trust_n in (7, 8):
+                        trust_mid = "<span style='color:#ef4444; font-weight:700'>投</span>"
+                    elif (trust_n is not None) and trust_n >= 9:
+                        trust_mid = "<span style='color:#ef4444; font-weight:700; background:rgba(239,68,68,0.14)'>投</span>"
+
+                    if trust_mid:
+                        buy_days_term += f" {trust_mid} (近10日)"
+                    else:
+                        buy_days_term += " (近10日)"
+
                     st.markdown(buy_days_term, unsafe_allow_html=True)
 
                     wk_html = _stylize_week_month_tag(_inject_rate_after_volume(tags['week'], wk_rate))
