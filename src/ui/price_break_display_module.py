@@ -603,6 +603,25 @@ def _fmt_buy_days_num(v: int, highlight_at: int = 7) -> str:
     return str(n)
 
 
+def _fmt_buy_days_label(label: str, v: int) -> str:
+    """格式化買超天數對應標籤（主/外）。
+
+    規則與 _fmt_buy_days_num 一致：
+    - 7、8：紅字 + 粗體
+    - >=9 ：紅字 + 粗體 + 底色 background:rgba(239,68,68,0.14)
+    """
+    try:
+        n = int(v)
+    except Exception:
+        return str(label)
+
+    if n >= 9:
+        return f"<span style='color:#ef4444; font-weight:700; background:rgba(239,68,68,0.14)'>{label}</span>"
+    if n in (7, 8):
+        return f"<span style='color:#ef4444; font-weight:700'>{label}</span>"
+    return str(label)
+
+
 def _fmt_streak_num(v: int) -> str:
     """格式化連續買超天數。
 
@@ -1578,27 +1597,32 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                         db_path="data/institution.db",
                         window=10,
                     )
+
+                    mf_buy_days_s = _fmt_buy_days_num(mf_buy_days)
+                    foreign_buy_days_s = _fmt_buy_days_num(foreign_buy_days)
+                    trust_buy_days_s = _fmt_buy_days_num(trust_buy_days)
+
                     mf_day, inst_day = _get_latest_trade_day_numbers(stock_id, db_path="data/institution.db")
                     mf_day_s = "-" if mf_day is None else str(mf_day)
                     inst_day_s = "-" if inst_day is None else str(inst_day)
+
+                    # 讓括號內的「主/外」字樣，跟前面兩個買超天數數字同步（紅字/粗體/底色）
+                    mf_label_html = _fmt_buy_days_label("主", mf_buy_days)
+                    foreign_label_html = _fmt_buy_days_label("外", foreign_buy_days)
 
                     # 若主/外「最近交易日序號」不同：整段加淡藍底，且數字(僅數字)變藍色粗體
                     day_mismatch = mf_day_s != inst_day_s
                     if day_mismatch:
                         days_badge_html = (
                             "<span style='background-color:#e6f3ff; padding:0 4px; border-radius:4px;'>"
-                            f"主<span style='color:blue; font-weight:bold'>{mf_day_s}</span> "
-                            f"外<span style='color:blue; font-weight:bold'>{inst_day_s}</span>"
+                            f"{mf_label_html}<span style='color:blue; font-weight:bold'>{mf_day_s}</span> "
+                            f"{foreign_label_html}<span style='color:blue; font-weight:bold'>{inst_day_s}</span>"
                             "</span>"
                         )
                     else:
                         days_badge_html = (
-                            f"主{mf_day_s} 外{inst_day_s}"
+                            f"{mf_label_html}{mf_day_s} {foreign_label_html}{inst_day_s}"
                         )
-
-                    mf_buy_days_s = _fmt_buy_days_num(mf_buy_days)
-                    foreign_buy_days_s = _fmt_buy_days_num(foreign_buy_days)
-                    trust_buy_days_s = _fmt_buy_days_num(trust_buy_days)
 
                     buy_days_term = (
                         f"💲 買超天數 {mf_buy_days_s} {foreign_buy_days_s} {trust_buy_days_s} "
