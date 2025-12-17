@@ -1602,7 +1602,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
                     buy_days_term = (
                         f"💲 買超天數 {mf_buy_days_s} {foreign_buy_days_s} {trust_buy_days_s} "
-                        f"(近10日) ({days_badge_html})"
+                        f"({days_badge_html}) (近10日)"
                     )
                     st.markdown(buy_days_term, unsafe_allow_html=True)
 
