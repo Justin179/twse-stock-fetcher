@@ -1566,7 +1566,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             foreign_label = _fmt_streak_label("外資", foreign_streak)
             trust_label = _fmt_streak_label("投信", trust_streak)
             streak_term = (
-                f"連續買超 {mf_streak_s} {foreign_streak_s} {trust_streak_s} "
+                f"<span style=\"text-decoration: underline; font-weight: 700;\">連續買</span>超 {mf_streak_s} {foreign_streak_s} {trust_streak_s} "
                 f"({mf_label} {foreign_label} {trust_label})"
             )
 
