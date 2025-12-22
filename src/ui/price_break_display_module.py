@@ -526,11 +526,15 @@ def _inject_rate_after_volume(raw_line: str, rate: float | None) -> str:
     if rate is None:
         return raw_line
 
+    # 只針對「上週」那一行的達成率加粗；上月維持原樣
+    is_week_line = raw_line.strip().startswith("上週")
+
     pattern = r"(帶大量|一般量)(，留上影線)?"
     def repl(m: re.Match):
         vol = m.group(1)
         shadow = m.group(2) or ""
-        return f"{vol}（達成: <span style='color:#ef4444'>{rate:.0f}%</span>）{shadow}"
+        style = "color:#ef4444; font-weight:700" if is_week_line else "color:#ef4444"
+        return f"{vol}（達成: <span style='{style}'>{rate:.0f}%</span>）{shadow}"
 
     return re.sub(pattern, repl, raw_line, count=1)
 
