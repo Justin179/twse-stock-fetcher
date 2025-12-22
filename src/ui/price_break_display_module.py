@@ -1651,10 +1651,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     elif (trust_n is not None) and trust_n >= 9:
                         trust_mid = "<span style='color:#ef4444; font-weight:700; background:rgba(239,68,68,0.14)'>投</span>"
 
+                    ten_days_html = "近<span style='font-weight:700; text-decoration:underline;'>10日</span>"
                     if trust_mid:
-                        buy_days_term += f" {trust_mid} (近10日)"
+                        buy_days_term += f" {trust_mid} ({ten_days_html})"
                     else:
-                        buy_days_term += " (近10日)"
+                        buy_days_term += f" ({ten_days_html})"
 
                     st.markdown(buy_days_term, unsafe_allow_html=True)
 
