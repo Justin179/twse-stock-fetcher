@@ -1082,7 +1082,8 @@ def get_volume_status(today_info: dict, y_volume_in_shares: Optional[float], sto
 def generate_quick_summary(price_status: str,
                            baseline_pressure_status: str, deduction_direction_status: str,
                            future_pressure_status: str,
-                           today_info: dict, y_volume_in_shares: Optional[float], stock_id: str) -> Tuple[str, str, str]:
+                           today_info: dict, y_volume_in_shares: Optional[float], stock_id: str,
+                           future_pressure_pct: Optional[float] = None) -> Tuple[str, str, str]:
     """
     生成快速摘要的三個詞條
     
@@ -1150,10 +1151,24 @@ def generate_quick_summary(price_status: str,
         term2 = "➖"
     
     # 詞條3（未來壓力）
+    pct_suffix = ""
+    try:
+        if future_pressure_pct is not None:
+            pct_suffix = f" {future_pressure_pct:+.2f}%"
+    except Exception:
+        pct_suffix = ""
+
     if future_pressure_status == "升高":
-        term3 = "⚠️ 未來壓力升高"
+        # 升高幅度 < 1%：使用較弱警示符號；>= 1%：使用原本的黃色警示符號
+        icon = "⚠️"
+        try:
+            if future_pressure_pct is not None and abs(float(future_pressure_pct)) < 1.0:
+                icon = "❗"
+        except Exception:
+            icon = "⚠️"
+        term3 = f"{icon} 未來壓力升高{pct_suffix}"
     elif future_pressure_status == "下降":
-        term3 = "✔️ 未來壓力下降"
+        term3 = f"✔️ 未來壓力下降{pct_suffix}"
     elif future_pressure_status == "持平":
         term3 = "➖ 未來壓力持平"
     else:
@@ -1298,12 +1313,19 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         
         # 🔹 計算未來壓力狀態（平均扣抵 vs 基準）
         future_pressure_status = "持平"
+        future_pressure_pct: Optional[float] = None
         if (baseline5 is not None) and (deduction5 is not None):
             ded_vals_raw = [deduction5, ded1_5, ded2_5, ded3_5]
             ded_vals = [float(x) for x in ded_vals_raw if x is not None]
             if ded_vals and float(baseline5) != 0:
                 avg_dec = sum(Decimal(str(x)) for x in ded_vals) / Decimal(len(ded_vals))
                 base_dec = Decimal(str(baseline5))
+                try:
+                    pct_dec = (avg_dec - base_dec) / base_dec * Decimal("100")
+                    pct_rounded = pct_dec.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                    future_pressure_pct = float(pct_rounded)
+                except Exception:
+                    future_pressure_pct = None
                 if avg_dec > base_dec:
                     future_pressure_status = "升高"
                 elif avg_dec < base_dec:
@@ -1317,7 +1339,8 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             baseline_pressure_status, 
             deduction_direction_status,
             future_pressure_status,
-            today, v1, stock_id
+            today, v1, stock_id,
+            future_pressure_pct=future_pressure_pct,
         )
         # 🔹 第四個 Summary：均線排列 + 上彎 + 乖離
         summary_term4 = evaluate_ma_trend_and_bias(stock_id, today_date, c1, ma5, ma10, ma24)
