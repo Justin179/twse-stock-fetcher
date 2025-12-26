@@ -1168,7 +1168,14 @@ def generate_quick_summary(price_status: str,
             icon = "⚠️"
         term3 = f"{icon} 未來壓力升高{pct_suffix}"
     elif future_pressure_status == "下降":
-        term3 = f"✔️ 未來壓力下降{pct_suffix}"
+        icon = "✔️"
+        try:
+            # 下降幅度 >= 1%（例如 -1.00% 或更小）用 ✅；其餘維持 ✔️
+            if future_pressure_pct is not None and float(future_pressure_pct) <= -1.0:
+                icon = "✅"
+        except Exception:
+            icon = "✔️"
+        term3 = f"{icon} 未來壓力下降{pct_suffix}"
     elif future_pressure_status == "持平":
         term3 = "➖ 未來壓力持平"
     else:
