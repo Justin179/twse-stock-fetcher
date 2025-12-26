@@ -1012,11 +1012,11 @@ def aggregate_monthly_from_daily(daily_with_today: pd.DataFrame, last_n: int = 1
 # -----------------------------
 def main() -> None:
     st.set_page_config(page_title="S/R 撐壓系統 (D/W/M)", layout="wide")
-    st.title("this is money -> 支撐 x 壓力 x 成交量（D / W / M / 被動當沖）")
+    st.title("📈 either 遠離(上方)壓力 or 帶量突破壓力（被動當沖）")
 
 def main() -> None:
     st.set_page_config(page_title="S/R 撐壓系統 (D/W/M)", layout="wide", initial_sidebar_state="collapsed")
-    st.title("this is money -> 支撐 x 壓力 x 成交量（D / W / M / 被動當沖）")
+    st.title("📈 either 遠離(上方)壓力 or 帶量突破壓力（被動當沖）")
 
     # 🔹 智慧自動刷新：偵測 app_v4 的股票變更
     # 初始化當前股票
