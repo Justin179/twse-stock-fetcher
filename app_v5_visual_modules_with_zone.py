@@ -139,7 +139,7 @@ with col1:
     st.markdown(
         """
         <div style='text-align: center; font-size: 22px; font-weight: 700; margin-top: -4px; margin-bottom: 6px; line-height: 1.2;'>
-            相信訊號
+            💲 相信訊號 💲
         </div>
         """,
         unsafe_allow_html=True,
