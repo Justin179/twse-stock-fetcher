@@ -134,6 +134,16 @@ with col1:
         msg = append_unique_stocks()
         st.success(msg)
         st.rerun()  # 🔁 直接重新跑整頁
+
+    # 🔹 插入提示文字（藍圈位置）
+    st.markdown(
+        """
+        <div style='text-align: center; font-size: 22px; font-weight: 700; margin-top: -4px; margin-bottom: 6px; line-height: 1.2;'>
+            相信訊號
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     
     # 🔹 當前週數顯示
     today = datetime.now()
