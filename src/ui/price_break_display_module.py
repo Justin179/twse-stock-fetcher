@@ -1360,7 +1360,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
         with col_left:
-            st.markdown("**地形 (扣抵值)：**")
+            st.markdown("**《地形》(扣抵值)：**")
             extra_info = get_price_change_and_kbar(c1, c2, o)
             st.markdown(
                 f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價**"
@@ -1550,7 +1550,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
 
         with col_mid:
-            st.markdown("**籌碼、上週量、高點：**")
+            st.markdown("**《趨勢、籌碼》上週量、高點：**")
             # ✅ 在這裡判斷，先把詞條加到 tips
             is_up   = is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5)
             is_down = is_downtrending_now(stock_id, today_date, c1, w2, m2, ma5, ma10, ma24)
