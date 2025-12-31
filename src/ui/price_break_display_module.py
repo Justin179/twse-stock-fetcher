@@ -1360,7 +1360,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         col_left, col_mid, col_right = st.columns([3, 2, 2])
 
         with col_left:
-            st.markdown("**⛰️《地形》🗡️(扣抵值)：**")
+            st.markdown("**⛰️《地形》(扣抵值)：**")
             extra_info = get_price_change_and_kbar(c1, c2, o)
             st.markdown(
                 f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價**"
