@@ -1240,13 +1240,13 @@ def get_price_change_and_kbar(c1: float, c2: float, o: float) -> str:
     # K棒色
     try:
         if c1 > o:
-            kbar_str = "📕K"
+            kbar_str = "📕價K"
         elif c1 < o:
-            kbar_str = "📗K"
+            kbar_str = "📗價K"
         else:
-            kbar_str = "平K"
+            kbar_str = "平價K"
     except Exception:
-        kbar_str = "平K"
+        kbar_str = "平價K"
 
     return f" ({change_str}{pct_html} / {kbar_str})"
 
@@ -1362,9 +1362,17 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         with col_left:
             st.markdown("**⛰️《地形》(扣抵值)：**")
             extra_info = get_price_change_and_kbar(c1, c2, o)
+            # 量增提示：在「今日收盤價(現價)」同一行尾端加上 ▁▂▃▅▉
+            volume_mark = ""
+            try:
+                volume_status = get_volume_status(today, v1, stock_id)
+                if volume_status == "量增":
+                    volume_mark = " <span style='color:#ef4444; font-weight:bold'>▁▂▃▅▉</span>"
+            except Exception:
+                volume_mark = ""
             st.markdown(
                 f"- **今日(<span style='color:red'>{today_date[5:]}</span>)收盤價**"
-                f"<span style='color:blue; font-weight:bold'>(現價)：{c1}</span>{extra_info}",
+                f"<span style='color:blue; font-weight:bold'>(現價)：{c1}</span>{extra_info}{volume_mark}",
                 unsafe_allow_html=True,
             )
 
