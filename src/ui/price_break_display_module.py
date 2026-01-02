@@ -1367,7 +1367,18 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             try:
                 volume_status = get_volume_status(today, v1, stock_id)
                 if volume_status == "量增":
-                    volume_mark = " <span style='color:#ef4444; font-weight:bold'>▁▂▃▅▉</span>"
+                    # 色彩跟隨 change_str 的漲跌語意：價漲紅 / 價跌綠 / 價平黑
+                    vol_color = "black"
+                    try:
+                        if c1 > c2:
+                            vol_color = "#ef4444"
+                        elif c1 < c2:
+                            vol_color = "#16a34a"
+                        else:
+                            vol_color = "black"
+                    except Exception:
+                        vol_color = "black"
+                    volume_mark = f" <span style='color:{vol_color}; font-weight:bold'>▁▂▃▅▉</span>"
             except Exception:
                 volume_mark = ""
             st.markdown(
