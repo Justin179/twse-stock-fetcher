@@ -1569,7 +1569,10 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
 
         with col_mid:
-            st.markdown("**《趨勢、籌碼》上週量、過上週/月高：**")
+            st.markdown(
+                "<b>《趨勢、籌碼》上週量、<span style='color: blue'>過上週/月高</span>：</b>",
+                unsafe_allow_html=True,
+            )
             # ✅ 在這裡判斷，先把詞條加到 tips
             is_up   = is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5)
             is_down = is_downtrending_now(stock_id, today_date, c1, w2, m2, ma5, ma10, ma24)
