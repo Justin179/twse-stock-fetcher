@@ -1720,7 +1720,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
 
         with col_right:
-            st.markdown("**乖離率：**")
+            st.markdown("**乖離率 (還原前)：**")
 
             render_bias_line("5日均線乖離",  ma5,  c1, stock_id=stock_id, today_date=today_date)
             render_bias_line("10日均線乖離", ma10, c1, stock_id=stock_id, today_date=today_date)
