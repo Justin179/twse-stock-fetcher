@@ -1672,14 +1672,35 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                         def _tb_icon(seg: str) -> str:
                             return "❌" if ("三盤跌破" in seg) else "✔️"
 
+                        def _tb_colorize(seg: str) -> str:
+                            # 只把「突破/跌破」兩字上色
+                            try:
+                                seg = seg.replace(
+                                    "突破",
+                                    "<span style='color:#ef4444; font-weight:700'>突破</span>",
+                                )
+                                seg = seg.replace(
+                                    "跌破",
+                                    "<span style='color:#16a34a; font-weight:700'>跌破</span>",
+                                )
+                            except Exception:
+                                pass
+                            return seg
+
                         if "┃" in three_bar_tip:
                             left, right = [s.strip() for s in three_bar_tip.split("┃", 1)]
                             left_icon = _tb_icon(left)
                             right_icon = _tb_icon(right)
-                            st.markdown(f"{left_icon} {left} ┃ {right_icon} {right}", unsafe_allow_html=True)
+                            st.markdown(
+                                f"{left_icon} {_tb_colorize(left)} ┃ {right_icon} {_tb_colorize(right)}",
+                                unsafe_allow_html=True,
+                            )
                         else:
                             tb_icon = _tb_icon(three_bar_tip)
-                            st.markdown(f"{tb_icon} {three_bar_tip}", unsafe_allow_html=True)
+                            st.markdown(
+                                f"{tb_icon} {_tb_colorize(three_bar_tip)}",
+                                unsafe_allow_html=True,
+                            )
 
                     # 需求：放在『提示訊息』第二個詞條位置（介於趨勢盤與週/月詞條之間）
                     st.markdown(f"💰 {streak_term}", unsafe_allow_html=True)
