@@ -275,7 +275,7 @@ def analyze_stock(stock_id, dl=None, sdk=None):
 
         if yesterday_term or today_term:
             if yesterday_term and today_term:
-                three_bar_term = f"昨{yesterday_term} ⚡ 今{today_term}"
+                three_bar_term = f"昨{yesterday_term} ┃ 今{today_term}"
             elif yesterday_term:
                 three_bar_term = f"昨{yesterday_term}"
             elif today_term:
