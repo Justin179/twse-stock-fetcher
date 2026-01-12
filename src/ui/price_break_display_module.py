@@ -1584,6 +1584,19 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             else:
                 tips.insert(0, "非趨勢盤，量縮 考慮區間佈局!")
 
+            # 把「三盤突破/跌破」詞條往上移：固定顯示在趨勢盤下一行（藍線位置）
+            three_bar_tip = None
+            try:
+                for i, t in enumerate(tips):
+                    if ("三盤突破" in t) or ("三盤跌破" in t):
+                        three_bar_tip = t
+                        # 避免後面 for-loop 重複印
+                        if i != 0:
+                            tips.pop(i)
+                        break
+            except Exception:
+                three_bar_tip = None
+
             # 在 with col_mid:、st.markdown("**提示訊息：**") 之後、for tip in tips: 之前插入
             tags = get_week_month_tags(
                 stock_id,
@@ -1654,6 +1667,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
                 # ⭐ 只在「趨勢盤」這一行印完後，馬上加上上週／上月詞條
                 if idx == 0:
+                    # 先插入：三盤突破/跌破（移到趨勢盤正下方）
+                    if three_bar_tip:
+                        tb_icon = "❌" if ("三盤跌破" in three_bar_tip) else "✔️"
+                        st.markdown(f"{tb_icon} {three_bar_tip}", unsafe_allow_html=True)
+
                     # 需求：放在『提示訊息』第二個詞條位置（介於趨勢盤與週/月詞條之間）
                     st.markdown(f"💰 {streak_term}", unsafe_allow_html=True)
 
