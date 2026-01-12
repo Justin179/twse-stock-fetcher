@@ -9,6 +9,29 @@ from common.time_utils import is_fubon_api_maintenance_time
 
 
 DB_PATH = "data/institution.db" 
+
+
+def get_recent_hl_before_date(stock_id: str, before_date: str, limit: int = 3) -> pd.DataFrame:
+        """取得 before_date(不含) 之前最近 N 根日K的 high/low。
+
+        用途：
+            - 今日三盤：用 today_date 為 before_date，取 [昨、前] 兩根
+            - 昨日三盤：同一批資料取 [前、前前] 兩根
+        """
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql_query(
+                """
+                SELECT date, high, low
+                FROM twse_prices
+                WHERE stock_id = ? AND date < ?
+                ORDER BY date DESC
+                LIMIT ?
+                """,
+                conn,
+                params=(stock_id, before_date, int(limit)),
+        )
+        conn.close()
+        return df
 def get_recent_prices(stock_id, today_date):
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(
@@ -201,6 +224,66 @@ def analyze_stock(stock_id, dl=None, sdk=None):
 
     signals = []
 
+    # --- 三盤突破 / 三盤跌破（昨/今） ---
+    # 定義：
+    # - 今三盤突破：c1 > max(昨日高, 前一日高)
+    # - 今三盤跌破：c1 < min(昨日低, 前一日低)
+    # - 昨三盤突破：c2 > max(前一日高, 前前一日高)
+    # - 昨三盤跌破：c2 < min(前一日低, 前前一日低)
+    def _to_float(v):
+        try:
+            if v is None:
+                return None
+            return float(v)
+        except Exception:
+            return None
+
+    three_bar_term = None
+    try:
+        prev_hl = get_recent_hl_before_date(stock_id, today_date, limit=3)
+        prev_hl = prev_hl.reset_index(drop=True)
+
+        c1_f = _to_float(c1)
+        c2_f = _to_float(c2)
+
+        today_term = None
+        yesterday_term = None
+
+        # 今：需要 (昨、前) 兩根
+        if (c1_f is not None) and (len(prev_hl) >= 2):
+            y_high = _to_float(prev_hl.iloc[0]["high"])
+            y_low = _to_float(prev_hl.iloc[0]["low"])
+            p_high = _to_float(prev_hl.iloc[1]["high"])
+            p_low = _to_float(prev_hl.iloc[1]["low"])
+
+            if (y_high is not None) and (p_high is not None) and (c1_f > max(y_high, p_high)):
+                today_term = "三盤突破"
+            elif (y_low is not None) and (p_low is not None) and (c1_f < min(y_low, p_low)):
+                today_term = "三盤跌破"
+
+        # 昨：需要 (前、前前) 兩根
+        if (c2_f is not None) and (len(prev_hl) >= 3):
+            p_high = _to_float(prev_hl.iloc[1]["high"])
+            p_low = _to_float(prev_hl.iloc[1]["low"])
+            pp_high = _to_float(prev_hl.iloc[2]["high"])
+            pp_low = _to_float(prev_hl.iloc[2]["low"])
+
+            if (p_high is not None) and (pp_high is not None) and (c2_f > max(p_high, pp_high)):
+                yesterday_term = "三盤突破"
+            elif (p_low is not None) and (pp_low is not None) and (c2_f < min(p_low, pp_low)):
+                yesterday_term = "三盤跌破"
+
+        if yesterday_term or today_term:
+            if yesterday_term and today_term:
+                three_bar_term = f"昨{yesterday_term} ⚡ 今{today_term}"
+            elif yesterday_term:
+                three_bar_term = f"昨{yesterday_term}"
+            elif today_term:
+                three_bar_term = f"今{today_term}"
+    except Exception:
+        # 資料不足或 DB 讀取失敗時，直接略過不影響其他訊號
+        pass
+
     # 今天開盤
     if o and c2:
         is_break_yesterday_high = h and o > h
@@ -219,6 +302,10 @@ def analyze_stock(stock_id, dl=None, sdk=None):
                 signals.append(f"今開盤({o}) 開平盤")
             elif o < c2:
                 signals.append(f"今開盤({o}) 開低")
+
+    # 讓「三盤突破/跌破」顯示在「今開盤...」的下一行（圖2藍圈位置）
+    if three_bar_term:
+        signals.append(three_bar_term)
 
 
     # 今天盤中

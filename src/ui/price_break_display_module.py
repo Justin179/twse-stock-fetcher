@@ -1623,7 +1623,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             )
 
             for idx, tip in enumerate(tips):
-                if (tip.startswith("今收盤(現價) 過昨高")
+                if ("三盤跌破" in tip):
+                    icon = "❌"
+                elif ("三盤突破" in tip):
+                    icon = "✔️"
+                elif (tip.startswith("今收盤(現價) 過昨高")
                     or tip.startswith("今收盤(現價) 過上週高點")
                     or tip.startswith("今收盤(現價) 過上月高點")
                     or tip.startswith("向上趨勢盤")):
