@@ -139,7 +139,7 @@ with col1:
     st.markdown(
         """
         <div style='text-align: center; font-size: 18px; font-weight: 500; margin-top: -4px; margin-bottom: 6px; line-height: 1.2;'>
-            🗡️相信訊號 - 🚫FOMO
+            🗡️順勢而為 - 🚫FOMO
         </div>
         """,
         unsafe_allow_html=True,
