@@ -1588,7 +1588,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             three_bar_tip = None
             try:
                 for i, t in enumerate(tips):
-                    if ("三盤突破" in t) or ("三盤跌破" in t):
+                    if ("三盤" in t) and (("突破" in t) or ("跌破" in t)):
                         three_bar_tip = t
                         # 避免後面 for-loop 重複印
                         if i != 0:
@@ -1636,10 +1636,10 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             )
 
             for idx, tip in enumerate(tips):
-                if ("三盤跌破" in tip):
-                    icon = "❌"
-                elif ("三盤突破" in tip):
-                    icon = "✔️"
+                if ("三盤" in tip) and ("跌破" in tip):
+                    icon = "💀" if ("帶量" in tip) else "❌"
+                elif ("三盤" in tip) and ("突破" in tip):
+                    icon = "✅" if ("帶量" in tip) else "✔️"
                 elif (tip.startswith("今收盤(現價) 過昨高")
                     or tip.startswith("今收盤(現價) 過上週高點")
                     or tip.startswith("今收盤(現價) 過上月高點")
@@ -1670,7 +1670,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     # 先插入：三盤突破/跌破（移到趨勢盤正下方）
                     if three_bar_tip:
                         def _tb_icon(seg: str) -> str:
-                            return "❌" if ("三盤跌破" in seg) else "✔️"
+                            if ("跌破" in seg):
+                                return "💀" if ("帶量" in seg) else "❌"
+                            if ("突破" in seg):
+                                return "✅" if ("帶量" in seg) else "✔️"
+                            return "ℹ️"
 
                         def _tb_colorize(seg: str) -> str:
                             # 只把「突破/跌破」兩字上色

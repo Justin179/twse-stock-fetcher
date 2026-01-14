@@ -224,6 +224,67 @@ def analyze_stock(stock_id, dl=None, sdk=None):
 
     signals = []
 
+    def _safe_float(v):
+        try:
+            if v is None:
+                return None
+            return float(v)
+        except Exception:
+            return None
+
+    def _get_today_volume_status(today_info: dict, y_volume_in_shares: float) -> str:
+        """判斷「今三盤」是否量增/量縮：沿用 UI 的盤中預估邏輯；盤後直接比今量>=昨量。
+
+        - today_info['v'] 單位：張（盤中 API）
+        - y_volume_in_shares 單位：股（DB）
+        """
+        try:
+            from ui.volume_forecast import (
+                get_trading_minutes_elapsed,
+                forecast_by_avg_rate,
+                forecast_by_time_segment,
+            )
+        except Exception:
+            get_trading_minutes_elapsed = None
+            forecast_by_avg_rate = None
+            forecast_by_time_segment = None
+
+        today_v = _safe_float(today_info.get("v")) if isinstance(today_info, dict) else None
+        y_v = _safe_float(y_volume_in_shares)
+        if y_v is not None:
+            y_v = y_v / 1000.0  # 股 -> 張
+
+        # 1) 交易時間內：用預估模組判斷
+        try:
+            if get_trading_minutes_elapsed is not None:
+                elapsed = get_trading_minutes_elapsed()
+                if (
+                    elapsed is not None
+                    and elapsed > 0
+                    and elapsed < 270
+                    and today_v is not None
+                    and y_v is not None
+                    and y_v > 0
+                    and forecast_by_avg_rate is not None
+                    and forecast_by_time_segment is not None
+                ):
+                    forecast1 = forecast_by_avg_rate(today_v, y_v)
+                    forecast2 = forecast_by_time_segment(today_v, y_v)
+                    if forecast1 and forecast2:
+                        method1_increase = forecast1.get("forecast_pct") is not None and forecast1["forecast_pct"] >= 100
+                        method2_increase = forecast2.get("status") == "ahead"
+                        if method1_increase == method2_increase:
+                            return "量增" if method1_increase else "量縮"
+                        return "量增" if method1_increase else "量縮"
+        except Exception:
+            pass
+
+        # 2) 盤後或無法預估：直接比今量 vs 昨量
+        if today_v is not None and y_v is not None:
+            return "量增" if today_v >= y_v else "量縮"
+
+        return "量縮"
+
     # --- 三盤突破 / 三盤跌破（昨/今） ---
     # 定義：
     # - 今三盤突破：c1 > max(昨日高, 前一日高)
@@ -231,12 +292,7 @@ def analyze_stock(stock_id, dl=None, sdk=None):
     # - 昨三盤突破：c2 > max(前一日高, 前前一日高)
     # - 昨三盤跌破：c2 < min(前一日低, 前前一日低)
     def _to_float(v):
-        try:
-            if v is None:
-                return None
-            return float(v)
-        except Exception:
-            return None
+        return _safe_float(v)
 
     three_bar_term = None
     try:
@@ -248,6 +304,8 @@ def analyze_stock(stock_id, dl=None, sdk=None):
 
         today_term = None
         yesterday_term = None
+        today_break = None   # "突破" | "跌破" | None
+        yday_break = None    # "突破" | "跌破" | None
 
         # 今：需要 (昨、前) 兩根
         if (c1_f is not None) and (len(prev_hl) >= 2):
@@ -257,9 +315,9 @@ def analyze_stock(stock_id, dl=None, sdk=None):
             p_low = _to_float(prev_hl.iloc[1]["low"])
 
             if (y_high is not None) and (p_high is not None) and (c1_f > max(y_high, p_high)):
-                today_term = "三盤突破"
+                today_break = "突破"
             elif (y_low is not None) and (p_low is not None) and (c1_f < min(y_low, p_low)):
-                today_term = "三盤跌破"
+                today_break = "跌破"
 
         # 昨：需要 (前、前前) 兩根
         if (c2_f is not None) and (len(prev_hl) >= 3):
@@ -269,9 +327,27 @@ def analyze_stock(stock_id, dl=None, sdk=None):
             pp_low = _to_float(prev_hl.iloc[2]["low"])
 
             if (p_high is not None) and (pp_high is not None) and (c2_f > max(p_high, pp_high)):
-                yesterday_term = "三盤突破"
+                yday_break = "突破"
             elif (p_low is not None) and (pp_low is not None) and (c2_f < min(p_low, pp_low)):
-                yesterday_term = "三盤跌破"
+                yday_break = "跌破"
+
+        # === 納入成交量（帶量） ===
+        # 今三盤：用盤中預估/盤後直接比今量>=昨量
+        if today_break:
+            vol_status_today = _get_today_volume_status(today, v1)
+            if vol_status_today == "量增":
+                today_term = f"三盤<b>帶量</b>{today_break}"
+            else:
+                today_term = f"三盤{today_break}"
+
+        # 昨三盤：直接用 DB 比較 c2 當天量 vs 前一交易日量
+        if yday_break:
+            v1_f = _safe_float(v1)
+            v2_f = _safe_float(v2)
+            if (v1_f is not None) and (v2_f is not None) and (v1_f >= v2_f):
+                yesterday_term = f"三盤<b>帶量</b>{yday_break}"
+            else:
+                yesterday_term = f"三盤{yday_break}"
 
         if yesterday_term or today_term:
             if yesterday_term and today_term:
