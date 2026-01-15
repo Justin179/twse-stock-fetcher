@@ -24,7 +24,7 @@ def check_price_vs_baseline_and_deduction(c1: float, baseline: float, deduction:
     if c1 > baseline and c1 > deduction:
         return f"- ✅ **現價站上基準價與扣抵值** {ref_text}"
     elif c1 > baseline:
-        return f"- ✔️ **現價只站上基準價** {ref_text}"
+        return f"- ⚠️ **現價只站上基準價** {ref_text}"
     elif c1 > deduction:
         return f"- ✔️ **現價只站上扣抵值** {ref_text}"
     elif c1 < baseline and c1 < deduction:
