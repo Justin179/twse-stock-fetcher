@@ -1662,6 +1662,19 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 else:
                     tip_html = tip
 
+                # 三盤詞條：只上色關鍵字（其餘保持原樣）
+                if isinstance(tip_html, str):
+                    try:
+                        tip_html = tip_html.replace(
+                            "昨三盤",
+                            "<span style='color:orange'>昨三盤</span>",
+                        ).replace(
+                            "今三盤",
+                            "<span style='color:blue'>今三盤</span>",
+                        )
+                    except Exception:
+                        pass
+
                 # 先印第 idx 條 tip
                 st.markdown(f"{icon} {tip_html}", unsafe_allow_html=True)
 
@@ -1677,8 +1690,16 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                             return "ℹ️"
 
                         def _tb_colorize(seg: str) -> str:
-                            # 只把「突破/跌破」兩字上色
+                            # 只把「昨三盤/今三盤/突破/跌破」關鍵字上色
                             try:
+                                seg = seg.replace(
+                                    "昨三盤",
+                                    "<span style='color:orange'>昨三盤</span>",
+                                )
+                                seg = seg.replace(
+                                    "今三盤",
+                                    "<span style='color:blue'>今三盤</span>",
+                                )
                                 seg = seg.replace(
                                     "突破",
                                     "<span style='color:#ef4444; font-weight:700'>突破</span>",
