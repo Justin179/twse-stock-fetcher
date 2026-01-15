@@ -1399,12 +1399,12 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             if above_upward_wma5:
                 st.markdown("- ✅ **現價站上 上彎5週均線！**", unsafe_allow_html=True)
             else:
-                st.markdown("- 💀 **現價未站上 上彎5週均線**", unsafe_allow_html=True)
+                st.markdown("- ❌ **現價未站上 上彎5週均線 💀**", unsafe_allow_html=True)
 
             if above_upward_mma5:
                 st.markdown("- ✅ **現價站上 上彎5個月均線！**", unsafe_allow_html=True)
             else:
-                st.markdown("- ❌ **現價未站上 上彎5個月均線**", unsafe_allow_html=True)
+                st.markdown("- ❌ **現價未站上 上彎5個月均線！**", unsafe_allow_html=True)
 
             if baseline5 is not None and deduction5 is not None:
                 msg = check_price_vs_baseline_and_deduction(c1, baseline5, deduction5)
