@@ -493,6 +493,14 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
         elif val > 20:
             icon_prefix = "⚠️ "
 
+    # ===== 新需求：只要為負值，詞條最前面加上 ⚠️ =====
+    if val < 0 and (
+        title in ("5日均線乖離", "10日均線乖離", "24日均線乖離")
+        or "均線開口" in title
+    ):
+        if not icon_prefix.startswith("⚠️ "):
+            icon_prefix = f"⚠️ {icon_prefix}"
+
     # ===== 組合顯示的 title（先彎向，再原 title）=====
     # 特殊需求：5日均線乖離 要粗體
     display_text = f"**{title}**" if title == "5日均線乖離" else title
