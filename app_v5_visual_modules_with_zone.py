@@ -167,7 +167,7 @@ with col1:
 
 with col2:
     if selected:
-        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算 / 🚧 either 遠離(上方)壓力 or 帶量突破壓力 / 💸 關鍵紅k與三盤沒跌破 應續抱", expanded=False):
+        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算 / 🚧 either 遠離(上方)壓力 or 帶量突破壓力 / 💸 關鍵紅K與三盤沒跌破 應續抱 / 🚩 第1根5分K低點+盤中均價線", expanded=False):
             col_left, col_mid, col_right = st.columns([2, 3, 3])
             with col_left:
                 display_rs_rsi_info(selected)
