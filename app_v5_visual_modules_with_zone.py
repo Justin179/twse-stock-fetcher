@@ -148,9 +148,17 @@ with col1:
     # 🔹 當前週數顯示
     today = datetime.now()
     year, week_num, weekday = today.isocalendar()
+
+    # 🔹 月初/月中標註（依日曆日）
+    month_phase_tag = ""
+    if 1 <= today.day <= 5:
+        month_phase_tag = ", 月初基"
+    elif 16 <= today.day <= 20:
+        month_phase_tag = ", 月中贏"
+
     st.markdown(f"""
     <div style='text-align: center; padding: 8px; background-color: #f0f2f6; border-radius: 5px; margin-top: 10px;'>
-        <span style='font-size: 20px; font-weight: bold; color: #1f77b4;'>📅 Week {week_num}</span>
+        <span style='font-size: 20px; font-weight: bold; color: #1f77b4;'>📅 Week {week_num}{month_phase_tag}</span>
     </div>
     """, unsafe_allow_html=True)
     
