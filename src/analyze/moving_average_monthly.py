@@ -89,6 +89,41 @@ def compute_mma5_with_today(
     return mma5, a, b, c, d, e, f
 
 
+def get_mma5_position_flags_with_today(
+    stock_id: str,
+    today_date: str,
+    today_close: float,
+    *,
+    debug_print: bool = False,
+) -> Optional[Tuple[float, bool, bool]]:
+    """回傳 (mma5, above_mma5, upward_mma5)，資料不足回傳 None。
+
+    - above_mma5: a(=today_close) > mma5
+    - upward_mma5: a(=today_close) > f (前 5 個月月收盤)
+    """
+    result = compute_mma5_with_today(stock_id, today_date, today_close)
+    if result is None:
+        if debug_print:
+            print(
+                f"[MMA5 DEBUG] stock={stock_id} today_date={today_date} 資料不足（月資料需至少 6 個月含本月）"
+            )
+        return None
+
+    mma5, a, b, c, d, e, f = result
+    above_mma5 = a > mma5
+    upward_mma5 = a > f
+
+    if debug_print:
+        mma5_2dp = round(mma5, 2)
+        print(
+            f"[MMA5 DEBUG] stock={stock_id} today_date={today_date} "
+            f"above_mma5={above_mma5} upward_mma5={upward_mma5} mma5={mma5_2dp} "
+            f"a={a} b={b} c={c} d={d} e={e} f={f}"
+        )
+
+    return mma5, above_mma5, upward_mma5
+
+
 def is_price_above_upward_mma5(
     stock_id: str,
     today_date: str,
@@ -103,22 +138,13 @@ def is_price_above_upward_mma5(
     兩者皆 True → 回傳 True
     會依需求印出 today_date, c1, mma5, a, b, c, d, e, f（確認後可關閉 debug_print）。
     """
-    result = compute_mma5_with_today(stock_id, today_date, today_close)
-    if result is None:
-        if debug_print:
-            print(f"[MMA5 DEBUG] stock={stock_id} today_date={today_date} 資料不足（月資料需至少 6 個月含本月）")
+    flags = get_mma5_position_flags_with_today(
+        stock_id,
+        today_date,
+        today_close,
+        debug_print=debug_print,
+    )
+    if flags is None:
         return False
-
-    mma5, a, b, c, d, e, f = result
-
-    if debug_print:
-        # 依你的要求輸出所有關鍵數值（確認無誤後可移除或設 debug_print=False）
-        mma5_2dp = round(mma5, 2)
-        print(
-            f"[MMA5 DEBUG] stock={stock_id} today_date={today_date} "
-            f"c1(a)={a} mma5={mma5_2dp} a={a} b={b} c={c} d={d} e={e} f={f}"
-        )
-
-    cond1 = a > mma5
-    cond2 = a > f
-    return cond1 and cond2
+    _mma5, above_mma5, upward_mma5 = flags
+    return above_mma5 and upward_mma5

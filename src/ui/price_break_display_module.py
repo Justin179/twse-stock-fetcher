@@ -9,7 +9,10 @@ from analyze.moving_average_weekly import (
     get_wma5_position_flags_with_today,
     is_price_above_upward_wma5,
 )
-from analyze.moving_average_monthly import is_price_above_upward_mma5
+from analyze.moving_average_monthly import (
+    get_mma5_position_flags_with_today,
+    is_price_above_upward_mma5,
+)
 # 檔頭適當位置加入
 from analyze.week_month_kbar_tags_helper import get_week_month_tags
 
@@ -1412,16 +1415,30 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                     # ✅/✔️：都屬於「現價站上(含等於) 5週均線」情境，再用 cond2 判斷上彎
                     if upward_wma5:
                         st.markdown(
-                            "- ✅ **現價站上 <span style='color:#ef4444; font-weight:700'>上彎</span>5週均線！**",
+                            "- ✅ **現價站上 <span style='color:#ef4444; font-weight:600'>上彎</span>5週均線！**",
                             unsafe_allow_html=True,
                         )
                     else:
                         st.markdown("- ✔️ **現價站上 5週均線！**", unsafe_allow_html=True)
 
-            if above_upward_mma5:
-                st.markdown("- ✅ **現價站上 上彎5個月均線！**", unsafe_allow_html=True)
+            mma5_flags = get_mma5_position_flags_with_today(stock_id, today_date, c1, debug_print=False)
+            if mma5_flags is None:
+                st.markdown("- ➖ **5個月均線：資料不足**", unsafe_allow_html=True)
             else:
-                st.markdown("- ❌ **現價未站上 上彎5個月均線！**", unsafe_allow_html=True)
+                mma5, above_mma5, upward_mma5 = mma5_flags
+                # UI 規則：
+                # ❌ 現價跌破 5個月均線：只看是否小於 mma5（不管上彎/下彎）
+                if float(c1) < float(mma5):
+                    st.markdown("- ❌ **現價跌破 5個月均線 ⚠️**", unsafe_allow_html=True)
+                else:
+                    # ✅/✔️：都屬於「現價站上(含等於) 5個月均線」情境，再用 cond2 判斷上彎
+                    if upward_mma5:
+                        st.markdown(
+                            "- ✅ **現價站上 <span style='color:#ef4444; font-weight:600'>上彎</span>5個月均線！**",
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.markdown("- ✔️ **現價站上 5個月均線！**", unsafe_allow_html=True)
 
             if baseline5 is not None and deduction5 is not None:
                 msg = check_price_vs_baseline_and_deduction(c1, baseline5, deduction5)
