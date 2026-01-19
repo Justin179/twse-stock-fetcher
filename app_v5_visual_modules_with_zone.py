@@ -175,7 +175,7 @@ with col1:
 
 with col2:
     if selected:
-        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算 / 🚧 either 遠離(上方)壓力 or 帶量突破壓力 / 📕 關鍵紅K低點 & 三盤沒破 應續抱 / 🚩 第1根5分K低點+盤中均價線 不能破 / 量即↗↘", expanded=False):
+        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算 / 🚧 either 遠離(上方)壓力 or 帶量突破壓力 / 📕 關鍵紅K低點 ＆ 三盤沒破 應續抱 / 🚩 趨勢向上 ＆ 主力做多 才能買 / 量即↗↘", expanded=False):
             col_left, col_mid, col_right = st.columns([2, 3, 3])
             with col_left:
                 display_rs_rsi_info(selected)
@@ -367,6 +367,7 @@ with st.expander("📘 說明：這是什麼？"):
     - **📈 價漲「量增」，主力看多做多，趨勢向上; 📉 價跌「量增」，主力看空做空，趨勢向下**
     - **📈 上漲過程中，只要「帶量大紅k低點沒跌破」、「三盤沒跌破」，行情都能延續，應續抱**
     - **📈 進場 either 遠離(上方)壓力 or 突破壓力**
+    - **🚩 第1根5分K低點 ✚ 盤中均價線 不能破**
     - **🎯 預判 蹲點 找飆股:** 技術線型(找已吃貨且還沒噴的) & 籌碼(主力守與拉的動機) & 扣抵(適合進攻的地形)
     - 工作流程: 紅字加碼/鎖利-> 分析匯集精選股-> 高分贏勢股 + 其他股
     - 股票代碼清單來自 `my_stock_holdings.txt`
