@@ -72,6 +72,41 @@ def compute_wma5_with_today(
     return wma5, a, b, c, d, e, f
 
 
+def get_wma5_position_flags_with_today(
+    stock_id: str,
+    today_date: str,
+    today_close: float,
+    *,
+    debug_print: bool = False,
+) -> Optional[Tuple[float, bool, bool]]:
+    """回傳 (wma5, above_wma5, upward_wma5)，資料不足回傳 None。
+
+    - above_wma5: a(=today_close) > wma5
+    - upward_wma5: a(=today_close) > f (前 5 週週收盤)
+    """
+    res = compute_wma5_with_today(stock_id, today_date, today_close)
+    if res is None:
+        if debug_print:
+            print(
+                f"[WMA5 DEBUG] stock={stock_id} today_date={today_date} 資料不足（至少需 6 週含本週）"
+            )
+        return None
+
+    wma5, a, b, c, d, e, f = res
+    above_wma5 = a > wma5
+    upward_wma5 = a > f
+
+    if debug_print:
+        wma5_2dp = round(wma5, 2)
+        print(
+            f"[WMA5 DEBUG] stock={stock_id} today_date={today_date} "
+            f"above_wma5={above_wma5} upward_wma5={upward_wma5} wma5={wma5_2dp} "
+            f"a={a} b={b} c={c} d={d} e={e} f={f}"
+        )
+
+    return wma5, above_wma5, upward_wma5
+
+
 def is_price_above_upward_wma5(
     stock_id: str,
     today_date: str,
@@ -83,21 +118,13 @@ def is_price_above_upward_wma5(
     判斷是否「現價站上上彎 5 週均線」；
     debug_print=True 時會印出 wma5 與 a~f 供查核。
     """
-    res = compute_wma5_with_today(stock_id, today_date, today_close)
-    if res is None:
-        if debug_print:
-            print(f"[WMA5 DEBUG] stock={stock_id} today_date={today_date} 資料不足（至少需 6 週含本週）")
+    flags = get_wma5_position_flags_with_today(
+        stock_id,
+        today_date,
+        today_close,
+        debug_print=debug_print,
+    )
+    if flags is None:
         return False
-
-    wma5, a, b, c, d, e, f = res
-
-    if debug_print:
-        wma5_2dp = round(wma5, 2)
-        print(
-            f"[WMA5 DEBUG] stock={stock_id} today_date={today_date} "
-            f"c1(a)={a} wma5={wma5_2dp} a={a} b={b} c={c} d={d} e={e} f={f}"
-        )
-
-    cond1 = a > wma5
-    cond2 = a > f
-    return cond1 and cond2
+    _wma5, above_wma5, upward_wma5 = flags
+    return above_wma5 and upward_wma5

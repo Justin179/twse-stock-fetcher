@@ -5,7 +5,10 @@ from analyze.analyze_price_break_conditions_dataloader import (
 )
 from common.db_helpers import fetch_close_history_from_db, fetch_close_history_trading_only_from_db
 from analyze.price_baseline_checker import check_price_vs_baseline_and_deduction
-from analyze.moving_average_weekly import is_price_above_upward_wma5
+from analyze.moving_average_weekly import (
+    get_wma5_position_flags_with_today,
+    is_price_above_upward_wma5,
+)
 from analyze.moving_average_monthly import is_price_above_upward_mma5
 # 檔頭適當位置加入
 from analyze.week_month_kbar_tags_helper import get_week_month_tags
@@ -1396,10 +1399,24 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             )
 
 
-            if above_upward_wma5:
-                st.markdown("- ✅ **現價站上 上彎5週均線！**", unsafe_allow_html=True)
+            wma5_flags = get_wma5_position_flags_with_today(stock_id, today_date, c1, debug_print=False)
+            if wma5_flags is None:
+                st.markdown("- ➖ **5週均線：資料不足**", unsafe_allow_html=True)
             else:
-                st.markdown("- ❌ **現價未站上 上彎5週均線 💀**", unsafe_allow_html=True)
+                wma5, above_wma5, upward_wma5 = wma5_flags
+                # UI 規則：
+                # ❌ 現價跌破 5週均線：只看是否小於 wma5（不管上彎/下彎）
+                if float(c1) < float(wma5):
+                    st.markdown("- ❌ **現價跌破 5週均線 💀**", unsafe_allow_html=True)
+                else:
+                    # ✅/✔️：都屬於「現價站上(含等於) 5週均線」情境，再用 cond2 判斷上彎
+                    if upward_wma5:
+                        st.markdown(
+                            "- ✅ **現價站上 <span style='color:#ef4444; font-weight:700'>上彎</span>5週均線！**",
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.markdown("- ✔️ **現價站上 5週均線！**", unsafe_allow_html=True)
 
             if above_upward_mma5:
                 st.markdown("- ✅ **現價站上 上彎5個月均線！**", unsafe_allow_html=True)
