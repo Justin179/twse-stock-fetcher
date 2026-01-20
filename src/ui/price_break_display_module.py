@@ -13,6 +13,11 @@ from analyze.moving_average_monthly import (
     get_mma5_position_flags_with_today,
     is_price_above_upward_mma5,
 )
+# Optional, modular feature: short/mid/long MA trend phrase
+try:
+    from analyze.trend_phrase import get_trend_phrase
+except Exception:  # pragma: no cover
+    get_trend_phrase = None
 # 檔頭適當位置加入
 from analyze.week_month_kbar_tags_helper import get_week_month_tags
 
@@ -1279,6 +1284,15 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         h, l = get_yesterday_hl(stock_id, today_date)
         c1, o, c2 = today["c1"], today["o"], today["c2"]
         v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
+
+        # Feature flag: easy to disable / uninstall later
+        ENABLE_TREND_PHRASE = True
+        trend_phrase: Optional[str] = None
+        if ENABLE_TREND_PHRASE and get_trend_phrase is not None:
+            try:
+                trend_phrase = get_trend_phrase(stock_id, today_date, today_close=c1)
+            except Exception:
+                trend_phrase = None
         
         above_upward_wma5 = is_price_above_upward_wma5(stock_id, today_date, c1, debug_print=False)
         above_upward_mma5 = is_price_above_upward_mma5(stock_id, today_date, c1, debug_print=False)
@@ -1400,6 +1414,13 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                 f"<span style='color:blue; font-weight:bold'>(現價)：{c1}</span>{extra_info}{volume_mark}",
                 unsafe_allow_html=True,
             )
+
+            # 🔹 Short/Mid/Long MA trend phrase (daily/weekly/monthly)
+            if trend_phrase:
+                st.markdown(
+                    f"- <span style='color:#1f77b4; font-weight:700'>趨勢</span>：<span style='font-weight:800'>{trend_phrase}</span>",
+                    unsafe_allow_html=True,
+                )
 
 
             wma5_flags = get_wma5_position_flags_with_today(stock_id, today_date, c1, debug_print=False)
