@@ -67,7 +67,7 @@ def _load_close_series(
     return df.iloc[::-1].reset_index(drop=True)
 
 
-def _classify_ma_trend(close: Sequence[float], windows: Tuple[int, int, int] = (5, 10, 20)) -> TrendResult:
+def _classify_ma_trend(close: Sequence[float], windows: Tuple[int, int, int] = (5, 10, 24)) -> TrendResult:
     w_fast, w_mid, w_slow = windows
     s = pd.Series(list(close), dtype="float64")
 
@@ -111,9 +111,9 @@ def compute_trend_tokens(
     today_date: str,
     today_close: Optional[float] = None,
     db_path: str = DEFAULT_DB_PATH,
-    daily_windows: Tuple[int, int, int] = (5, 10, 20),
-    weekly_windows: Tuple[int, int, int] = (5, 10, 20),
-    monthly_windows: Tuple[int, int, int] = (5, 10, 20),
+    daily_windows: Tuple[int, int, int] = (5, 10, 24),
+    weekly_windows: Tuple[int, int, int] = (5, 10, 24),
+    monthly_windows: Tuple[int, int, int] = (5, 10, 24),
 ) -> Tuple[TrendResult, TrendResult, TrendResult]:
     """Return (daily, weekly, monthly) trend results.
 

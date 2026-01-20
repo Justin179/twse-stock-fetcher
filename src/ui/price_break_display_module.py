@@ -1417,8 +1417,26 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
 
             # 🔹 Short/Mid/Long MA trend phrase (daily/weekly/monthly)
             if trend_phrase:
+                # Expect pattern like: "短✅ 中➖ 長❌" and expand labels to 短期/中期/長期
+                parts = str(trend_phrase).split()
+                if len(parts) == 3:
+                    short_part, mid_part, long_part = parts
+
+                    def _expand(part: str, prefix: str) -> str:
+                        if isinstance(part, str) and len(part) >= 1:
+                            return f"{prefix}{part[1:]}"
+                        return part
+
+                    styled_phrase = (
+                        f"{_expand(short_part, '短期')} "
+                        f"{_expand(mid_part, '中期')} "
+                        f"{_expand(long_part, '長期')}"
+                    )
+                else:
+                    styled_phrase = str(trend_phrase)
+
                 st.markdown(
-                    f"- <span style='color:#1f77b4; font-weight:700'>趨勢</span>：<span style='font-weight:800'>{trend_phrase}</span>",
+                    f"- <span style='color:#1f77b4; font-weight:700'>趨勢</span>：<span style='font-weight:450'>{styled_phrase}</span>",
                     unsafe_allow_html=True,
                 )
 
