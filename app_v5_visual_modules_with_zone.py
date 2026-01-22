@@ -75,6 +75,18 @@ st.markdown("""
 sdk, dl = init_session_login_objects()
 
 
+def trigger_main_force_update(stock_id: str) -> None:
+    cmd = f"start /min python src\\tools\\update_single_stock_main_force.py {stock_id}"
+    subprocess.Popen(cmd, shell=True)
+    st.session_state[f"show_update_msg_{stock_id}"] = True
+
+
+def trigger_institutional_update(stock_id: str) -> None:
+    cmd = f"start /min python src\\tools\\update_single_stock_institutional.py {stock_id}"
+    subprocess.Popen(cmd, shell=True)
+    st.session_state[f"show_update_msg_inst_{stock_id}"] = True
+
+
 col1, col2 = st.columns([1, 6])
 with col1:
     # 🔹 期現價差資訊（添加在股票代碼選單上方）
@@ -166,6 +178,15 @@ with col1:
     with st.expander("💰 T+2 在途應收付", expanded=False):
         render_t2_settlement_tracker()
 
+    # 🔹 左側快捷更新（免捲動到下方）
+    quick_col1, quick_col2 = st.columns(2)
+    with quick_col1:
+        if st.button("🔄 主力", key=f"sidebar_update_main_force_{selected}", use_container_width=True):
+            trigger_main_force_update(selected)
+    with quick_col2:
+        if st.button("🔄 外資", key=f"sidebar_update_institutional_{selected}", use_container_width=True):
+            trigger_institutional_update(selected)
+
     # 🔹 左側底部提示文字（藍圈位置）
     st.markdown(
         """
@@ -229,10 +250,7 @@ with col2:
         
         with col_btn:
             if st.button("🔄 更新", key=f"update_main_force_{selected}", help="背景更新此股票的主力買賣超資料"):
-                # 背景執行更新程式
-                cmd = f'start /min python src\\tools\\update_single_stock_main_force.py {selected}'
-                subprocess.Popen(cmd, shell=True)
-                st.session_state[f'show_update_msg_{selected}'] = True
+                trigger_main_force_update(selected)
         
         with col_msg:
             # 顯示背景執行提示（3秒後自動淡出）
@@ -280,10 +298,7 @@ with col2:
         
         with col_btn2:
             if st.button("🔄 更新", key=f"update_institutional_{selected}", help="背景更新此股票的外資、投信買賣超與持股比率資料"):
-                # 背景執行更新程式
-                cmd = f'start /min python src\\tools\\update_single_stock_institutional.py {selected}'
-                subprocess.Popen(cmd, shell=True)
-                st.session_state[f'show_update_msg_inst_{selected}'] = True
+                trigger_institutional_update(selected)
         
         with col_msg2:
             # 顯示背景執行提示（3秒後自動淡出）
