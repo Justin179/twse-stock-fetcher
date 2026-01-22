@@ -156,6 +156,15 @@ with col1:
         """,
         unsafe_allow_html=True,
     )
+
+    # 🔹 左側快捷更新（免捲動到下方）
+    quick_col1, quick_col2 = st.columns(2)
+    with quick_col1:
+        if st.button("🔄 主力", key=f"sidebar_update_main_force_{selected}", use_container_width=True):
+            trigger_main_force_update(selected)
+    with quick_col2:
+        if st.button("🔄 外資", key=f"sidebar_update_institutional_{selected}", use_container_width=True):
+            trigger_institutional_update(selected)
     
     # 🔹 當前週數顯示
     today = datetime.now()
@@ -169,7 +178,7 @@ with col1:
         month_phase_tag = ", 月中贏"
 
     st.markdown(f"""
-    <div style='text-align: center; padding: 8px; background-color: #f0f2f6; border-radius: 5px; margin-top: 10px;'>
+    <div style='text-align: center; padding: 8px; background-color: #f0f2f6; border-radius: 5px; margin-top: 2px;'>
         <span style='font-size: 20px; font-weight: bold; color: #1f77b4;'>📅 Week {week_num}{month_phase_tag}</span>
     </div>
     """, unsafe_allow_html=True)
@@ -177,15 +186,6 @@ with col1:
     # 🔹 T+2 在途應收付追蹤器（移到 Week x 下面）
     with st.expander("💰 T+2 在途應收付", expanded=False):
         render_t2_settlement_tracker()
-
-    # 🔹 左側快捷更新（免捲動到下方）
-    quick_col1, quick_col2 = st.columns(2)
-    with quick_col1:
-        if st.button("🔄 主力", key=f"sidebar_update_main_force_{selected}", use_container_width=True):
-            trigger_main_force_update(selected)
-    with quick_col2:
-        if st.button("🔄 外資", key=f"sidebar_update_institutional_{selected}", use_container_width=True):
-            trigger_institutional_update(selected)
 
     # 🔹 左側底部提示文字（藍圈位置）
     st.markdown(
