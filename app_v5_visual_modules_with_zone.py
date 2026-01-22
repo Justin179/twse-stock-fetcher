@@ -166,6 +166,16 @@ with col1:
     with st.expander("💰 T+2 在途應收付", expanded=False):
         render_t2_settlement_tracker()
 
+    # 🔹 左側底部提示文字（藍圈位置）
+    st.markdown(
+        """
+        <div style='text-align: center; font-size: 18px; font-weight: 500; margin-top: -6px; margin-bottom: 2px; line-height: 1.2; padding: 0;'>
+            <span style='color: #ff4b4b; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 20px; font-weight: 550;'>沒事就抱著</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # 🔹 移到左側最底部：temp_list 快速檢視
     render_temp_list_expander(
         temp_txt="temp_list.txt",
