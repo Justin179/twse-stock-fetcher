@@ -216,7 +216,7 @@ with col1:
 
 with col2:
     if selected:
-        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算 / 🚧 either 遠離(上方)壓力 or 帶量突破壓力 / 📕 關鍵紅K低點 ＆ 三盤沒破 應續抱 / 🚩 趨勢向上 ＆ 主力做多 應做多 / 量即↗↘", expanded=False):
+        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算 / 🚧 either 遠離(上方)壓力 or 帶量突破壓力 / 📕 關K低 ＆ 三盤沒破 應續抱 / 🎢 趨勢向上 ＆ 主力做多 應做多 / 量即↗↘", expanded=False):
             col_left, col_mid, col_right = st.columns([2, 3, 3])
             with col_left:
                 display_rs_rsi_info(selected)
@@ -398,6 +398,7 @@ with col2:
 
 with st.expander("📘 說明：這是什麼？"):
     st.markdown("""
+    - **📈 多頭大賺小賠邏輯: 上不預設高點，下停損/利 設好**            
     - **📈 做波段主要是看趨勢，單一k棒的漲跌一般不會改變趨勢**
     - **📈 價漲「量增」，是主力願意追價買進的結果，說明後面看更多; 📉 價跌「量增」，是主力願意降價求售的結果，說明後面看更空**
     - **📈 價漲「量增」，主力看多做多，趨勢向上; 📉 價跌「量增」，主力看空做空，趨勢向下**
