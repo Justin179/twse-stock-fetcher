@@ -1278,10 +1278,21 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
         # 1101 成交量v: 16991
         # 2330 成交量v: 13800
         
-        today_date = today["date"]
-        db_data = get_recent_prices(stock_id, today_date)
+        # NOTE:
+        # 富邦 API 的 quote.date 有時會落在「上一個交易日」（例如開盤前/某些時段），
+        # 若直接用該日期做 DB cutoff (date < today_date)，會把「昨量」誤判成「前天量」。
+        # 因此用本機日曆日與 quote.date 取較大者作為 DB cutoff。
+        api_date = today.get("date")
+        local_date = datetime.now().strftime("%Y-%m-%d")
+        if isinstance(api_date, str) and len(api_date) >= 10:
+            effective_today_date = max(api_date[:10], local_date)
+        else:
+            effective_today_date = local_date
+
+        today_date = effective_today_date
+        db_data = get_recent_prices(stock_id, effective_today_date)
         w1, w2, m1, m2 = get_week_month_high_low(stock_id)
-        h, l = get_yesterday_hl(stock_id, today_date)
+        h, l = get_yesterday_hl(stock_id, effective_today_date)
         c1, o, c2 = today["c1"], today["o"], today["c2"]
         v1 = db_data.iloc[0]["volume"] if len(db_data) > 0 else None
 
