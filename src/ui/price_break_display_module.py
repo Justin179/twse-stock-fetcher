@@ -1794,11 +1794,11 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
                                 )
                                 seg = seg.replace(
                                     "突破",
-                                    "<span style='color:#ef4444; font-weight:700'>突破</span>",
+                                    "<span style='color:#ef4444; font-weight:700'>突破</span>(波段開始)",
                                 )
                                 seg = seg.replace(
                                     "跌破",
-                                    "<span style='color:#16a34a; font-weight:700'>跌破</span>",
+                                    "<span style='color:#16a34a; font-weight:700'>跌破</span>(波段結束)",
                                 )
                             except Exception:
                                 pass
