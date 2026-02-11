@@ -242,7 +242,7 @@ with col2:
             st.plotly_chart(fig_zone, use_container_width=True)
         
         st.markdown(f"""
-        <span style='font-size:20px'>📈 強勢股，應在上漲過程中，守住基準價與扣抵值(就可續抱) 與5日均</span>
+        <span style='font-size:20px'>📈 強勢股，應在上漲過程中，守住基準價與扣抵值(上軌道 可續抱) 與5日均</span>
         <span style='font-size:16px; color:gray'>　{selected_display}</span>
         """, unsafe_allow_html=True)
         fig_strength = analyze_10day_strength(selected)
