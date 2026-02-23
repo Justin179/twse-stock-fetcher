@@ -200,8 +200,16 @@ with col1:
     # 🔹 左側底部提示文字（藍圈位置）
     st.markdown(
         """
-        <div style='text-align: center; font-size: 18px; font-weight: 500; margin-top: -6px; margin-bottom: 12px; line-height: 1.2; padding: 0;'>
-            𝓟𝓻𝓸 <span style='color: #ff4b4b; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 20px; font-weight: 550;'>沒事就抱著</span>
+        <div style='text-align: center; font-size: 18px; font-weight: 500; margin-top: -6px; margin-bottom: 12px; line-height: 1.30; padding: 0;'>
+            <div style='margin: 0;'>
+                𝓟𝓻𝓸 <span style='color: #ff4b4b; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 20px; font-weight: 550;'>沒事就抱著</span>
+            </div>
+            <div style='margin-top: 6px;'>
+                <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 20px; font-weight: 550;'>關K低 三盤沒破</span>
+            </div>
+            <div style='margin-top: 6px;'>
+                <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 19px; font-weight: 500;'>守住 基準 扣抵 5日均</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
