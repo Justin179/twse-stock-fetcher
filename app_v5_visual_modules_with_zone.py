@@ -202,7 +202,7 @@ with col1:
         """
         <div style='text-align: center; font-size: 18px; font-weight: 500; margin-top: -6px; margin-bottom: 12px; line-height: 1.30; padding: 0;'>
             <div style='margin: 0;'>
-                𝓟𝓻𝓸 <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 20px; font-weight: 550;'>沒事就續抱</span>
+                𝓟𝓻𝓸 <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 20px; font-weight: 550;'>沒事就「續抱」</span>
             </div>
             <div style='margin-top: 6px;'>
                 <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 19px; font-weight: 500;'>「關K低 三盤沒破」or</span>
