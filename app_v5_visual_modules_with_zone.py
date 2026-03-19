@@ -224,7 +224,7 @@ with col1:
 
 with col2:
     if selected:
-        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算 / 📕 關K低 ＆ 三盤沒破 應續抱 / 🎢 買在 三盤突破(遠離上方壓力 or 帶量突破壓力) or 上升波.量縮拉回支撐 / 🥀 賣在力竭 / ☄️ 量即↗↘", expanded=False):
+        with st.expander("🧮 RSI / RS & 乖離率 / 成交量 / PEG 快算 / 📕 第一根帶量突破k棒可上車 / 🎢 買在 三盤突破(遠離上方壓力 or 帶量突破壓力) or 上升波.量縮拉回支撐 / 🥀 賣在力竭 / ☄️ 量即↗↘", expanded=False):
             col_left, col_mid, col_right = st.columns([2, 3, 3])
             with col_left:
                 display_rs_rsi_info(selected)
