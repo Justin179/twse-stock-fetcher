@@ -23,6 +23,9 @@ def plot_eps_with_close_price(stock_id, db_path="data/institution.db"):
     if df.empty:
         raise ValueError("查無資料，請確認資料庫中是否有該股票的 EPS 資料。")
 
+    df["eps"] = pd.to_numeric(df["eps"], errors="coerce")
+    df["season_close_price"] = pd.to_numeric(df["season_close_price"], errors="coerce")
+
     # 解析 season，例如 2024Q1
     def parse_season(s):
         match = re.match(r"(\d{4})Q(\d)", s)
@@ -32,14 +35,26 @@ def plot_eps_with_close_price(stock_id, db_path="data/institution.db"):
     df = df.sort_values(by=["year", "quarter"]).tail(20).copy()
     df["label"] = df["season"].apply(lambda s: s[-4:])  # 例如 24Q1
 
+    if df["eps"].notna().sum() == 0:
+        raise ValueError("查無有效 EPS 資料，請確認資料庫中的 EPS 是否已更新。")
+
     # 計算去年全年 EPS
     current_year = datetime.now().year
     last_year = current_year - 1
     eps_last_year_df = df[(df["year"] == last_year) & (df["quarter"].isin([1, 2, 3, 4]))]
-    total_eps_last_year = eps_last_year_df["eps"].sum() if not eps_last_year_df.empty else None
+    total_eps_last_year = eps_last_year_df["eps"].sum(min_count=1) if not eps_last_year_df.empty else None
+    if pd.isna(total_eps_last_year):
+        total_eps_last_year = None
 
     # 設定 Bar 顏色（正數淡紅、負數淡綠）
-    colors_eps = ["rgba(255, 0, 0, 0.6)" if val >= 0 else "rgba(56, 200, 35, 0.8)" for val in df["eps"]]
+    colors_eps = [
+        "rgba(255, 0, 0, 0.6)"
+        if pd.notna(val) and val >= 0
+        else "rgba(56, 200, 35, 0.8)"
+        if pd.notna(val)
+        else "rgba(160, 160, 160, 0.35)"
+        for val in df["eps"]
+    ]
 
     fig = go.Figure()
 
