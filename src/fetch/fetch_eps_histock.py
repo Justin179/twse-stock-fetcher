@@ -87,6 +87,18 @@ def save_eps_to_db(data, db_path=DB_PATH):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS profitability_ratios (
+            stock_id TEXT,
+            season TEXT,
+            gross_profit_margin REAL,
+            operating_profit_margin REAL,
+            net_income_margin REAL,
+            eps REAL,
+            PRIMARY KEY (stock_id, season)
+        )
+    """)
+
     # 確保 eps 欄位存在
     cursor.execute("PRAGMA table_info(profitability_ratios)")
     columns = [col[1] for col in cursor.fetchall()]
@@ -97,17 +109,13 @@ def save_eps_to_db(data, db_path=DB_PATH):
     success_count = 0
     for stock_id, season, eps_value in data:
         cursor.execute("""
-            SELECT 1 FROM profitability_ratios
-            WHERE stock_id = ? AND season = ?
-        """, (stock_id, season))
-        if cursor.fetchone():
-            cursor.execute("""
-                UPDATE profitability_ratios
-                SET eps = ?
-                WHERE stock_id = ? AND season = ?
-            """, (eps_value, stock_id, season))
-            if cursor.rowcount > 0:
-                success_count += 1
+            INSERT INTO profitability_ratios (stock_id, season, eps)
+            VALUES (?, ?, ?)
+            ON CONFLICT(stock_id, season) DO UPDATE SET
+                eps = excluded.eps
+        """, (stock_id, season, eps_value))
+        if cursor.rowcount > 0:
+            success_count += 1
 
     conn.commit()
     conn.close()

@@ -80,9 +80,13 @@ def save_to_db(data, db_path="data/institution.db"):
     success_count = 0
     for row in data:
         cursor.execute("""
-            INSERT OR IGNORE INTO profitability_ratios
+            INSERT INTO profitability_ratios
             (stock_id, season, gross_profit_margin, operating_profit_margin, net_income_margin)
             VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(stock_id, season) DO UPDATE SET
+                gross_profit_margin = excluded.gross_profit_margin,
+                operating_profit_margin = excluded.operating_profit_margin,
+                net_income_margin = excluded.net_income_margin
         """, row)
         if cursor.rowcount > 0:
             success_count += 1
