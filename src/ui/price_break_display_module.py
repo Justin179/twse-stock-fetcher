@@ -494,8 +494,8 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
             icon_prefix = "✔️ "
         elif val > 40:
             icon_prefix = "⚠️ "
-    
-    # 均線開口（10 → 5 或 24 → 10）
+
+    # 均線開口（10 → 5、24 → 10、24 → 5）
     elif "均線開口" in title:
         if 0 < val <= 1.8:
             icon_prefix = "✅ "
@@ -503,7 +503,9 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
             icon_prefix = "✔️ "
         elif title == "10 → 5 均線開口" and val > 10:
             icon_prefix = "⚠️ "
-        elif title == "24 → 10 均線開口" and val > 20:
+        elif title == "24 → 10 均線開口" and val > 15:
+            icon_prefix = "⚠️ "
+        elif title == "24 → 5 均線開口" and val > 20:
             icon_prefix = "⚠️ "
 
     # ===== 新需求：只要為負值，詞條最前面加上 ⚠️ =====
@@ -1898,6 +1900,7 @@ def display_price_break_analysis(stock_id: str, dl=None, sdk=None):
             render_bias_line("24日均線乖離", ma24, c1, stock_id=stock_id, today_date=today_date)
             render_bias_line("10 → 5 均線開口",  ma10, ma5)    # 開口不需判斷彎向
             render_bias_line("24 → 10 均線開口", ma24, ma10)  # 開口不需判斷彎向
+            render_bias_line("24 → 5 均線開口",  ma24, ma5)   # 開口不需判斷彎向
             
             # 🔹 加入成交量預估
             from ui.volume_forecast import render_volume_forecast
