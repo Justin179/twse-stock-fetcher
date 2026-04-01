@@ -1,13 +1,9 @@
-import pandas as pd
 import sqlite3
 from pathlib import Path
 import sys
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from src.analyze.stock_conditions import apply_conditions
 from src.ui.condition_selector import get_user_selected_conditions
-from src.analyze.calculate_weekly_ma import calculate_weekly_ma
-from src.common.db_helpers import fetch_stock_history_from_db
 
 
 # 價量同步+短多有撐開口小
@@ -64,6 +60,12 @@ if __name__ == "__main__":
 
     conditions = get_user_selected_conditions(
         use_gui=use_gui, default_conditions=custom_conditions, bias_threshold=bias_threshold)
+
+    print("⏳ 載入分析模組中，請稍候...")
+    import pandas as pd
+    from src.analyze.stock_conditions import apply_conditions
+    from src.analyze.calculate_weekly_ma import calculate_weekly_ma
+    from src.common.db_helpers import fetch_stock_history_from_db
 
     db_path = str(Path(__file__).resolve().parent.parent / "data" / "institution.db")
     
