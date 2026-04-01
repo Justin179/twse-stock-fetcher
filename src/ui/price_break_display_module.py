@@ -501,7 +501,9 @@ def render_bias_line(title: str, a, b, *, stock_id: str = None, today_date: str 
             icon_prefix = "✅ "
         elif 1.8 < val <= 3.6:
             icon_prefix = "✔️ "
-        elif val > 20:
+        elif title == "10 → 5 均線開口" and val > 10:
+            icon_prefix = "⚠️ "
+        elif title == "24 → 10 均線開口" and val > 20:
             icon_prefix = "⚠️ "
 
     # ===== 新需求：只要為負值，詞條最前面加上 ⚠️ =====
