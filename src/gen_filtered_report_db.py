@@ -2,6 +2,20 @@ import sqlite3
 from pathlib import Path
 import sys
 
+
+def configure_console_encoding() -> None:
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except ValueError:
+            pass
+
+
+configure_console_encoding()
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from src.ui.condition_selector import get_user_selected_conditions
 
@@ -41,7 +55,7 @@ elif input_name == "break_above_last_months_high":
 else:
     xq_filename = f"{input_name}_output.csv"
 
-if __name__ == "__main__":
+def main() -> int:
     use_gui = True
 
     # 🎯 判斷是否為 high_relative_strength_stocks，套用自定義條件
@@ -141,3 +155,13 @@ if __name__ == "__main__":
             f"📁 報表輸出：all_report.csv（{bias_threshold}%），"
             f"XQ 匯入：{xq_filename}（共 {len(xq_list)} 檔）\n"
         )
+
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except KeyboardInterrupt:
+        print("\n⚠️ 偵測到使用者中斷執行，程式已停止。若畫面沒有跳出條件視窗，請先檢查它是否被其他視窗擋住。")
+        raise SystemExit(130)
