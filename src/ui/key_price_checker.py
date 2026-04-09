@@ -224,7 +224,7 @@ def render_key_price_checker(file_path: str = KEY_PRICE_FILE, db_path: str = DB_
 
     with st.expander("🎯 指定價格點位檢查", expanded=False):
         feedback_placeholder = st.empty()
-        st.caption("盤中可先儲存股票代碼與價格點位，收盤後按 check 篩出帶量站上或帶量跌破指定點位的股票。")
+        st.caption("盤中可先儲存股票代碼與價格點位，收盤後按「執行」篩出帶量站上或帶量跌破指定點位的股票。")
 
         form_version = st.session_state.get("key_price_form_version", 0)
         stock_input_key = f"key_price_stock_id_input_{form_version}"
@@ -237,7 +237,7 @@ def render_key_price_checker(file_path: str = KEY_PRICE_FILE, db_path: str = DB_
                 placeholder="例如 2330",
             ).strip()
             target_price_input = st.text_input(
-                "價格點位 x",
+                "關鍵點位 x",
                 key=price_input_key,
                 placeholder="例如 1969",
             ).strip()
