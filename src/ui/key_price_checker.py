@@ -226,15 +226,19 @@ def render_key_price_checker(file_path: str = KEY_PRICE_FILE, db_path: str = DB_
         feedback_placeholder = st.empty()
         st.caption("盤中可先儲存股票代碼與價格點位，收盤後按 check 篩出帶量站上或帶量跌破指定點位的股票。")
 
+        form_version = st.session_state.get("key_price_form_version", 0)
+        stock_input_key = f"key_price_stock_id_input_{form_version}"
+        price_input_key = f"key_price_target_price_input_{form_version}"
+
         with st.form("key_price_input_form", clear_on_submit=False):
             stock_id_input = st.text_input(
                 "股票代碼",
-                key="key_price_stock_id_input",
+                key=stock_input_key,
                 placeholder="例如 2330",
             ).strip()
             target_price_input = st.text_input(
                 "價格點位 x",
-                key="key_price_target_price_input",
+                key=price_input_key,
                 placeholder="例如 1969",
             ).strip()
 
@@ -256,7 +260,22 @@ def render_key_price_checker(file_path: str = KEY_PRICE_FILE, db_path: str = DB_
             else:
                 existed = upsert_key_price(stock_id_input, target_price, file_path=file_path)
                 action_text = "已覆蓋" if existed else "已新增"
-                feedback_placeholder.success(f"{action_text} {stock_id_input} → {_format_price(target_price)}")
+                st.session_state["key_price_form_version"] = form_version + 1
+                st.session_state["key_price_feedback"] = f"{action_text} {stock_id_input} → {_format_price(target_price)}"
+                st.session_state["key_price_feedback_type"] = "success"
+                st.session_state.pop(stock_input_key, None)
+                st.session_state.pop(price_input_key, None)
+                st.rerun()
+
+        feedback_message = st.session_state.pop("key_price_feedback", None)
+        feedback_type = st.session_state.pop("key_price_feedback_type", "success")
+        if feedback_message:
+            if feedback_type == "success":
+                feedback_placeholder.success(feedback_message)
+            elif feedback_type == "warning":
+                feedback_placeholder.warning(feedback_message)
+            else:
+                feedback_placeholder.info(feedback_message)
 
         entries = load_key_price_map(file_path=file_path)
 
