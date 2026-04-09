@@ -350,4 +350,4 @@ def render_key_price_checker(file_path: str = KEY_PRICE_FILE, db_path: str = DB_
                 st.info("本次沒有符合條件的股票。")
 
             if skipped_count:
-                st.caption(f"另有 {skipped_count} 檔未觸發條件或資料不足，因此未列出。")
+                st.caption(f"有 {skipped_count} 檔未觸發條件或資料不足，因此未列出。")
