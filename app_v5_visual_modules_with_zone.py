@@ -27,6 +27,7 @@ from ui.peg_calculator import render_peg_calculator
 from ui.volume_avg_calculator import render_volume_avg_calculator
 from common.futures_spread_helper import get_futures_spread_info, format_futures_spread_display
 from tools.t2_settlement_tracker import render_t2_settlement_tracker
+from ui.key_price_checker import render_key_price_checker
 
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
@@ -216,6 +217,8 @@ with col1:
     )
 
     # 🔹 移到左側最底部：temp_list 快速檢視
+    render_key_price_checker(sdk=sdk)
+
     render_temp_list_expander(
         temp_txt="temp_list.txt",
         db_path="data/institution.db",
