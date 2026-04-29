@@ -26,7 +26,7 @@ from ui.bias_calculator import render_bias_calculator
 from ui.peg_calculator import render_peg_calculator
 from ui.prev_close_move_calculator import render_prev_close_move_calculator
 from ui.volume_avg_calculator import render_volume_avg_calculator
-from common.futures_spread_helper import get_futures_spread_info, format_futures_spread_display
+from common.futures_spread_helper import get_futures_spread_info, format_futures_spread_display, get_futures_spread_status
 from tools.t2_settlement_tracker import render_t2_settlement_tracker
 from ui.key_price_checker import render_key_price_checker
 from analyze.analyze_price_break_conditions_dataloader import get_today_prices
@@ -97,6 +97,12 @@ with col1:
         futures_data = get_futures_spread_info()
         spread_display = format_futures_spread_display(futures_data)
         st.markdown(spread_display)
+        futures_status = get_futures_spread_status()
+        if futures_status.get("message"):
+            if futures_status.get("level") == "error":
+                st.warning(f"期現價差 debug: {futures_status['message']}")
+            else:
+                st.caption(f"期現價差 debug: {futures_status['message']}")
     
     # 下拉選單區
     stock_ids, stock_display = load_stock_list_with_names(refresh=True)
