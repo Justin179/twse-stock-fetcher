@@ -24,10 +24,12 @@ from ui.collect_stock_button import render_collect_stock_button
 from ui.show_temp_list_expander import render_temp_list_expander
 from ui.bias_calculator import render_bias_calculator
 from ui.peg_calculator import render_peg_calculator
+from ui.prev_close_move_calculator import render_prev_close_move_calculator
 from ui.volume_avg_calculator import render_volume_avg_calculator
 from common.futures_spread_helper import get_futures_spread_info, format_futures_spread_display
 from tools.t2_settlement_tracker import render_t2_settlement_tracker
 from ui.key_price_checker import render_key_price_checker
+from analyze.analyze_price_break_conditions_dataloader import get_today_prices
 
 
 plt.rcParams['font.family'] = 'Microsoft JhengHei'
@@ -233,7 +235,15 @@ with col2:
                 display_rs_rsi_info(selected)
 
             with col_mid:
+                prev_close = None
+                try:
+                    today_prices = get_today_prices(selected, sdk=sdk)
+                    prev_close = today_prices.get("c2") if today_prices else None
+                except Exception:
+                    prev_close = None
+
                 render_bias_calculator(key_suffix=selected, compact=True)
+                render_prev_close_move_calculator(previous_close=prev_close, key_suffix=selected, compact=True)
                 render_volume_avg_calculator(key_suffix=selected, compact=True, default_days=5)
 
             with col_right:
