@@ -312,24 +312,6 @@ def render_key_price_checker(file_path: str = KEY_PRICE_FILE, db_path: str = DB_
 
         entries = load_key_price_map(file_path=file_path)
 
-        if entries:
-            st.markdown("**目前 key_price.txt**")
-            for stock_id, target_price in entries.items():
-                item_col1, item_col2 = st.columns([5, 1])
-                with item_col1:
-                    st.write(f"- {format_stock_display(stock_id, stock_meta_map)} , x = {_format_price(target_price)}")
-                with item_col2:
-                    if st.button("刪除", key=f"delete_key_price_{stock_id}", use_container_width=True):
-                        deleted = delete_key_price(stock_id, file_path=file_path)
-                        st.session_state.pop("key_price_check_results_above", None)
-                        st.session_state.pop("key_price_check_results_below", None)
-                        st.session_state.pop("key_price_check_skipped_count", None)
-                        if deleted:
-                            feedback_placeholder.success(f"已刪除 {stock_id}")
-                            st.rerun()
-        else:
-            st.info("目前尚未設定任何指定價格點位。")
-
         if "key_price_check_results_above" in st.session_state or "key_price_check_results_below" in st.session_state:
             above_results = st.session_state.get("key_price_check_results_above", [])
             below_results = st.session_state.get("key_price_check_results_below", [])
@@ -351,3 +333,21 @@ def render_key_price_checker(file_path: str = KEY_PRICE_FILE, db_path: str = DB_
 
             if skipped_count:
                 st.caption(f"有 {skipped_count} 檔未觸發條件或資料不足，因此未列出。")
+
+        if entries:
+            st.markdown("**目前 key_price.txt**")
+            for stock_id, target_price in entries.items():
+                item_col1, item_col2 = st.columns([5, 1])
+                with item_col1:
+                    st.write(f"- {format_stock_display(stock_id, stock_meta_map)} , x = {_format_price(target_price)}")
+                with item_col2:
+                    if st.button("刪除", key=f"delete_key_price_{stock_id}", use_container_width=True):
+                        deleted = delete_key_price(stock_id, file_path=file_path)
+                        st.session_state.pop("key_price_check_results_above", None)
+                        st.session_state.pop("key_price_check_results_below", None)
+                        st.session_state.pop("key_price_check_skipped_count", None)
+                        if deleted:
+                            feedback_placeholder.success(f"已刪除 {stock_id}")
+                            st.rerun()
+        else:
+            st.info("目前尚未設定任何指定價格點位。")
