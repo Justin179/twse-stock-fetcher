@@ -30,6 +30,13 @@ def _format_price(value) -> str:
     return f"{number:.2f}".rstrip("0").rstrip(".")
 
 
+def _stock_id_sort_key(stock_id: str) -> tuple[int, int | str]:
+    normalized = stock_id.strip()
+    if normalized.isdigit():
+        return (0, int(normalized))
+    return (1, normalized)
+
+
 def load_key_price_map(file_path: str = KEY_PRICE_FILE) -> "OrderedDict[str, float]":
     entries: "OrderedDict[str, float]" = OrderedDict()
     path = Path(file_path)
@@ -52,13 +59,14 @@ def load_key_price_map(file_path: str = KEY_PRICE_FILE) -> "OrderedDict[str, flo
 
         entries[stock_id] = target_price
 
-    return entries
+    return OrderedDict(sorted(entries.items(), key=lambda item: _stock_id_sort_key(item[0])))
 
 
 def write_key_price_map(entries: "OrderedDict[str, float]", file_path: str = KEY_PRICE_FILE) -> None:
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    content = "\n".join(f"{stock_id},{_format_price(price)}" for stock_id, price in entries.items())
+    sorted_entries = sorted(entries.items(), key=lambda item: _stock_id_sort_key(item[0]))
+    content = "\n".join(f"{stock_id},{_format_price(price)}" for stock_id, price in sorted_entries)
     if content:
         content += "\n"
     path.write_text(content, encoding="utf-8")
@@ -298,6 +306,9 @@ def render_key_price_checker(file_path: str = KEY_PRICE_FILE, db_path: str = DB_
                     above_results.append(result)
                 elif result["signal"] == "價跌量增跌破指定價格點位":
                     below_results.append(result)
+
+            above_results.sort(key=lambda item: _stock_id_sort_key(item["stock_id"]))
+            below_results.sort(key=lambda item: _stock_id_sort_key(item["stock_id"]))
 
             st.session_state["key_price_check_results_above"] = above_results
             st.session_state["key_price_check_results_below"] = below_results
