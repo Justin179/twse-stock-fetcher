@@ -82,7 +82,7 @@ with open(log_path, "w", encoding="utf-8") as log_fp:
             for _, row in df.iterrows():
                 try:
                     cursor.execute(
-                        "INSERT OR IGNORE INTO twse_prices (stock_id, date, open, high, low, close, volume) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT OR REPLACE INTO twse_prices (stock_id, date, open, high, low, close, volume) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (stock_id, row["date"], row["open"], row["high"], row["low"], row["close"], row["volume"])
                     )
                     if cursor.rowcount > 0:
