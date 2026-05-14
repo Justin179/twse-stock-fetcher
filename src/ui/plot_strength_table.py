@@ -53,7 +53,7 @@ def analyze_10day_strength(stock_id: str) -> go.Figure:
         c7 = row["Close_4days_ago"] > row["Close_5days_ago"] and row["Close"] > row["Close_Yesterday"] and row["Volume"] > row["Volume_Yesterday"]
         results.append({
             "日期": date,
-            "價量同步": check(c1),
+            "量價同步": check(c1),
             "扣抵變高但價漲量增(強勢股)": check(c7),
             "站上5日均線(> MA5)": check(c2),
             "站上基準價(上彎5日均線)": check(c3),

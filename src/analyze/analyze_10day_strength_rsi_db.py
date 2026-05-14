@@ -96,7 +96,7 @@ for _, row in analysis_days.iterrows():
 
     results.append({
         "日期": date,
-        "價量同步": check(c1),
+        "量價同步": check(c1),
         "扣抵變高但價漲量增(強勢股)": check(c7),
         "站上 5日均線(> MA5)": check(c2),
         "上彎 5日均線(> 基準價)": check(c3),
