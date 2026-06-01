@@ -255,7 +255,7 @@ def get_week_month_baseline_and_deduction(stock_id: str, today_date: str, period
 def is_uptrending_now(stock_id: str, today_date: str, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5: bool = False, tol: float = 1e-6) -> bool:
     """
     判斷「當下現價 c1」是否為【向上趨勢盤】：
-      條件1：c1 > w1 且 c1 > m1
+      條件1：c1 > w1 且 c1 > m1，或現價距離上週與上月最高點不遠（負乖離在 5% 以內，即 c1 >= w1 * 0.95 且 c1 >= m1 * 0.95）
       條件2：上彎5日均 > 上彎10日均 > 上彎24日均，且三條均線皆為上彎
              （上彎沿用現有定義：c1 > N日均線的「基準價 baseline」）
       條件3：c1 > 5日均線（且 5日均線必為上彎；由條件2中的 up5 保證）
@@ -272,8 +272,8 @@ def is_uptrending_now(stock_id: str, today_date: str, c1, w1, m1, ma5, ma10, ma2
     except Exception:
         return False
 
-    # 條件1：現價同時過上週與上月高
-    cond1 = (c1 > w1) and (c1 > m1)
+    # 條件1：現價同時過上週與上月高，或對其負乖離在 5% 以內
+    cond1 = (c1 >= w1 * 0.95) and (c1 >= m1 * 0.95)
 
     # 取各 N 日均線的「基準價 baseline」
     b5, _, * _ = get_baseline_and_deduction(stock_id, today_date, n=5)
