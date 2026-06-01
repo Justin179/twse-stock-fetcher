@@ -121,12 +121,16 @@ if __name__ == "__main__":
         # 4. 多加一層 GUI 條件篩選器
         print(f"\n🔍 對 {len(uptrend_list)} 檔符合趨勢的股票進行第二輪條件篩選...")
         filtered_stocks = filter_attack_stocks(uptrend_list, bias_threshold=bias_threshold)
+        filtered_set = set(filtered_stocks)
 
-        print("\n📢 籌碼集中且趨勢向上之個股（通過篩選後）：")
-        if filtered_stocks:
-            for stock_id in filtered_stocks:
+        print("\n📢 符合向上趨勢之個股清單（一篩與二篩結果）：")
+        if uptrend_list:
+            for stock_id in uptrend_list:
                 name = id_name_map.get(stock_id, "")
-                print(f"✅ {stock_id} {name} (過高且向上趨勢)")
+                if stock_id in filtered_set:
+                    print(f"✅ {stock_id} {name} [通過二篩] (過高且向上趨勢)")
+                else:
+                    print(f"ℹ️ {stock_id} {name} [僅過一篩]")
         else:
             print("ℹ️ 無符合條件的股票")
 
