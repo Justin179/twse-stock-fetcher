@@ -15,31 +15,47 @@ from ui.price_break_display_module import is_uptrending_now, compute_ma_with_tod
 from analyze.moving_average_weekly import is_price_above_upward_wma5
 
 
-def detect_signals(file_path="my_stock_holdings.txt", sdk=None):
-    attack_list = []
+def detect_signals_and_uptrends_unified(stocks, id_name_map, sdk=None):
+    """
+    統一對合併後的去重個股清單進行一次性的 Fubon API 呼叫、趨勢與跌破判斷。
+    """
+    uptrend_list = []
     weaken_list = []
 
-    stocks, display_options = load_stock_list_with_names(file_path)
-    id_name_map = {s.split()[0]: s.split()[1] for s in display_options if " " in s}
-
-    print(f"🔍 開始檢測 {len(stocks)} 檔股票的突破訊號...")
+    print(f"\n🔍 開始在一線流程中，檢測 {len(stocks)} 檔去重股票的「向上趨勢 4 條件」與「跌破訊號」...")
     
     for i, stock_id in enumerate(stocks, 1):
         try:
             print(f"⏳ ({i}/{len(stocks)}) 處理 {stock_id}...")
+            
+            # 取得今日價格資訊（只呼叫一次 API！）
             today = get_today_prices(stock_id, sdk)
-            w1, w2, m1, m2 = get_week_month_high_low(stock_id)
+            today_date = today["date"]
             c1 = today["c1"]
 
             if c1 is None:
                 print(f"⚠️ {stock_id} 無法取得現價，跳過")
                 continue
 
-            if w1 and m1 and c1 > w1 and c1 > m1:
-                attack_list.append((stock_id, ["過上週高", "過上月高"]))
-                print(f"✅ {stock_id} 突破訊號")
+            # 取得週月高低點
+            w1, w2, m1, m2 = get_week_month_high_low(stock_id)
+
+            # A. 向上趨勢所需均線計算（含今日現價）
+            ma5 = compute_ma_with_today(stock_id, today_date, c1, 5)
+            ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
+            ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
+            
+            # 判斷是否站上上彎5週均線
+            above_upward_wma5 = is_price_above_upward_wma5(stock_id, today_date, c1, debug_print=False)
+
+            # B. 判斷是否符合向上趨勢的 4 大嚴格條件
+            if is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5):
+                uptrend_list.append(stock_id)
+                print(f"📈 {stock_id} 符合向上趨勢訊號")
+
+            # C. 判斷是否符合跌破訊號 (破上週低且破上月低)
             if w2 and m2 and c1 < w2 and c1 < m2:
-                weaken_list.append((stock_id, ["破上週低", "破上月低"]))
+                weaken_list.append(stock_id)
                 print(f"❌ {stock_id} 跌破訊號")
 
         except KeyboardInterrupt:
@@ -49,68 +65,41 @@ def detect_signals(file_path="my_stock_holdings.txt", sdk=None):
             print(f"⚠️ {stock_id} 發生錯誤：{e}")
             continue
 
-    return attack_list, weaken_list, id_name_map
-
-
-def detect_uptrending_stocks(file_path="shareholding_concentration_list.txt", sdk=None):
-    """
-    檢測向上趨勢的個股
-    讀取 shareholding_concentration_list.txt，找出符合向上趨勢條件的股票
-    """
-    uptrend_list = []
-    
-    stocks, display_options = load_stock_list_with_names(file_path)
-    id_name_map = {s.split()[0]: s.split()[1] for s in display_options if " " in s}
-    
-    print(f"\n🔍 開始檢測 {len(stocks)} 檔股票的向上趨勢...")
-    
-    for i, stock_id in enumerate(stocks, 1):
-        try:
-            print(f"⏳ ({i}/{len(stocks)}) 處理 {stock_id}...")
-            
-            # 取得今日價格資訊
-            today = get_today_prices(stock_id, sdk)
-            today_date = today["date"]
-            c1 = today["c1"]
-            
-            if c1 is None:
-                print(f"⚠️ {stock_id} 無法取得現價，跳過")
-                continue
-            
-            # 取得週月高低點
-            w1, w2, m1, m2 = get_week_month_high_low(stock_id)
-            
-            # 計算均線（含今日現價）
-            ma5 = compute_ma_with_today(stock_id, today_date, c1, 5)
-            ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
-            ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
-            
-            # 判斷是否站上上彎5週均線
-            above_upward_wma5 = is_price_above_upward_wma5(stock_id, today_date, c1, debug_print=False)
-            
-            # 判斷是否為向上趨勢
-            if is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5):
-                uptrend_list.append((stock_id, ["向上趨勢"]))
-                print(f"📈 {stock_id} 向上趨勢訊號")
-            
-        except KeyboardInterrupt:
-            print(f"\n🛑 用戶中斷，已處理 {i-1}/{len(stocks)} 檔股票")
-            break
-        except Exception as e:
-            print(f"⚠️ {stock_id} 發生錯誤：{e}")
-            continue
-    
-    return uptrend_list, id_name_map
+    return uptrend_list, weaken_list
 
 
 if __name__ == "__main__":
-    file_path = sys.argv[1] if len(sys.argv) > 1 else "my_stock_holdings.txt"
+    file_path1 = sys.argv[1] if len(sys.argv) > 1 else "my_stock_holdings.txt"
+    file_path2 = "shareholding_concentration_list.txt"
     bias_threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 2.0  # 新增乖離率參數
 
-    print(f"📊 開始突破訊號檢測...")
-    print(f"📁 股票清單：{file_path}")
+    print(f"📊 開始突破暨趨勢訊號檢測...")
+    print(f"📁 預設清單一：{file_path1}")
+    print(f"📁 預設清單二：{file_path2}")
     print(f"📈 乖離率門檻：{bias_threshold}%")
 
+    # 1. 讀取並合併兩個清單，進行去重
+    try:
+        stocks1, display_options1 = load_stock_list_with_names(file_path1)
+        stocks2, display_options2 = load_stock_list_with_names(file_path2)
+    except Exception as e:
+        print(f"❌ 讀取清單失敗：{e}")
+        sys.exit(1)
+
+    # 建立統一名稱對照表
+    id_name_map = {}
+    for s in display_options1 + display_options2:
+        if " " in s:
+            parts = s.split()
+            id_name_map[parts[0]] = parts[1]
+
+    # 合併並去除重複
+    merged_stocks = list(dict.fromkeys(stocks1 + stocks2))
+    print(f"📋 清單一數量：{len(stocks1)} 檔")
+    print(f"📋 清單二數量：{len(stocks2)} 檔")
+    print(f"📋 兩清單合併去重後總數：{len(merged_stocks)} 檔")
+
+    # 2. 登入富邦 API
     if is_fubon_api_maintenance_time():
         print("🔧 現在是 API 維護時間，將使用資料庫資料")
         sdk = None
@@ -124,85 +113,40 @@ if __name__ == "__main__":
             sdk = None
 
     try:
-        attack, weaken, id_name_map = detect_signals(file_path, sdk=sdk)
+        # 3. 統一走一線程序，只連線一次 API 抓取現價
+        uptrend_list, weaken_list = detect_signals_and_uptrends_unified(merged_stocks, id_name_map, sdk=sdk)
 
-        # 檢測向上趨勢股票（從 shareholding_concentration_list.txt）
-        print(f"\n📊 檢測籌碼集中且向上趨勢的股票...")
-        uptrend, uptrend_id_name_map = detect_uptrending_stocks("shareholding_concentration_list.txt", sdk=sdk)
-        
-        # 更新 id_name_map（合併兩個清單的股票名稱對應）
-        id_name_map.update(uptrend_id_name_map)
-        
-        # 合併突破股票與向上趨勢股票
-        attack_stock_ids = [stock_id for stock_id, _ in attack]
-        uptrend_stock_ids = [stock_id for stock_id, _ in uptrend]
-        
-        # 匯集並去重
-        combined_stock_ids = list(set(attack_stock_ids + uptrend_stock_ids))
-        print(f"\n📋 突破股票：{len(attack_stock_ids)} 檔")
-        print(f"📋 向上趨勢股票：{len(uptrend_stock_ids)} 檔")
-        print(f"📋 合併後（去重）：{len(combined_stock_ids)} 檔")
+        print(f"\n📋 符合4大向上趨勢條件股票：{len(uptrend_list)} 檔")
 
-        # 多加一層條件篩選
-        print(f"\n🔍 對 {len(combined_stock_ids)} 檔股票進行條件篩選...")
-        # 將 combined_stock_ids 轉換為 filter_attack_stocks 需要的格式
-        combined_tuples = [(stock_id, []) for stock_id in combined_stock_ids]
-        filtered_stocks = filter_attack_stocks(combined_tuples, bias_threshold=bias_threshold)
+        # 4. 多加一層 GUI 條件篩選器
+        print(f"\n🔍 對 {len(uptrend_list)} 檔符合趨勢的股票進行第二輪條件篩選...")
+        filtered_stocks = filter_attack_stocks(uptrend_list, bias_threshold=bias_threshold)
 
-        print("\n📢 現價 過上週高 且 過上月高 或 向上趨勢（篩選後）：")
+        print("\n📢 籌碼集中且趨勢向上之個股（通過篩選後）：")
         if filtered_stocks:
-            # 對股票進行分類和排序
-            # 優先順序：1. 突破+向上趨勢  2. 向上趨勢  3. 突破
-            both_signals = []      # 突破+向上趨勢
-            uptrend_only = []      # 僅向上趨勢
-            attack_only = []       # 僅突破
-            
             for stock_id in filtered_stocks:
-                is_attack = stock_id in attack_stock_ids
-                is_uptrend = stock_id in uptrend_stock_ids
-                
-                if is_attack and is_uptrend:
-                    both_signals.append(stock_id)
-                elif is_uptrend:
-                    uptrend_only.append(stock_id)
-                elif is_attack:
-                    attack_only.append(stock_id)
-            
-            # 按優先順序合併
-            sorted_stocks = both_signals + uptrend_only + attack_only
-            
-            # 顯示排序後的結果
-            for stock_id in sorted_stocks:
                 name = id_name_map.get(stock_id, "")
-                # 判斷是來自突破還是向上趨勢
-                source = []
-                if stock_id in attack_stock_ids:
-                    source.append("突破")
-                if stock_id in uptrend_stock_ids:
-                    source.append("向上趨勢")
-                source_str = "+".join(source)
-                print(f"✅ {stock_id} {name} ({source_str})")
+                print(f"✅ {stock_id} {name} (向上趨勢)")
         else:
             print("ℹ️ 無符合條件的股票")
-            sorted_stocks = []
 
-        # === 將篩選後的清單加 .TW 後，寫成 籌碼集中且趨勢向上.csv（按排序後的順序） ===
+        # === 寫成 籌碼集中且趨勢向上.csv ===
         try:
-            if sorted_stocks:
+            if filtered_stocks:
                 Path("output").mkdir(parents=True, exist_ok=True)
                 out_path = Path("output") / "籌碼集中且趨勢向上.csv"
-                out_series = pd.Series([f"{sid}.TW" for sid in sorted_stocks])
+                out_series = pd.Series([f"{sid}.TW" for sid in filtered_stocks])
                 out_series.to_csv(out_path, index=False, header=False, encoding="utf-8-sig")
                 print(f"📁 已將 {len(out_series)} 檔股票清單輸出至 {out_path}")
-                print(f"   └─ 突破+向上趨勢: {len(both_signals)} 檔, 向上趨勢: {len(uptrend_only)} 檔, 突破: {len(attack_only)} 檔")
             else:
                 print("ℹ️ 篩選後清單為空，未產生輸出檔。")
         except Exception as e:
             print(f"⚠️ 輸出檔案時發生錯誤：{e}")
 
+        # 5. 輸出跌破結果
         print("\n📉 現價 破上週低 且 破上月低（c1 < w2 且 c1 < m2）：")
-        if weaken:
-            for stock_id, _ in weaken:
+        if weaken_list:
+            for stock_id in weaken_list:
                 name = id_name_map.get(stock_id, "")
                 print(f"❌ {stock_id} {name}")
         else:
