@@ -126,7 +126,7 @@ if __name__ == "__main__":
         if filtered_stocks:
             for stock_id in filtered_stocks:
                 name = id_name_map.get(stock_id, "")
-                print(f"✅ {stock_id} {name} (向上趨勢)")
+                print(f"✅ {stock_id} {name} (過高且向上趨勢)")
         else:
             print("ℹ️ 無符合條件的股票")
 
