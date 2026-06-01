@@ -36,9 +36,9 @@ def merge_and_deduplicate_and_sort(sources, target_file):
 
 
 def main():
-    sources = [holdings_path, hermits_path, inst_revenue_path]
+    sources = [holdings_path, hermits_path, inst_revenue_path, target_path]
     merge_and_deduplicate_and_sort(sources, target_path)
-    print("✅ 已完成多清單合併、去重、排序，結果已寫入 high_relative_strength_stocks.txt。")
+    print("✅ 已完成主多清單（持股、隱者、投信營收、強勢股）合併、去重、排序，結果已寫入 high_relative_strength_stocks.txt。")
 
 
 if __name__ == "__main__":

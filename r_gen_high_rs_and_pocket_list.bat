@@ -7,6 +7,10 @@ python src\analyze\filter_strong_stocks_by_rs_rsi.py
 python src\tools\append_my_stock_holdings.py
 :: 把我的持股清單也加入到強勢股清單中(my_stock_holdings.txt 加到 high_relative_strength_stocks.txt)
 
+@echo off
+python src\tools\fetch_custom_combined_list.py
+:: 整合最新 0050, 00981a, 00992a 與 每日成交量排行前50，合併去重到 high_relative_strength_stocks.txt 中
+
 
 @echo off
 REM %~1 代表外部傳進來的乖離率
