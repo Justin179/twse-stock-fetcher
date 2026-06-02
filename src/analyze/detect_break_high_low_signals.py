@@ -123,7 +123,7 @@ if __name__ == "__main__":
         filtered_stocks = filter_attack_stocks(uptrend_list, bias_threshold=bias_threshold)
         filtered_set = set(filtered_stocks)
 
-        print("\n📢 符合向上趨勢之個股清單（一篩與二篩結果）：")
+        print("\n📢 符合向上趨勢之個股清單（買在起漲點🤩）：")
         if uptrend_list:
             # 優先印出通過二篩的個股
             for stock_id in uptrend_list:
