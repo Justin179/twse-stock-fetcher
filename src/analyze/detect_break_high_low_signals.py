@@ -125,11 +125,15 @@ if __name__ == "__main__":
 
         print("\n📢 符合向上趨勢之個股清單（一篩與二篩結果）：")
         if uptrend_list:
+            # 優先印出通過二篩的個股
             for stock_id in uptrend_list:
-                name = id_name_map.get(stock_id, "")
                 if stock_id in filtered_set:
+                    name = id_name_map.get(stock_id, "")
                     print(f"✅ {stock_id} {name} [通過二篩] (過高且向上趨勢)")
-                else:
+            # 接著印出僅過一篩的個股
+            for stock_id in uptrend_list:
+                if stock_id not in filtered_set:
+                    name = id_name_map.get(stock_id, "")
                     print(f"ℹ️ {stock_id} {name} [僅過一篩]")
         else:
             print("ℹ️ 無符合條件的股票")
