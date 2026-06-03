@@ -127,38 +127,38 @@ if __name__ == "__main__":
         filtered_stocks = filter_attack_stocks(uptrend_list, bias_threshold=bias_threshold)
         filtered_set = set(filtered_stocks)
 
-        # 4.5 插入個股評分模組 (使用已取得的 prices_cache 進行零重複 API 評分)
-        scored_stocks_info = score_attack_stocks(filtered_stocks, prices_cache)
-        if scored_stocks_info:
-            print("\n🏆 二篩股票評分與推薦排序：")
-            for idx, item in enumerate(scored_stocks_info, 1):
+        # 4.5 執行全體評分 (計算所有符合趨勢一篩的個股)
+        all_uptrend_scored = score_attack_stocks(uptrend_list, prices_cache)
+        
+        # 將評分結果按二篩狀態拆分
+        passed_stage2 = [s for s in all_uptrend_scored if s["stock_id"] in filtered_set]
+        passed_stage1_only = [s for s in all_uptrend_scored if s["stock_id"] not in filtered_set]
+
+        print("\n📢 符合向上趨勢之個股清單 (已依綜合評分排序 🤩)：")
+        if all_uptrend_scored:
+            # 優先印出通過二篩的個股 (已按分數排序)
+            for idx, item in enumerate(passed_stage2, 1):
                 stock_id = item["stock_id"]
                 name = id_name_map.get(stock_id, "")
-                print(f"🥇 No.{idx} - {stock_id} {name} | 綜合評分: {item['score']}分 | 漲幅: {item['change_pct']}% | 成交量: {item['volume']} 張")
-
-        print("\n📢 符合向上趨勢之個股清單（買在起漲點🤩）：")
-        if uptrend_list:
-            # 優先印出通過二篩的個股
-            for stock_id in uptrend_list:
-                if stock_id in filtered_set:
-                    name = id_name_map.get(stock_id, "")
-                    print(f"✅ {stock_id} {name} [通過二篩] (過高且向上趨勢)")
-            # 接著印出僅過一篩的個股
-            for stock_id in uptrend_list:
-                if stock_id not in filtered_set:
-                    name = id_name_map.get(stock_id, "")
-                    print(f"ℹ️ {stock_id} {name} [僅過一篩]")
+                print(f"✅ {stock_id} {name} [通過二篩] (評分: {item['score']} | 漲幅: {item['change_pct']}% | 量: {item['volume']}張)")
+            
+            # 接著印出僅過一篩的個股 (已按分數排序)
+            for item in passed_stage1_only:
+                stock_id = item["stock_id"]
+                name = id_name_map.get(stock_id, "")
+                print(f"ℹ️ {stock_id} {name} [僅過一篩] (評分: {item['score']} | 漲幅: {item['change_pct']}% | 量: {item['volume']}張)")
         else:
             print("ℹ️ 無符合條件的股票")
 
         # === 寫成 籌碼集中且趨勢向上.csv ===
         try:
-            if filtered_stocks:
+            if passed_stage2:
                 Path("output").mkdir(parents=True, exist_ok=True)
                 out_path = Path("output") / "籌碼集中且趨勢向上.csv"
-                out_series = pd.Series([f"{sid}.TW" for sid in filtered_stocks])
+                # 使用已排序的 passed_stage2 清單進行輸出
+                out_series = pd.Series([f"{item['stock_id']}.TW" for item in passed_stage2])
                 out_series.to_csv(out_path, index=False, header=False, encoding="utf-8-sig")
-                print(f"📁 已將 {len(out_series)} 檔股票清單輸出至 {out_path}")
+                print(f"📁 已將 {len(out_series)} 檔股票依評分排序輸出至 {out_path}")
             else:
                 print("ℹ️ 篩選後清單為空，未產生輸出檔。")
         except Exception as e:
