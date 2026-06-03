@@ -5,6 +5,7 @@ from common.stock_loader import load_stock_list_with_names
 import sys
 from common.login_helper import get_logged_in_sdk
 from analyze.filter_attack_stocks_by_conditions import filter_attack_stocks
+from analyze.score_attack_stocks import score_attack_stocks
 
 # 新增匯出所需
 from pathlib import Path
@@ -21,6 +22,7 @@ def detect_signals_and_uptrends_unified(stocks, id_name_map, sdk=None):
     """
     uptrend_list = []
     weaken_list = []
+    prices_cache = {}
 
     print(f"\n🔍 開始在一線流程中，檢測 {len(stocks)} 檔去重股票的「向上趨勢 4 條件」與「跌破訊號」...")
     
@@ -30,6 +32,8 @@ def detect_signals_and_uptrends_unified(stocks, id_name_map, sdk=None):
             
             # 取得今日價格資訊（只呼叫一次 API！）
             today = get_today_prices(stock_id, sdk)
+            if today:
+                prices_cache[stock_id] = today
             today_date = today["date"]
             c1 = today["c1"]
 
@@ -65,7 +69,7 @@ def detect_signals_and_uptrends_unified(stocks, id_name_map, sdk=None):
             print(f"⚠️ {stock_id} 發生錯誤：{e}")
             continue
 
-    return uptrend_list, weaken_list
+    return uptrend_list, weaken_list, prices_cache
 
 
 if __name__ == "__main__":
@@ -114,7 +118,7 @@ if __name__ == "__main__":
 
     try:
         # 3. 統一走一線程序，只連線一次 API 抓取現價
-        uptrend_list, weaken_list = detect_signals_and_uptrends_unified(merged_stocks, id_name_map, sdk=sdk)
+        uptrend_list, weaken_list, prices_cache = detect_signals_and_uptrends_unified(merged_stocks, id_name_map, sdk=sdk)
 
         print(f"\n📋 符合4大向上趨勢條件股票：{len(uptrend_list)} 檔")
 
@@ -122,6 +126,15 @@ if __name__ == "__main__":
         print(f"\n🔍 對 {len(uptrend_list)} 檔符合趨勢的股票進行第二輪條件篩選...")
         filtered_stocks = filter_attack_stocks(uptrend_list, bias_threshold=bias_threshold)
         filtered_set = set(filtered_stocks)
+
+        # 4.5 插入個股評分模組 (使用已取得的 prices_cache 進行零重複 API 評分)
+        scored_stocks_info = score_attack_stocks(filtered_stocks, prices_cache)
+        if scored_stocks_info:
+            print("\n🏆 二篩股票評分與推薦排序：")
+            for idx, item in enumerate(scored_stocks_info, 1):
+                stock_id = item["stock_id"]
+                name = id_name_map.get(stock_id, "")
+                print(f"🥇 No.{idx} - {stock_id} {name} | 綜合評分: {item['score']}分 | 漲幅: {item['change_pct']}% | 成交量: {item['volume']} 張")
 
         print("\n📢 符合向上趨勢之個股清單（買在起漲點🤩）：")
         if uptrend_list:
