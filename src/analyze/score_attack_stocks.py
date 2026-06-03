@@ -25,6 +25,7 @@ def score_attack_stocks(filtered_stocks: list[str], prices_cache: dict[str, dict
             print(f"⚠️ 找不到 {stock_id} 的即時價格快取，無法進行評分。")
             continue
         
+        # 變數c1,c2,h,l,v確實都是透過 API 取得的當日即時數據（或是 API 維護時的資料庫備援）。
         c1 = price_info.get("c1")  # 現價
         c2 = price_info.get("c2")  # 昨收
         h = price_info.get("h")    # 今日最高
@@ -38,11 +39,11 @@ def score_attack_stocks(filtered_stocks: list[str], prices_cache: dict[str, dict
         change_pct = ((c1 - c2) / c2) * 100
         # 漲幅大於等於 7% 給滿分 40，其餘按比例 (change_pct / 7) * 40
         if change_pct >= 7:
-            涨幅_score = 40.0
+            漲幅_score = 40.0
         elif change_pct > 0:
-            涨幅_score = (change_pct / 7.0) * 40.0
+            漲幅_score = (change_pct / 7.0) * 40.0
         else:
-            涨幅_score = 0.0
+            漲幅_score = 0.0
             
         # 2. 今日收盤強勢度評分 (最大分數 30 分)
         # 用現價在今日高低點的相對位置：(c1 - l) / (h - l)
@@ -63,7 +64,7 @@ def score_attack_stocks(filtered_stocks: list[str], prices_cache: dict[str, dict
             elif v > 0:
                 vol_score = 15.0 + (v / 1000.0) * 15.0
 
-        total_score = round(涨幅_score + strong_pos_score + vol_score, 2)
+        total_score = round(漲幅_score + strong_pos_score + vol_score, 2)
         
         scored_results.append({
             "stock_id": stock_id,
