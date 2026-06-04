@@ -17,7 +17,7 @@ def score_attack_stocks(filtered_stocks: list[str], prices_cache: dict[str, dict
     """
     scored_results = []
     
-    print(f"\n💯 啟動「個股評分模組」，開始評估 {len(filtered_stocks)} 檔個股...")
+    print(f"\n💯 啟動「個股當日強勢程度評分」，開始評估 {len(filtered_stocks)} 檔個股...")
     
     for stock_id in filtered_stocks:
         price_info = prices_cache.get(stock_id)
