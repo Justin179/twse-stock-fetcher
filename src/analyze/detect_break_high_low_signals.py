@@ -132,49 +132,74 @@ if __name__ == "__main__":
 
         print(f"\n📋 符合4大向上趨勢條件股票：{len(uptrend_list)} 檔")
 
-        # 4. 多加一層 GUI 條件篩選器
-        print(f"\n🔍 對 {len(uptrend_list)} 檔符合趨勢的股票進行第二輪條件篩選...")
-        filtered_stocks = filter_attack_stocks(uptrend_list, bias_threshold=bias_threshold)
-        filtered_set = set(filtered_stocks)
-
-        # 4.5 執行全體評分 (計算所有符合趨勢一篩的個股)
-        all_uptrend_scored = score_attack_stocks(uptrend_list, prices_cache)
-        
-        # 將評分結果按二篩狀態拆分
-        passed_stage2 = [s for s in all_uptrend_scored if s["stock_id"] in filtered_set]
-        passed_stage1_only = [s for s in all_uptrend_scored if s["stock_id"] not in filtered_set]
-
-        print("\n📢 符合向上趨勢之個股清單 (已依綜合評分排序 🤩)：")
-        if all_uptrend_scored:
-            # 優先印出通過二篩的個股 (已按分數排序)
-            for idx, item in enumerate(passed_stage2, 1):
-                stock_id = item["stock_id"]
-                name = id_name_map.get(stock_id, "")
-                print(f"✅ {stock_id} {name} [通過二篩] (評分: {item['score']} | 今量: {item['volume']}張 | 昨量: {item['y_volume']}張 | 漲幅: {item['change_pct']}%)")
+        # --- 改善點：進入互動式循環，避免重複執行 API 抓取 ---
+        while True:
+            # 4. 多加一層 GUI 條件篩選器
+            print(f"\n🔍 對 {len(uptrend_list)} 檔符合趨勢的股票進行第二輪條件篩選...")
+            filtered_stocks = filter_attack_stocks(uptrend_list, bias_threshold=bias_threshold)
             
-            # 接著印出僅過一篩的個股 (已按分數排序)
-            for item in passed_stage1_only:
-                stock_id = item["stock_id"]
-                name = id_name_map.get(stock_id, "")
-                print(f"ℹ️ {stock_id} {name} [僅過一篩] (評分: {item['score']} | 今量: {item['volume']}張 | 昨量: {item['y_volume']}張 | 漲幅: {item['change_pct']}%)")
-        else:
-            print("ℹ️ 無符合條件的股票")
+            if filtered_stocks is None: # 表示使用者按下取消或關閉視窗，但我們問他要不要退出
+                import tkinter.messagebox as mb
+                import tkinter as tk
+                root = tk.Tk()
+                root.withdraw()
+                if mb.askyesno("結束程式", "確定要完全退出程式嗎？\n(選 '否' 可重新調整篩選條件，選 '是' 則結束)"):
+                    root.destroy()
+                    break
+                root.destroy()
+                continue
+                
+            filtered_set = set(filtered_stocks)
 
-        # === 寫成 籌碼集中且趨勢向上.csv ===
-        try:
-            if passed_stage2:
-                Path("output").mkdir(parents=True, exist_ok=True)
-                out_path = Path("output") / "籌碼集中且趨勢向上.csv"
-                # 使用已排序的 passed_stage2 清單進行輸出
-                out_series = pd.Series([f"{item['stock_id']}.TW" for item in passed_stage2])
-                out_series.to_csv(out_path, index=False, header=False, encoding="utf-8-sig")
-                print(f"📁 已將 {len(out_series)} 檔股票依評分排序輸出至 {out_path}")
+            # 4.5 執行全體評分 (計算所有符合趨勢一篩的個股)
+            all_uptrend_scored = score_attack_stocks(uptrend_list, prices_cache)
+            
+            # 將評分結果按二篩狀態拆分
+            passed_stage2 = [s for s in all_uptrend_scored if s["stock_id"] in filtered_set]
+            passed_stage1_only = [s for s in all_uptrend_scored if s["stock_id"] not in filtered_set]
+
+            print("\n📢 符合向上趨勢之個股清單 (已依綜合評分排序 🤩)：")
+            if all_uptrend_scored:
+                # 優先印出通過二篩的個股 (已按分數排序)
+                for idx, item in enumerate(passed_stage2, 1):
+                    stock_id = item["stock_id"]
+                    name = id_name_map.get(stock_id, "")
+                    print(f"✅ {stock_id} {name} [通過二篩] (評分: {item['score']} | 今量: {item['volume']}張 | 昨量: {item['y_volume']}張 | 漲幅: {item['change_pct']}%)")
+                
+                # 接著印出僅過一篩的個股 (已按分數排序)
+                for item in passed_stage1_only:
+                    stock_id = item["stock_id"]
+                    name = id_name_map.get(stock_id, "")
+                    print(f"ℹ️ {stock_id} {name} [僅過一篩] (評分: {item['score']} | 今量: {item['volume']}張 | 昨量: {item['y_volume']}張 | 漲幅: {item['change_pct']}%)")
             else:
-                print("ℹ️ 篩選後清單為空，未產生輸出檔。")
-        except Exception as e:
-            print(f"⚠️ 輸出檔案時發生錯誤：{e}")
+                print("ℹ️ 無符合條件的股票")
 
-        # 5. 輸出跌破結果
+            # === 寫成 籌碼集中且趨勢向上.csv ===
+            try:
+                if passed_stage2:
+                    Path("output").mkdir(parents=True, exist_ok=True)
+                    out_path = Path("output") / "籌碼集中且趨勢向上.csv"
+                    # 使用已排序的 passed_stage2 清單進行輸出
+                    out_series = pd.Series([f"{item['stock_id']}.TW" for item in passed_stage2])
+                    out_series.to_csv(out_path, index=False, header=False, encoding="utf-8-sig")
+                    print(f"📁 已將 {len(out_series)} 檔股票依評分排序輸出至 {out_path}")
+                else:
+                    print("ℹ️ 篩選後清單為空，未產生輸出檔。")
+            except Exception as e:
+                print(f"⚠️ 輸出檔案時發生錯誤：{e}")
+            
+            # 詢問是否要重新篩選
+            import tkinter.messagebox as mb
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            if not mb.askyesno("重新篩選", "結果已輸出。需要重新調整篩選條件嗎？\n(選 '是' 可保留本次抓取的資料並重開篩選器)"):
+                root.destroy()
+                break
+            root.destroy()
+            print("🔄 重新開啟篩選器...")
+
+        # 5. 輸出跌破結果 (這部分只在最後退出循環時印出一次)
         print("\n📉 現價 破上週低 且 破上月低（c1 < w2 且 c1 < m2）：")
         if weaken_list:
             for stock_id in weaken_list:
