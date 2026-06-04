@@ -5,6 +5,7 @@ import requests
 import urllib3
 import pandas as pd
 import yfinance as yf
+import sqlite3
 from datetime import datetime, timedelta
 
 # Disable SSL verification warnings
@@ -13,7 +14,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Ensure terminal prints UTF-8 characters correctly
 sys.stdout.reconfigure(encoding='utf-8')
 
-# Output target file
+# Paths
+DB_PATH = "data/institution.db"
 OUTPUT_PATH = "high_relative_strength_stocks.txt"
 
 # Standard 0050 (元大台灣50) complete constituent fallback list (top 50 companies)
@@ -67,37 +69,70 @@ def fetch_etf_holdings_via_yfinance(etf_symbol):
     return []
 
 
+def get_volume_leaders_from_db(top_n=50):
+    """
+    備援方案：從在地資料庫讀取最新成交量排行。
+    """
+    print("   ⚠️ 網路獲取失敗或逾時，嘗試從在地資料庫讀取最新成交量排行...")
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        # 找出資料庫中最新的日期
+        latest_date_df = pd.read_sql_query("SELECT MAX(date) as max_date FROM twse_prices", conn)
+        latest_date = latest_date_df.iloc[0]["max_date"]
+        
+        if not latest_date:
+            print("   ❌ 資料庫中查無資料。")
+            return []
+            
+        print(f"   📅 使用資料庫最新日期: {latest_date}")
+        query = """
+            SELECT stock_id 
+            FROM twse_prices 
+            WHERE date = ? 
+            ORDER BY volume DESC 
+            LIMIT ?
+        """
+        df = pd.read_sql_query(query, conn, params=(latest_date, top_n))
+        conn.close()
+        
+        leaders = df["stock_id"].tolist()
+        if leaders:
+            print(f"   ✅ 成功從資料庫取得 {len(leaders)} 檔成交量熱門股。")
+        return leaders
+    except Exception as e:
+        print(f"   ❌ 資料庫讀取失敗: {e}")
+        return []
+
+
 def get_latest_twse_volume_leaders(top_n=50):
     """
     Search backwards from today to locate the latest trading day on TWSE,
     then fetch MI_INDEX and sort to get the top `top_n` volume leaders.
     """
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.twse.com.tw/zh/page/trading/exchange/MI_INDEX.html"
     }
     
     print("🔍 正在尋找最新的證交所開盤日行情資料...")
     date_to_try = datetime.today()
-    for _ in range(10):  # Seek backward up to 10 days
+    # 縮短嘗試天數與逾時時間，若失敗立即轉向資料庫備援
+    for _ in range(3): 
         date_str = date_to_try.strftime("%Y%m%d")
         url = f"https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date={date_str}&type=ALLBUT0999"
         try:
-            r = requests.get(url, headers=headers, verify=False, timeout=10)
+            r = requests.get(url, headers=headers, verify=False, timeout=5)
             if r.status_code == 200:
                 data = r.json()
                 if "tables" in data and len(data["tables"]) > 8:
                     table8 = data["tables"][8]
                     title = table8.get("title", "")
-                    fields = table8.get("fields", [])
                     rows_data = table8.get("data", [])
                     
                     print(f"   🎉 成功找到最近收盤日資料！日期：{date_to_try.strftime('%Y-%m-%d')} ({title[:15]}...)")
                     
-                    # Identify '證券代號' (code) and '成交股數' (volume in shares) positions
-                    # Based on standard: col 0 is code, col 2 is volume
                     code_idx = 0
                     val_idx = 2
-                    
                     stock_volumes = []
                     for row in rows_data:
                         raw_code = row[code_idx]
@@ -108,8 +143,7 @@ def get_latest_twse_volume_leaders(top_n=50):
                                 vol_str = row[val_idx].replace(",", "")
                                 vol = int(vol_str)
                                 stock_volumes.append((clean_code, vol))
-                            except ValueError:
-                                continue
+                            except ValueError: continue
                     
                     # Sort by volume descending
                     stock_volumes.sort(key=lambda x: x[1], reverse=True)
@@ -120,8 +154,7 @@ def get_latest_twse_volume_leaders(top_n=50):
             pass
         date_to_try -= timedelta(days=1)
         
-    print("   ❌ 無法取得證交所收盤行情資料。")
-    return []
+    return get_volume_leaders_from_db(top_n)
 
 
 def main():

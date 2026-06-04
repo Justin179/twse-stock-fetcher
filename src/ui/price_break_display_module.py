@@ -853,6 +853,50 @@ def compute_recent_netbuy_streaks(stock_id: str, db_path: str = "data/institutio
     return main_streak, foreign_streak, trust_streak
 
 
+def compute_institutional_netbuy_days(stock_id: str, period: int = 10, db_path: str = "data/institution.db") -> Tuple[int, int, int]:
+    """計算主力/外資/投信在過去 N 個交易日內，買超的天數。"""
+    main_days = 0
+    foreign_days = 0
+    trust_days = 0
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            # 主力
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT net_buy_sell
+                    FROM main_force_trading
+                    WHERE stock_id = ?
+                    ORDER BY date DESC
+                    LIMIT ?
+                    """,
+                    (stock_id, int(period)),
+                ).fetchall()
+                main_days = sum(1 for r in rows if r[0] > 0)
+            except Exception: pass
+
+            # 外資/投信
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT foreign_netbuy, trust_netbuy
+                    FROM institutional_netbuy_holding
+                    WHERE stock_id = ?
+                    ORDER BY date DESC
+                    LIMIT ?
+                    """,
+                    (stock_id, int(period)),
+                ).fetchall()
+                foreign_days = sum(1 for r in rows if r[0] > 0)
+                trust_days = sum(1 for r in rows if r[1] > 0)
+            except Exception: pass
+    except Exception:
+        pass
+
+    return main_days, foreign_days, trust_days
+
+
 
 def _load_recent_daily_volumes(db_path: str, stock_id: str, last_n: int = 300) -> pd.DataFrame:
     """

@@ -1,95 +1,141 @@
 from ui.volume_forecast import forecast_by_avg_rate
+import sqlite3
+import pandas as pd
+from ui.price_break_display_module import (
+    get_volume_status,
+    get_baseline_and_deduction, compute_recent_netbuy_streaks,
+    compute_institutional_netbuy_days,
+    is_uptrending_now, compute_ma_with_today
+)
+from analyze.analyze_price_break_conditions_dataloader import (
+    get_week_month_high_low, get_recent_hl_before_date
+)
+from analyze.moving_average_weekly import is_price_above_upward_wma5
 
 def score_attack_stocks(filtered_stocks: list[str], prices_cache: dict[str, dict]) -> list[dict]:
     """
     個股當日強勢程度評分模組：利用已快取的即時價格與量能資料，對通過二篩的個股進行量化評分與排序。
-    不重複呼叫富邦 API，確保效能。
+    整合價格、量能、技術指標、與籌碼連買等多維度加分項。
     
-    評分維度 (總分 100 分)：
-    1. 漲幅與量能配合度 (80%): 
-       - 價格基分 (0-40): 漲幅 >= 7% 得 40 分，其餘按比例。
-       - 量能基分 (0/15): 預估收盤量 >= 昨量 80% 時給 15 分。
-       - 強勢加成 (x1.5): 若實時量 > 昨量 或 預估量 > 昨量，總和乘以 1.5 (最高 80 分)。
-    2. 收盤強勢度 (20%): 位於今日高低點區間的位置高低 (c1 - l) / (h - l)，越高越強。
-    
-    回傳：
-        已排序的評分結果列表
+    評分維度：
+    1. 基礎得分 (漲幅+量能 80%, 收盤強勢 20%)
+    2. 額外訊號加分 (直接累加於總分)
     """
     scored_results = []
+    db_path = "data/institution.db"
     
     print(f"\n💯 啟動「個股當日強勢程度評分」，開始評估 {len(filtered_stocks)} 檔個股...")
     
     for stock_id in filtered_stocks:
         price_info = prices_cache.get(stock_id)
         if not price_info:
-            print(f"⚠️ 找不到 {stock_id} 的即時價格快取，無法進行評分。")
             continue
         
-        # 變數c1,c2,h,l,v確實都是透過 API 取得的當日即時數據（或是 API 維護時的資料庫備援）。
-        c1 = price_info.get("c1")    # 現價
-        c2 = price_info.get("c2")    # 昨收
-        h = price_info.get("h")      # 今日最高
-        l = price_info.get("l")      # 今日最低
-        v = price_info.get("v", 0)   # 當前成交量 (張)
-        y_v = price_info.get("y_v", 0) # 昨成交量 (張)
+        c1 = price_info.get("c1")
+        c2 = price_info.get("c2")
+        h = price_info.get("h")
+        l = price_info.get("l")
+        v = price_info.get("v", 0)
+        y_v = price_info.get("y_v", 0)
+        today_date = price_info.get("date")
         
         if c1 is None or c2 is None or c2 == 0:
             continue
             
-        # --- 1. & 3. 整合：今日漲幅與量能配合度 (最大分數 80 分) ---
-        # A. 價格基分 (max 40)
+        # --- (A) 基礎評分 (100分制) ---
         change_pct = ((c1 - c2) / c2) * 100
-        if change_pct >= 7:
-            price_base = 40.0
-        elif change_pct > 0:
-            price_base = (change_pct / 7.0) * 40.0
-        else:
-            price_base = 0.0
+        price_base = (change_pct / 7.0) * 40.0 if 0 < change_pct < 7 else (40.0 if change_pct >= 7 else 0.0)
         
-        # B. 量能基分與加成
+        # 量能基分與加成
         vol_base = 0.0
         vol_multiplier = 1.0
-        
         if y_v > 0:
-            # 計算預估量 (使用 project 模組)
             f_res = forecast_by_avg_rate(v, y_v)
             proj_v = f_res.get("forecast_volume", 0) if f_res else v
-            
-            # 若預估量達到昨量的 80%，給予基分
-            if proj_v >= (y_v * 0.8):
-                vol_base = 15.0
-            
-            # 若已經量增 (實時 > 昨) 或 預估量增 (預估 > 昨)，視為強勢追價
-            if v >= y_v or proj_v >= y_v:
-                vol_multiplier = 1.5
+            if proj_v >= (y_v * 0.8): vol_base = 15.0
+            if v >= y_v or proj_v >= y_v: vol_multiplier = 1.5
         else:
-            # 無昨量資料時，給予基礎分
             vol_base = 10.0
 
         price_volume_score = min(80.0, (price_base + vol_base) * vol_multiplier)
 
-        # --- 2. 今日收盤強勢度評分 (最大分數 20 分) ---
-        # 用現價在今日高低點的相對位置：(c1 - l) / (h - l)
-        strong_pos_score = 0.0
+        # 收盤強勢度 (20分)
+        strong_pos_score = 10.0
         if h is not None and l is not None and h > l:
-            relative_pos = (c1 - l) / (h - l) # 0.0 ~ 1.0
-            strong_pos_score = relative_pos * 20.0
-        else:
-            # 若無高低點或平盤，給基礎分數 10 分
-            strong_pos_score = 10.0
+            strong_pos_score = ((c1 - l) / (h - l)) * 20.0
+        
+        base_total = price_volume_score + strong_pos_score
+        
+        # --- (B) 額外強勢訊號加分 ---
+        extra_bonus = 0.0
+        try:
+            # 獲取基準與扣抵
+            b, d, d1, d2, d3, pb = get_baseline_and_deduction(stock_id, today_date)
+            vol_status = get_volume_status(price_info, y_v * 1000.0 if y_v else 0, stock_id)
+            price_status = "漲" if c1 > c2 else ("跌" if c1 < c2 else "平")
             
-        total_score = round(price_volume_score + strong_pos_score, 2)
+            # ✅ 今天強勢: 今壓上升 + 價漲量增
+            if b and pb and b > pb and price_status == "漲" and vol_status == "量增":
+                extra_bonus += 5.0
+            
+            # ✅ 強勢股: 扣抵向上 + 價漲量增
+            if d and b and d > b and price_status == "漲" and vol_status == "量增":
+                extra_bonus += 5.0
+
+            # --- 趨勢加分 (向上趨勢盤，帶量 破壓追價!) ---
+            w1, w2, m1, m2 = get_week_month_high_low(stock_id)
+            ma5 = compute_ma_with_today(stock_id, today_date, c1, 5)
+            ma10 = compute_ma_with_today(stock_id, today_date, c1, 10)
+            ma24 = compute_ma_with_today(stock_id, today_date, c1, 24)
+            above_upward_wma5 = is_price_above_upward_wma5(stock_id, today_date, c1, debug_print=False)
+
+            if is_uptrending_now(stock_id, today_date, c1, w1, m1, ma5, ma10, ma24, above_upward_wma5):
+                # 趨勢向上基本分 +5，若帶量則加成至 +10
+                if vol_status == "量增":
+                    extra_bonus += 10.0
+                else:
+                    extra_bonus += 5.0
+
+            # --- 三盤突破與過昨高 (階梯加分) ---
+            three_bar_bonus = 0.0
+            prev_hl = get_recent_hl_before_date(stock_id, today_date, limit=2)
+            if not prev_hl.empty and len(prev_hl) >= 2:
+                y_high = float(prev_hl.iloc[0]["high"])
+                p_high = float(prev_hl.iloc[1]["high"])
+                if c1 > y_high:
+                    three_bar_bonus = 2.0 # 過昨高
+                    if c1 > p_high:
+                        three_bar_bonus = 5.0 # 三盤突破
+                        if vol_status == "量增":
+                            three_bar_bonus = 8.0 # 三盤帶量突破
+            extra_bonus += three_bar_bonus
+        except Exception:
+            pass
+
+        # --- (C) 籌碼面加分 (主力/外資/投信) ---
+        try:
+            m_s, f_s, t_s = compute_recent_netbuy_streaks(stock_id, db_path)
+            for streak in [m_s, f_s, t_s]:
+                if streak >= 3:
+                    extra_bonus += min(5.0, (streak - 2))
+
+            m_d, f_d, t_d = compute_institutional_netbuy_days(stock_id, 10, db_path)
+            for days in [m_d, f_d, t_d]:
+                if days >= 6:
+                    extra_bonus += min(5.0, (days - 5))
+        except Exception:
+            pass
+
+        final_score = round(min(100.0, base_total + extra_bonus), 2)
         
         scored_results.append({
             "stock_id": stock_id,
-            "score": total_score,
+            "score": final_score,
             "change_pct": round(change_pct, 2),
             "close_price": c1,
             "volume": v,
-            "y_volume": round(y_v, 1) if y_v else 0
+            "y_volume": round(y_v, 1)
         })
         
-    # 依評分由高到低進行排序
     scored_results.sort(key=lambda x: x["score"], reverse=True)
-    
     return scored_results

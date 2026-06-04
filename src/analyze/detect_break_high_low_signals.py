@@ -1,3 +1,13 @@
+import sys
+import os
+
+# 將專案根目錄或是 src 目錄加入 sys.path
+# 這樣不論是從專案根目錄跑 src\analyze\xxx.py 或是直接跑都能找到模組
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, ".."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 from analyze.analyze_price_break_conditions_dataloader import (
     get_today_prices, get_week_month_high_low, is_fubon_api_maintenance_time
 )
