@@ -140,13 +140,13 @@ if __name__ == "__main__":
             for idx, item in enumerate(passed_stage2, 1):
                 stock_id = item["stock_id"]
                 name = id_name_map.get(stock_id, "")
-                print(f"✅ {stock_id} {name} [通過二篩] (評分: {item['score']} | 漲幅: {item['change_pct']}% | 量: {item['volume']}張)")
+                print(f"✅ {stock_id} {name} [通過二篩] (評分: {item['score']} | 今量: {item['volume']}張 | 昨量: {item['y_volume']}張 | 漲幅: {item['change_pct']}%)")
             
             # 接著印出僅過一篩的個股 (已按分數排序)
             for item in passed_stage1_only:
                 stock_id = item["stock_id"]
                 name = id_name_map.get(stock_id, "")
-                print(f"ℹ️ {stock_id} {name} [僅過一篩] (評分: {item['score']} | 漲幅: {item['change_pct']}% | 量: {item['volume']}張)")
+                print(f"ℹ️ {stock_id} {name} [僅過一篩] (評分: {item['score']} | 今量: {item['volume']}張 | 昨量: {item['y_volume']}張 | 漲幅: {item['change_pct']}%)")
         else:
             print("ℹ️ 無符合條件的股票")
 

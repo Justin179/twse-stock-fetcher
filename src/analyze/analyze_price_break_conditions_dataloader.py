@@ -123,7 +123,7 @@ def get_latest_price_from_db(stock_id):
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(
         """
-        SELECT date, open, close
+        SELECT date, open, close, volume
         FROM twse_prices
         WHERE stock_id = ?
         ORDER BY date DESC LIMIT 2
@@ -142,7 +142,9 @@ def get_latest_price_from_db(stock_id):
         "date": today_row["date"],
         "c1": today_row["close"],
         "o": today_row["open"],
-        "c2": prev_row["close"]  # 第二新資料的收盤價為 c2
+        "c2": prev_row["close"],  # 第二新資料的收盤價為 c2
+        "v": today_row["volume"] / 1000.0,
+        "y_v": prev_row["volume"] / 1000.0
     }
 
 def get_today_prices(stock_id, sdk=None):
@@ -188,6 +190,18 @@ def get_today_prices(stock_id, sdk=None):
         if not need_ok:
             raise ValueError("富邦 API 回傳欄位不完整，改用 DB fallback")
 
+        # 獲取昨天成交量 (從 DB 抓，因為 API quote 通常不帶昨量)
+        today_date_str = quote.get("date")
+        y_v = 0
+        conn = sqlite3.connect(DB_PATH)
+        df_y = pd.read_sql_query(
+            "SELECT volume FROM twse_prices WHERE stock_id = ? AND date < ? ORDER BY date DESC LIMIT 1",
+            conn, params=(stock_id, today_date_str)
+        )
+        conn.close()
+        if not df_y.empty:
+            y_v = df_y.iloc[0]["volume"] / 1000.0 # 股轉張
+
         return {
             "date": quote.get("date"),
             "c1":   quote.get("closePrice"),
@@ -196,6 +210,7 @@ def get_today_prices(stock_id, sdk=None):
             "h":    quote.get("highPrice"),
             "l":    quote.get("lowPrice"),
             "v":    vol,  # ← 成交量(張)
+            "y_v":  y_v   # ← 昨天成交量(張)
         }
 
     except Exception as e:
