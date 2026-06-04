@@ -9,7 +9,8 @@ def _read_codes_csv(path: Path) -> pd.Series:
     s = pd.read_csv(path, header=None, encoding="utf-8-sig")[0].astype(str)
     s = s.str.strip()
     s = s[s.ne("")]
-    s = s.str.replace(r"\.TW$", "", regex=True)
+    # 同時拿掉 .TW 與 .TWO 字尾
+    s = s.str.replace(r"\.TW[O]?$", "", regex=True)
     return s
 
 def _collect_and_write_with_single_blank_line(
@@ -17,12 +18,13 @@ def _collect_and_write_with_single_blank_line(
     source_files: List[str] | None = None,
     temp_txt: str = "temp_list.txt",
 ) -> Dict:
+    # 定義優先順序：將「籌碼集中且趨勢向上.csv」排在第一位，以保留其排序
     if source_files is None:
         source_files = [
+            "籌碼集中且趨勢向上.csv",
             "匯入XQ_rs90強勢股.csv",
             "匯入XQ_籌碼集中度.csv",
             "匯入XQ_過上月高點.csv",
-            "過上週上月高個股.csv",
         ]
 
     out_dir = Path(output_dir)
@@ -39,14 +41,18 @@ def _collect_and_write_with_single_blank_line(
     if not series_list:
         return {"appended": 0, "duplicates": [], "missing": missing, "written_codes": []}
 
+    # 合併所有清單
+    # pandas 的 drop_duplicates 會保留「第一次出現」的項目。
+    # 因為我們把「籌碼集中且趨勢向上.csv」放在 series_list 的最前面，
+    # 它的個股與排序會被完整保留，後面重複出現的個股會被自動捨棄。
     all_codes = pd.concat(series_list, ignore_index=True)
 
-    # 找出重複（跨檔或同檔）
+    # 找出重複（僅供訊息顯示，不影響寫入）
     dup_mask = all_codes.duplicated(keep=False)
     duplicates = sorted(all_codes[dup_mask].unique().tolist())
 
-    # 去重（保持原出現順序）
-    unique_codes = all_codes.drop_duplicates().tolist()
+    # 去重（關鍵：pandas 會保留第一個出現的項目，也就是優先保留主體檔案的代碼與位置）
+    unique_codes = all_codes.drop_duplicates(keep='first').tolist()
 
     
     temp_path = Path(temp_txt)
@@ -104,7 +110,7 @@ def show_center_toast(msg: str, seconds: float = 2.0):
 
 
 def render_collect_stock_button(
-    label: str = "🧺 匯集個股到temp_list",
+    label: str = "💎 匯集個股到temp_list",
     output_dir: str = "output",
     source_files: List[str] | None = None,
     temp_txt: str = "temp_list.txt",
