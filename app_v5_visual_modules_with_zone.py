@@ -214,7 +214,7 @@ with col1:
                 𝓟𝓻𝓸 <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 20px; font-weight: 550;'>沒事就「續抱」</span>
             </div>
             <div style='margin-top: 6px;'>
-                <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 19px; font-weight: 500;'>「關K低 三盤沒破」or</span>
+                <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 19px; font-weight: 500;'>關K 三盤 頸線沒破</span>
             </div>
             <div style='margin-top: 6px;'>
                 <span style='color: #1f77b4; font-family: "DFKai-SB", "KaiTi", "STKaiti", "Segoe Script", "Comic Sans MS", cursive; font-size: 17px; font-weight: 500;'>守住「基準 扣抵 5日均」</span>
