@@ -106,6 +106,66 @@ with col1:
     
     # 下拉選單區
     stock_ids, stock_display = load_stock_list_with_names(refresh=True)
+
+    # 🔹 檢查是否需要重設搜尋欄 (避免 Streamlit Widget Key 實例化後修改衝突錯誤)
+    if st.session_state.get("reset_search"):
+        st.session_state["stock_search_input"] = ""
+        st.session_state["reset_search"] = False
+
+    # 🔹 智慧搜尋與新增個股輸入框
+    search_input = st.text_input(
+        "🔎 搜尋 / 新增代碼", 
+        value="", 
+        placeholder="輸入名稱或新代碼 (如 2114)",
+        key="stock_search_input"
+    )
+
+    if search_input:
+        search_input_clean = search_input.strip()
+        if search_input_clean:
+            # 1. 檢查是否直接匹配已存在的股票代碼
+            if search_input_clean in stock_ids:
+                st.session_state["current_stock_id"] = search_input_clean
+                save_selected_stock(search_input_clean)
+                st.session_state["reset_search"] = True
+                st.rerun()
+            else:
+                # 2. 檢查是否模糊匹配已存在股票代碼或名稱
+                matched_id = None
+                for idx, display in enumerate(stock_display):
+                    if search_input_clean.lower() in display.lower():
+                        matched_id = stock_ids[idx]
+                        break
+                
+                if matched_id:
+                    st.session_state["current_stock_id"] = matched_id
+                    save_selected_stock(matched_id)
+                    st.session_state["reset_search"] = True
+                    st.rerun()
+                else:
+                    # ⚠️ 找不到匹配的！判定為新個股
+                    if search_input_clean.isdigit():
+                        st.warning(f"⚠️ 偵測到未收錄個股 {search_input_clean}")
+                        if st.button(f"🚀 一鍵自動更新並加入 {search_input_clean}", use_container_width=True):
+                            # a. 覆寫 temp_list.txt，只含這檔新代碼 (避免全更新太慢)
+                            with open("temp_list.txt", "w", encoding="utf-8") as f:
+                                f.write(f"{search_input_clean}\n")
+                            
+                            # b. 執行批次檔 (非同步 background 執行，與原本按鈕邏輯一致但只針對新股)
+                            cmd = "start /min r_new_stocks_manual_setup.bat"
+                            subprocess.Popen(cmd, shell=True)
+                            
+                            # c. 將新代碼附加至 my_stock_holdings.txt
+                            msg = append_unique_stocks()
+                            st.success(f"{msg}\n(正在背景完成初始資料下載，完成後會播放提示音)")
+                            
+                            # d. 設定目前代碼，標記重設輸入框，重載頁面
+                            st.session_state["current_stock_id"] = search_input_clean
+                            save_selected_stock(search_input_clean)
+                            st.session_state["reset_search"] = True
+                            st.rerun()
+                    else:
+                        st.error(f"❌ 查無匹配結果，若要新增個股，請輸入純數字代碼 (如: 2114)")
     
     # 🔹 使用 session_state 來追蹤當前股票，避免被共享檔案覆蓋
     if "current_stock_id" not in st.session_state:
