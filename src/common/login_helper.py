@@ -36,16 +36,39 @@ def get_logged_in_sdk():
     result = sdk.login(user_id, password, cert_path)
 
     if not result.is_success:
-        print("❌ 登入失敗：", result.message)
+        print("[-] 登入失敗：", result.message)
         raise ConnectionError("富邦 API 登入失敗")
 
-    print("✅ 登入成功")
+    print("[+] 登入成功")
     return sdk
 
 def get_logged_in_dl():
     load_dotenv()
     dl = DataLoader()
-    dl.login(user_id=os.getenv("FINMIND_USER_1"), password=os.getenv("FINMIND_PASSWORD_1"))
+    
+    # 優先使用 token 進行登入
+    token = os.getenv("FINMIND_TOKEN_1")
+    if token:
+        try:
+            dl.login_by_token(api_token=token)
+            print("[+] FinMind: 成功使用 FINMIND_TOKEN_1 登入")
+            return dl
+        except Exception as e:
+            print(f"[!] FinMind: login_by_token 失敗: {e}")
+            
+    # 若 token 登入失敗或不存在，則退回帳密登入
+    user = os.getenv("FINMIND_USER_1")
+    password = os.getenv("FINMIND_PASSWORD_1")
+    if user and password:
+        try:
+            dl.login(user_id=user, password=password)
+            print("[+] FinMind: 成功使用 FINMIND_USER_1 登入")
+            return dl
+        except Exception as e:
+            print(f"[!] FinMind: user/password 登入失敗: {e}")
+            
+    # 最終退路：返回未登入的 DataLoader，避免整個 streamlit app 崩潰
+    print("[!] FinMind: 登入驗證失敗或未設定，將以未登入狀態繼續執行")
     return dl
 
 def init_session_login_objects():
